@@ -1,0 +1,14 @@
+tmp
+*.so
+*.dll
+*.o
+*.i
+*.exe
+*.SCR
+*gdb.py
+*.DAT
+*.DAT.*
+cobgdb
+simple
+customer
+number

@@ -1,0 +1,28 @@
+{
+    "files.associations": {
+        "*html": "html",
+        "unistd.h": "c",
+        "string.h": "c",
+        "wait.h": "c",
+        "stdlib.h": "c",
+        "tchar.h": "c",
+        "windows.h": "c",
+        "regex_gdb.h": "c",
+        "assert.h": "c",
+        "sstream": "c",
+        "algorithm": "c",
+        "*.tcc": "c",
+        "random": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "stdio.h": "c",
+        "*.rh": "c",
+        "windows_terminal.h": "c",
+        "cobgdb.h": "c"
+    },
+    "debug.allowBreakpointsEverywhere": true
+}
