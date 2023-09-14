@@ -22,7 +22,8 @@
         "stdio.h": "c",
         "*.rh": "c",
         "windows_terminal.h": "c",
-        "cobgdb.h": "c"
+        "cobgdb.h": "c",
+        "errno.h": "c"
     },
     "debug.allowBreakpointsEverywhere": true
 }

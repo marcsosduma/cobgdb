@@ -1,3 +1,9 @@
+/* 
+   This code is based on the GnuCOBOL Debugger extension available at: 
+   https://github.com/OlegKunitsyn/gnucobol-debug
+   It is provided without any warranty, express or implied. 
+   You may modify and distribute it at your own risk.
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

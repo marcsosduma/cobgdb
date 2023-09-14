@@ -1,14 +1,21 @@
+/* 
+   This code is based on the GnuCOBOL Debugger extension available at: 
+   https://github.com/OlegKunitsyn/gnucobol-debug
+   It is provided without any warranty, express or implied. 
+   You may modify and distribute it at your own risk.
+*/
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <wchar.h>
 #include "cobgdb.h"
 
 extern ST_DebuggerVariable * DebuggerVariable;
 extern int ctlVar;
 extern int color_frame;
-
 int showOne = FALSE;
 int expand = FALSE;
+wchar_t wcBuffer[512];
 
 int show_opt_var(){
     char * opt = " COBGDB - (R)return (ENTER)expand/contract";
@@ -55,17 +62,28 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
             start_linex_x2=-1 * nm;
         }
         if(var->value!=NULL){
-            int lenVar = strlen(var->value);
+            wchar_t *wcharString = (wchar_t *)malloc((strlen(var->value) + 1) * sizeof(wchar_t));           
+            #if defined(_WIN32)
+            MultiByteToWideChar(CP_UTF8, 0, var->value, -1, wcharString,(strlen(var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
+            #else
+            mbstowcs(wcharString, var->value, strlen(var->value) + 1);
+            #endif
+            int lenVar = wcslen(wcharString);
             if(start_linex_x2<lenVar){
                 nm = lenVar-start_linex_x2;
                 if(nm>linW) nm=linW;
                 print_colorBK(color_green, bkg);
-                printf("%-.*s", nm, &var->value[start_linex_x2]);
+                wcsncpy(wcBuffer, &wcharString[start_linex_x2], nm);
+                wcBuffer[nm]='\0';
+                printf("%ls",wcBuffer);
                 linW-=nm;
             }
+            free(wcharString);
         }
         print_colorBK(color_green, bkg);
-        if(linW>0) printf("%*s",linW," ");
+        if(linW>0){
+             printf("%*ls",linW,L" ");
+        }
         printBK(" ", color_white, color_frame);  
         lin++;
     }

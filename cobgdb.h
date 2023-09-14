@@ -37,11 +37,11 @@
 #define color_pink      13
 #define color_yellow    14
 #define color_white     15
-
+#include <wchar.h>
 
 struct st_highlt {
     int color;
-    char * token;
+    wchar_t * token;
     int size;
     struct st_highlt * next;
 };
@@ -153,7 +153,7 @@ struct ST_TableValues {
 struct ST_OutOfBandRecord {
     int isStream;
     char * type;
-    char * aysncClass;
+    char * asyncClass;
     struct ST_TableValues * output;
     char * content;
     struct ST_OutOfBandRecord * next;
@@ -170,7 +170,7 @@ typedef struct ST_OutOfBandRecord ST_OutOfBandRecord;
 typedef struct ST_TableValues ST_TableValues;
 
 struct ST_MIInfo {
-    char token;
+    int token;
     ST_OutOfBandRecord * outOfBandRecord;
     ST_ResultRecords * resultRecords;
 };

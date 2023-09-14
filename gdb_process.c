@@ -22,7 +22,7 @@
 //#define DEBUG 0
 
 extern char * gdbOutput;
-extern int waitAnser;
+extern int waitAnswer;
 extern char * ttyName;
 int token=1;
 
@@ -93,7 +93,7 @@ int start_gdb(char * name)
         strcpy(command, gdbSet[idx++]);
         sendCommandGdb(command);
    }
-   waitAnser=1;
+   waitAnswer=1;
    debug(0, &sendCommandGdb );
    printf("\n->End of parent execution.\n");
    return 0;
@@ -175,7 +175,7 @@ int sendCommandGdb(char * command)
       if(strcmp(command,"-gdb-exit\n")==0){
          strcpy(chBuf,command);
          mustReturn=0;
-         waitAnser = 1;
+         waitAnswer = 1;
       }else{
          sprintf(chBuf,"%d-%s", token++, command);
       }
@@ -213,7 +213,7 @@ int sendCommandGdb(char * command)
          strcat(gdbOutput, chBuf);
          count0=0;
       }else{
-         Sleep(10);
+         Sleep(1);
          count0++;
       }
       if(dwRead>5)
@@ -263,7 +263,7 @@ int sendCommandGdb(char * command)
       if(strcmp(command,"-gdb-exit\n")==0 || strncmp(command,"-gdb-set",8)==0){
          mustReturn=0;
          strcpy(chBuf,command);
-         waitAnser = 1;
+         waitAnswer = 1;
       }else{
          sprintf(chBuf,"%d-%s", token++, command);
       }
@@ -377,7 +377,7 @@ int start_gdb(char * name){
            strcpy(chBuf, gdbSet[idx++]);
            sendCommandGdb(chBuf);
         }        
-        waitAnser=1;
+        waitAnswer=1;
         debug(0, &sendCommandGdb );
         printf("\n->End of parent execution.\n");
         //wait(NULL);

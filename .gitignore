@@ -10,5 +10,14 @@ tmp
 *.DAT.*
 cobgdb
 simple
+simple.c
+simple.c.h
+simple.c.l.h
 customer
+customer.c
+customer.c.h
+customer.c.l.h
 number
+number.c
+number.c.h
+number.c.l.h

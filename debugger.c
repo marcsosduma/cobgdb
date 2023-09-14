@@ -1,4 +1,9 @@
-
+/* 
+   This code is based on the GnuCOBOL Debugger extension available at: 
+   https://github.com/OlegKunitsyn/gnucobol-debug
+   It is provided without any warranty, express or implied. 
+   You may modify and distribute it at your own risk.
+*/
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -7,7 +12,6 @@
 
 extern char m[10][512];
 
-//const repeatTimeRegex = /(\"\,\s|^)\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/i;
 char repeatTimeRegex[] = "(\"\\,\\s|^)\\'(\\s|0)\\'\\s\\<repeats\\s(\\[0-9]+)\\stimes\\>";
 
 #define ZERO_SIGN_CHAR_CODE 112
@@ -18,7 +22,7 @@ void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *
     int isNegative = 0;
     if (value[0] == '-' || value[0] == '+') {
         isNegative = (value[0] == '-');
-        memmove(value, value + 1, strlen(value));  // Remove o sinal
+        memmove(value, value + 1, strlen(value));  // Remove the signal
     }
 
     char *wholeNumber = strtok(value, ".");
@@ -31,12 +35,12 @@ void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *
         decimals = "";
         int len = strlen(wholeNumber);
         if (len > abs(scale)) {
-            wholeNumber[len - abs(scale)] = '\0';  // Trunca os dígitos à direita
+            wholeNumber[len - abs(scale)] = '\0';  // Trunc right
         }
     } else if (scale > fieldSize) {
         int len = strlen(decimals);
         if (len > (scale - fieldSize)) {
-            decimals += len - (scale - fieldSize);  // Remove os dígitos à esquerda
+            decimals += len - (scale - fieldSize);  // Trunc left
         } else {
             decimals = "";
         }
@@ -158,7 +162,6 @@ static void replacestr(char *line, const char *search, const char *replace)
      int search_len = strlen(search);
      int replace_len = strlen(replace);
      int tail_len = strlen(sp+search_len);
-
      memmove(sp+replace_len,sp+search_len,tail_len+1);
      memcpy(sp, replace, replace_len);
 }
@@ -209,12 +212,7 @@ char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
     if (!valueStr) {
         return NULL;
     }
-
-    // Use strcmp para comparar strings em C
     if (strcmp(type, "numeric") == 0) {
-        // Simule o comportamento de NumericValueParser.parse
-        // Substitua isso pela lógica real, se necessário
-        // Neste exemplo, retornamos o valor original
         formatNumberParser(valueStr, fieldSize, scale);
         return valueStr;
     }
@@ -225,9 +223,7 @@ char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
         strcmp(type, "national") == 0 ||
         strcmp(type, "national edited") == 0
     ) {
-        // Simule o comportamento de AlphanumericValueParser.parse
-        // Substitua isso pela lógica real, se necessário
-        // Neste exemplo, retornamos o valor original
+        // AlphanumericValueParser parse to do
         return valueStr;
     }
     else if (
@@ -237,7 +233,7 @@ char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
         return valueStr;
     }
     else {
-        fprintf(stderr, "Tipo não suportado: %s\n", type);
+        fprintf(stderr, "Type error: %s\n", type);
         return NULL;
     }
     return valueStr;

@@ -1,3 +1,9 @@
+/* 
+   This code is based on the GnuCOBOL Debugger extension available at: 
+   https://github.com/OlegKunitsyn/gnucobol-debug
+   It is provided without any warranty, express or implied. 
+   You may modify and distribute it at your own risk.
+*/
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -58,7 +64,7 @@ int testMI2()
         assert(parsed->token == 4);  
         assert(parsed->outOfBandRecord!=NULL && parsed->outOfBandRecord->next==NULL);
         assert(parsed->outOfBandRecord->isStream==FALSE);
-        assert(strcmp(parsed->outOfBandRecord->aysncClass, "thread-exited")==0);
+        assert(strcmp(parsed->outOfBandRecord->asyncClass, "thread-exited")==0);
         assert(parsed->outOfBandRecord->output!=NULL);
         int x=0;
         search=parsed->outOfBandRecord->output;
@@ -79,21 +85,21 @@ int testMI2()
         assert(strcmp(parsed->outOfBandRecord->content,"[Thread 0x7fffe993a700 (LWP 11002) exited]\n")==0 );
         assert(parsed->resultRecords==NULL);
         freeParsed(parsed);
-        parsed = parseMI("~\"[Depuraci\303\263n de hilo usando libthread_db enabled]\n\"");
+        parsed = parseMI("~\"[Depuraci\\303\\263n de hilo usando libthread_db enabled]\n\"");
         assert(parsed!=NULL);
         assert(parsed->token == 0);
         assert(parsed->outOfBandRecord!=NULL && parsed->outOfBandRecord->next==NULL);
         assert(parsed->outOfBandRecord->isStream==TRUE);  
         assert(strcmp(parsed->outOfBandRecord->content,"[Depuración de hilo usando libthread_db enabled]\n")==0 );
-//        assert(parsed->resultRecords==NULL);
-//        freeParsed(parsed);
-//        parsed = parseMI("~\"4\\t  std::cout << \\\"\345\245\275\345245\275\345\255\246\344\271\240\357\274\214\345\244\251\345\244\251\345\220\221\344\270\212\\\" << std::endl;\\n\"");
-//        assert(parsed!=NULL);
-//        assert(parsed->token == 0);
-//        assert(parsed->outOfBandRecord!=NULL && parsed->outOfBandRecord->next==NULL);
-//        assert(parsed->outOfBandRecord->isStream==TRUE);  
-//        assert(strcmp(parsed->outOfBandRecord->content,"4\t  std::cout << \"好好学习，天天向上\" << std::endl;\n")==0 );
-//        assert(parsed->resultRecords==NULL);
+        assert(parsed->resultRecords==NULL);
+        freeParsed(parsed);
+        parsed = parseMI("~\"4\\t  std::cout << \\\"\\345\\245\\275\\345\\245\\275\\345\\255\\246\\344\\271\\240\\357\\274\\214\\345\\244\\251\\345\\244\\251\\345\\220\\221\\344\\270\\212\\\" << std::endl;\\n\"");
+        assert(parsed!=NULL);
+        assert(parsed->token == 0);
+        assert(parsed->outOfBandRecord!=NULL && parsed->outOfBandRecord->next==NULL);
+        assert(parsed->outOfBandRecord->isStream==TRUE);  
+        assert(strcmp(parsed->outOfBandRecord->content,"4\t  std::cout << \"好好学习，天天向上\" << std::endl;\n")==0 );
+        assert(parsed->resultRecords==NULL);
         printf("Test->Empty line\n");
         freeParsed(parsed);
         parsed = parseMI("");
@@ -133,7 +139,7 @@ int testMI2()
         assert(parsed->token == 0);
         assert(parsed->outOfBandRecord!=NULL);
         assert(parsed->outOfBandRecord->isStream==FALSE);
-        assert(strcmp(parsed->outOfBandRecord->aysncClass, "stopped")==0);
+        assert(strcmp(parsed->outOfBandRecord->asyncClass, "stopped")==0);
         x=0;
         search=parsed->outOfBandRecord->output;
         while(search!=NULL){

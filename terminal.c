@@ -1,6 +1,10 @@
+/* 
+   The functions related to colorization were obtained from the following site: 
+   https://stackoverflow.com/questions/4053837/colorizing-text-in-the-console-with-c
+   It is provided without any warranty, express or implied. 
+   You may modify and distribute it at your own risk.
+*/
 #if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #include <Windows.h>
 #include <stdio.h>
 #include <WinCon.h>
@@ -521,3 +525,4 @@ void print_no_resetBK(char * s, int textcolor, int backgroundcolor) { // print w
     print_colorBK(textcolor, backgroundcolor);
     printf("%s", s);
 }
+

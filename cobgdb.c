@@ -1,23 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 #if defined(__linux__)
 #include <unistd.h>
+#else
+#include <windows.h>
 #endif
 #include "cobgdb.h"
+#define __WITH_TESTS_ 
 struct program_file program_file;
 int start_window_line = 0;
 int qtd_window_line = 23;
-int start_linex_x = 0;
+int start_line_x = 0;
 int debug_line = -1;
 int running = TRUE;
-int waitAnser = FALSE;
+int waitAnswer = FALSE;
 char * gdbOutput = NULL;
 int showFile=TRUE;
 int ctlVar=0;
 char * ttyName=NULL;
 int WIDTH=80;
-int HEIGTH=25;
+int HEIGHT=25;
+int changeLine=FALSE;
 int color_frame=color_light_blue;
 
 ST_Line * LineDebug=NULL;
@@ -114,7 +119,6 @@ Lines * set_window_pos(int * line_pos){
 }
 
 int show_opt(){
-    //const char * opt = "COBGDB -> (R)run  (N)next  (S)step  (C)continue (V)variables (Q)quit";
     char * opt = " COBGDB - (R)run  (N)next  (S)step  (C)continue (G)cursor (V)variables (Q)quit";
     char aux[100];
     sprintf(aux,"%-80s\r", opt);
@@ -129,14 +133,15 @@ int show_info(){
     gotoxy(1,25);
     if(debug_line>0 && !running){
         print_colorBK(color_green, color_black);
-        printf("%s\r", "Debugging ");
+        printf("%s\r", "Debugging             ");
     }else if(debug_line>0 && running){
         print_colorBK(color_red, color_black);
-        printf("%s\r", "Running   ");
+        printf("%s\r", "Running               ");
     }else{
         print_colorBK(color_black, color_black);
-        printf("%s\r", "          ");
+        printf("%s\r", "                      ");
     }
+    gotoxy(1,25);
 }
 
 int show_file(Lines * lines, int line_pos){
@@ -169,13 +174,13 @@ int show_file(Lines * lines, int line_pos){
                 show_line->line[strcspn(show_line->line,"\n")]='\0';
                 int len=strlen(show_line->line);
                 //if(len>0) show_line->line[strcspn(show_line->line,"\n")]='\0';
-                if(line_pos==i) 
+                if(line_pos==i)
                     print_colorBK(color_green, bkgColor);
                 else
                     print_colorBK(color_white, color_black);
-                int nm = len -start_linex_x;
+                int nm = len -start_line_x;
                 if(nm>0){
-                    printf("%s", &show_line->line[start_linex_x]);
+                    printf("%s", &show_line->line[start_line_x]);
                     nm=(72-nm>0)?72-nm:72;
                     printf("%*s", nm, " ");
                 }else{
@@ -183,12 +188,13 @@ int show_file(Lines * lines, int line_pos){
                 }
             }else{
                 bkgColor=(line_pos==i)?color_gray:-1;
-                printHighlight(show_line->high, bkgColor, start_linex_x, 72);
+                printHighlight(show_line->high, bkgColor, start_line_x, 72);
             }
             show_line = show_line->line_after;
             if(show_line == NULL){
                 if(line_pos>i) line_pos=i-1;
             }
+            //gotoxy(80,i+2);
             print_no_resetBK(" ",color_white, color_frame);
         }else{
             gotoxy(1,i+2);
@@ -213,16 +219,19 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     int line_file=0;
     int bstop = 0;
     //startBuffer();
+
     //setvbuf(stdout, NULL, _IOFBF, 8192); // Habilita o buffering de saída com um buffer de 4 KB
     cursorOFF();
     clearScreen();
     while(program_file.lines!=NULL && !bstop){
         if(showFile){
+            //setvbuf(stdout, NULL, _IONBF, 8192);
             show_opt();
-            line_file = lines->file_line; // acertar isso...
+            line_file = lines->file_line;
             line_pos=show_file(lines, line_pos);
-            fflush(stdout);
             showFile=FALSE;
+            print_color_reset();
+            fflush(stdout);
         }
         input_character =  key_press();
         switch (input_character)
@@ -279,20 +288,20 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 showFile=TRUE;
                 break;
             case VK_LEFT:
-                if(start_linex_x>0){
-                    start_linex_x--;
+                if(start_line_x>0){
+                    start_line_x--;
                     showFile=TRUE;
                 }
                 break;
             case VK_RIGHT:
-                if(start_linex_x<250){
-                    start_linex_x++;
+                if(start_line_x<250){
+                    start_line_x++;
                     showFile=TRUE;
                 }
                 break;
             case 'b':    
             case 'B':    
-                if(!waitAnser){ 
+                if(!waitAnswer){ 
                     lb = lines;           
                     for(int a=0;a<line_pos;a++) lb=lb->line_after;
                     int check=hasCobolLine(lb->file_line);
@@ -308,7 +317,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 }
                 break;
             case 'd':
-                if(!waitAnser){ 
+                if(!waitAnswer){ 
                     lb = lines;           
                     for(int a=0;a<line_pos;a++) lb=lb->line_after;
                     lb->breakpoint='N';
@@ -327,19 +336,19 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 break;
             case 's':
             case 'S':
-                if(!waitAnser) MI2stepInto(sendCommandGdb);
+                if(!waitAnswer) MI2stepInto(sendCommandGdb);
                 break;
             case 'n':
             case 'N':
-                if(!waitAnser) MI2stepOver(sendCommandGdb);
+                if(!waitAnswer) MI2stepOver(sendCommandGdb);
                 break;
             case 'c':
             case 'C':
-                if(!waitAnser) MI2stepOut(sendCommandGdb);
+                if(!waitAnswer) MI2stepOut(sendCommandGdb);
                 break;
             case 'g':
             case 'G':
-                if(!waitAnser){ 
+                if(!waitAnswer){ 
                     lb = lines;           
                     for(int a=0;a<line_pos;a++) lb=lb->line_after;
                     int check=hasCobolLine(lb->file_line);
@@ -351,9 +360,9 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 break;
             case 'v':
             case 'V':
-                if(!waitAnser){
+                if(!waitAnswer){
                     ctlVar=(ctlVar>10000)?1:ctlVar+1;
-                    waitAnser = TRUE;
+                    waitAnswer = TRUE;
                     int aux1=debug_line;
                     int aux2=running;
                     MI2variablesRequest(sendCommandGdb);
@@ -368,10 +377,12 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 printf(" ");
                 break;
             default: 
-                if(waitAnser){
+                if(waitAnswer){
                     MI2verifyGdb(sendCommandGdb);
-                    if(showFile)
+                    if(showFile && changeLine){
                         lines = set_window_pos(&line_pos);
+                        changeLine=FALSE;
+                    }
                 }
                 break;
         }
@@ -406,13 +417,20 @@ int main(int argc, char **argv) {
     char nameExecFile[256];
     char baseName[256];
     char nameCFile[256];
+
+    setlocale(LC_CTYPE, "");
+    setlocale(LC_ALL,"");
+    #if defined(_WIN32)
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    #endif    
     if(argc<2){
         printf("Informe GnuCOBOL file\n");
         return 0;
     }
     if(argc>1 && strncmp(argv[1],"--test",6)==0){
         #ifdef __WITH_TESTS_
-            testParser();
+           // testParser();
             testMI2();
         #else
             printf("Tests not included.\n");
@@ -429,7 +447,7 @@ int main(int argc, char **argv) {
         loadfile(program_file.name_file);
         strcpy(nameCFile,baseName);
         strcat(nameCFile,".c");
-        printf("Parser initing...\n");
+        printf("Parser starting...\n");
         normalizePath(nameCFile);
 		char fileGroup[4][512];
 		strcpy(fileGroup[0],nameCFile);
@@ -437,6 +455,8 @@ int main(int argc, char **argv) {
 		SourceMap(fileGroup);
         executeParse(); 
         printf("Parser end...\n");
+        //printf("A localidade corrente agora é %s \n",setlocale(LC_ALL,""));
+        //while(key_press()<=0);
         #if defined(__linux__)
         ttyName=openOuput(program_file.name_file);
         if(ttyName==NULL){

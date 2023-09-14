@@ -1,3 +1,8 @@
+/* 
+   This code is based on information from: https://thobias.org/doc/er_c.html
+   It is provided without any warranty, express or implied. 
+   You may modify and distribute it at your own risk.
+*/
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,7 +11,6 @@
 #include <regex.h>
 
 #define ARRAY_SIZE(array) (sizeof((array)) / sizeof((array)[0]))
-#define debug 0
 
 int er_error(int i, regex_t reg)
 {
@@ -38,21 +42,17 @@ int regex(char * tx_regex, char * text, char mm[][512])
 {
     FILE *fp;
     regex_t     regex;
-    regmatch_t  pmatch [100]; // Up to 3 sub-expressions
+    regmatch_t  pmatch [100]; 
     regoff_t    offset, length;
     int ret;
     strcpy (re, tx_regex);
     char m[100][512];
 
-        // Extended Regular Expressions, case insensitive search
-    //printf("r1: %s\n", tx_regex);
-    //printf("r1: %s\n", text);
     if (ret = regcomp (&regex, re, REG_EXTENDED | REG_ICASE | REG_NEWLINE)) {
         (void) regerror (ret, &regex, buf, sizeof (buf));
         fprintf (stderr, "Error: regcomp: %s\n", buf);
         exit(EXIT_FAILURE);
     }
-    //printf("r2\n");
     char *s = text;
     qtd_match=0;
     if(s==NULL) return qtd_match;
@@ -73,24 +73,13 @@ int regex(char * tx_regex, char * text, char mm[][512])
                 }
                 break;
 	        }
-	        if (debug && i == 0){
-                printf ("Matches:\n");
-		        printf ("\n%s", buf);
-            }
             offset = pmatch [0].rm_so + (s - buf);
             length = pmatch [0].rm_eo - pmatch[0].rm_so;
-            if(debug) printf("#%d:\n", i);
-            if(debug) printf("offset = %jd; length = %jd\n", (intmax_t) offset,
-                (intmax_t) length);
-            if(debug) printf("substring = \"%.*s\"\n", length, s + pmatch[0].rm_so);
             for (int j = 0; j < ARRAY_SIZE(pmatch); j++) {
                 if (pmatch [j].rm_so == -1)
                     break;
                 offset = pmatch [j].rm_so + (s - buf);
                 length = pmatch [j].rm_eo - pmatch [j].rm_so;
-                if(debug) printf("\toffset = %jd; length = %jd\n", (intmax_t) offset, (intmax_t) length);
-                if(debug) printf("\tsubstring = \"%.*s\"\n", length, s + pmatch[j].rm_so);
-                if(debug) printf ("\t[%d] %d %d \n", j, pmatch [j].rm_so, pmatch [j].rm_eo);
                 if(length>512) length=510;
                 sprintf(m[qtd_match++],"%.*s", length, s + pmatch[j].rm_so); 
             }

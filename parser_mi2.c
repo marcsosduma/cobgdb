@@ -1,3 +1,9 @@
+/* 
+   This code is based on the GnuCOBOL Debugger extension available at: 
+   https://github.com/OlegKunitsyn/gnucobol-debug
+   It is provided without any warranty, express or implied. 
+   You may modify and distribute it at your own risk.
+*/
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -52,6 +58,7 @@ ST_TableValues * newTableValues(){
 }
 
 char * parseString(char * str){
+    char chrUTF8[4];
     char * ret = malloc(strlen(str)*4);
     strcpy(ret,"");
     if(str[0]!='"' || str[strlen(str)-1]!='"')
@@ -62,9 +69,9 @@ char * parseString(char * str){
     int bufIndex = 0;
     boolean escaped = FALSE;
     int x=0;
+    int i=0;
     for(int i=0;i<strlen(str);i++){
         if(escaped){
-           //let m;
             if (str[i] == '\\'){
                ret[x++] = '\\';}
             else if (str[i] == '\"'){
@@ -86,15 +93,18 @@ char * parseString(char * str){
             else if (str[i] == '0'){
                 ret[x++] = '\0';}
             else{
+                
                 char match[10][512];
                 char * aux=malloc(strlen(str)+1);
                 subString(str,i, strlen(str)-i, aux);
                 int qtd=regex(octalMatch, aux, match);
                 free(aux);
                 if(qtd>0){
-                    //ret[x++]='\\';
-                    strncpy(&ret[x], (char *) &match[0], 3);
-                    x+=3;
+                    strncpy(chrUTF8, (char *) &match[0], 3);
+                    chrUTF8[3] = '\0';
+                    int valUTF8 = strtol(chrUTF8, NULL, 8);
+                    ret[x++]= (char)valUTF8;
+                    i += 2;
                 }else{
                   ret[x++]=str[i];  
                 }
@@ -277,8 +287,6 @@ ST_MIInfo * parseMI(char * out){
         printf("m[1]: %s\n", match[0]);
         printf("Tamanho: %d\n", (int) strlen(output));
         #endif
-
-        //char * temp1 = malloc()
         
         subString(output,strlen(match[0]), strlen(output)-strlen(match[0]), output);
 
@@ -293,8 +301,8 @@ ST_MIInfo * parseMI(char * out){
             if(outOfBandRecord==NULL) outOfBandRecord = asyncRecord;
             asyncRecord->isStream=FALSE;
             asyncRecord->type = asyncRecordType(match[3]);
-            asyncRecord->aysncClass=malloc(strlen(classMatch[1])+1);
-            strcpy(asyncRecord->aysncClass, classMatch[1]);
+            asyncRecord->asyncClass=malloc(strlen(classMatch[1])+1);
+            strcpy(asyncRecord->asyncClass, classMatch[1]);
             asyncRecord->output=NULL;
             asyncRecord->content=NULL;
             asyncRecord->next=NULL;
@@ -317,7 +325,7 @@ ST_MIInfo * parseMI(char * out){
             if(outOfBandRecord==NULL) outOfBandRecord = streamRecord;
             streamRecord->isStream=TRUE;
             streamRecord->type = streamRecordType(match[1]);
-            streamRecord->aysncClass=NULL;
+            streamRecord->asyncClass=NULL;
             streamRecord->output=NULL;
             streamRecord->next=NULL;
             streamRecord->content=parseCString(output);
@@ -380,7 +388,7 @@ void freeParsed(ST_MIInfo * parsed) {
     if(parsed==NULL)
         return;    
     if(parsed->outOfBandRecord!=NULL){
-        if(parsed->outOfBandRecord->aysncClass!=NULL) free(parsed->outOfBandRecord->aysncClass);
+        if(parsed->outOfBandRecord->asyncClass!=NULL) free(parsed->outOfBandRecord->asyncClass);
         if(parsed->outOfBandRecord->content!=NULL) free(parsed->outOfBandRecord->content);
         if(parsed->outOfBandRecord->type!=NULL) free(parsed->outOfBandRecord->type);
         if(parsed->outOfBandRecord->output!=NULL){
@@ -482,4 +490,3 @@ ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, bo
     free(path);
     return search;
 }
-

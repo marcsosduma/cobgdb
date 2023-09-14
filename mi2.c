@@ -1,3 +1,9 @@
+/* 
+   This code is based on the GnuCOBOL Debugger extension available at: 
+   https://github.com/OlegKunitsyn/gnucobol-debug
+   It is provided without any warranty, express or implied. 
+   You may modify and distribute it at your own risk.
+*/
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -11,7 +17,8 @@ extern char m[10][512];
 extern int debug_line;
 extern int running;
 extern int showFile;
-extern int waitAnser;
+extern int waitAnswer;
+extern int changeLine;
 char lastComand[200];
 int subroutine=-1;
 
@@ -70,21 +77,21 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                 ST_MIInfo * parsed = parseMI(line);
                 if (parsed->resultRecords!=NULL){
                     if(strcmp(parsed->resultRecords->resultClass,"error")==0 || strcmp(parsed->resultRecords->resultClass,"done")==0 ) {
-                        waitAnser=FALSE;
+                        waitAnswer=FALSE;
                         running=FALSE;
                         showFile=TRUE;
                         debug_line=-1;
-                        if(parsed->token>0 && tk>0){
+                        if(parsed->token>0 && tk>0 && parsed->token==tk){
                             parsedRet=parsed;
                         }
                     }
                 }
                 if(parsed!=NULL && parsed->outOfBandRecord!=NULL){
                     if(parsed->outOfBandRecord->type!=NULL && strcmp(parsed->outOfBandRecord->type,"exec")==0){
-                        if(parsed->outOfBandRecord->aysncClass!=NULL && strcmp(parsed->outOfBandRecord->aysncClass,"running")==0){
+                        if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"running")==0){
                             running=TRUE;
-                            showFile=TRUE;
-                        }else if(parsed->outOfBandRecord->aysncClass!=NULL && strcmp(parsed->outOfBandRecord->aysncClass,"stopped")==0){
+                            //showFile=TRUE;
+                        }else if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"stopped")==0){
                             ST_TableValues * reason = parsed->outOfBandRecord->output;
                             if(reason!=NULL && reason->key!=NULL && strcmp(reason->key,"reason")==0){
                                 if(strcmp(reason->value,"breakpoint-hit")==0){
@@ -94,7 +101,8 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                                         lineChange=TRUE;
                                     }else{
                                         debug_line = hasLine->lineCobol;
-                                        waitAnser=FALSE;
+                                        changeLine = TRUE;
+                                        waitAnswer=FALSE;
                                         running=FALSE;
                                         showFile=TRUE;
                                     }
@@ -103,8 +111,9 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                                     if(hasLine==NULL){
                                         sendCommandGdb("exec-next\n");
                                     }else{
-                                        waitAnser=FALSE;
+                                        waitAnswer=FALSE;
                                         debug_line = hasLine->lineCobol;
+                                        changeLine = TRUE;
                                         running=FALSE;
                                         showFile=TRUE;
                                     }
@@ -114,9 +123,10 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                                         sendCommandGdb(lastComand);
                                     }else{
                                         debug_line = hasLine->lineCobol;
+                                        changeLine = TRUE;
                                         running = FALSE;                                        
                                         showFile=TRUE;
-                                        waitAnser=FALSE;
+                                        waitAnswer=FALSE;
                                     }
                                 }else if(strcmp(reason->value,"function-finished")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
@@ -124,20 +134,26 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                                         sendCommandGdb(lastComand);
                                     }else{
                                         debug_line = hasLine->lineCobol;
+                                        changeLine = TRUE;
                                         running = FALSE;                                        
                                         showFile=TRUE;
-                                        waitAnser=FALSE;
+                                        waitAnswer=FALSE;
                                     }
                                 }else if(strcmp(reason->value,"signal-received")==0){
                                         showFile=TRUE;
-                                        waitAnser=FALSE;
+                                        waitAnswer=FALSE;
                                         running=FALSE;
                                 }else if(strcmp(reason->value,"exited-normally")==0){
                                         showFile=TRUE;
-                                        waitAnser=FALSE;
+                                        waitAnswer=FALSE;
                                         running=FALSE;
                                         debug_line=-1;
 
+                                }else if(strcmp(reason->value,"exited")==0){
+                                        showFile=TRUE;
+                                        waitAnswer=FALSE;
+                                        running=FALSE;
+                                        debug_line=-1;
                                 }
                             }
                         }
@@ -165,7 +181,8 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
     }else{
         sendCommandGdb(lastComand);
     }
-    waitAnser = TRUE;
+    waitAnswer = TRUE;
+    running=TRUE;
 }
 
 int MI2stepInto(int (*sendCommandGdb)(char *)){
@@ -178,7 +195,8 @@ int MI2stepInto(int (*sendCommandGdb)(char *)){
     }
     strcpy(command,"exec-step\n"); 
     sendCommandGdb(command);
-    waitAnser = TRUE;
+    waitAnswer = TRUE;
+    running=TRUE;
     return 0;
 }
 
@@ -187,7 +205,8 @@ int MI2stepOut(int (*sendCommandGdb)(char *)){
     char command[200];
     strcpy(command,"exec-finish\n"); 
     sendCommandGdb(command);
-    waitAnser = TRUE;
+    waitAnswer = TRUE;
+    running=TRUE;
     return 0;
 }
 
@@ -195,7 +214,8 @@ int MI2start(int (*sendCommandGdb)(char *)){
     strcpy(lastComand,"exec-next\n"); 
     char command[]="exec-run\n";
     sendCommandGdb(command);
-    waitAnser = TRUE;
+    waitAnswer = TRUE;
+    running=TRUE;
     return 0;
 }
 
@@ -205,22 +225,21 @@ int MI2verifyGdb(int (*sendCommandGdb)(char *)){
     return 0;
 }
 
-void wait_gdb_anser(int (*sendCommandGdb)(char *)){
+void wait_gdb_answer(int (*sendCommandGdb)(char *)){
     if(gdbOutput==NULL) gdbOutput=malloc(strlen((""))+1);
     strcpy(gdbOutput,"");
     do{
         sendCommandGdb("");
-    }while(strlen(gdbOutput)==0);
+    }while(strlen(gdbOutput)==0 && strcmp(gdbOutput,"\n")!=0);
 }
 
 int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
-    //TODO: breakpoint condicional
     char command[256];
     ST_Line * line = getLineC(fileCobol, lineNumber);
     if(line!=NULL){
         sprintf(command,"%s%s:%d\n","break-insert -f ",line->fileC,line->lineC);
         sendCommandGdb(command);
-        waitAnser = TRUE;
+        waitAnswer = TRUE;
     }
 }
 
@@ -230,14 +249,15 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
     if(line!=NULL){
         sprintf(command,"%s%s:%d\n","break-insert -t ",line->fileC,line->lineC);
         sendCommandGdb(command);
-        wait_gdb_anser(sendCommandGdb);
+        wait_gdb_answer(sendCommandGdb);
         if(debug_line>0)
             strcpy(command,"exec-finish\n"); 
         else
             strcpy(command,"exec-run\n");
         sendCommandGdb(command);
-        wait_gdb_anser(sendCommandGdb);
-        waitAnser = TRUE;
+        wait_gdb_answer(sendCommandGdb);
+        waitAnswer = TRUE;
+        running=TRUE;
     }
 }
 
@@ -248,7 +268,7 @@ int MI2removeBreakPoint (int (*sendCommandGdb)(char *), Lines * lines, char * fi
         char command[256];
         strcpy(command,"break-delete\n");
         sendCommandGdb(command);
-        waitAnser = TRUE;
+        waitAnswer = TRUE;
         Lines * lb = lines;
         while(lb!=NULL){
             if(lb->breakpoint=='S'){
@@ -281,7 +301,7 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
         }
         strcat(command,"\n");
         int tk=sendCommandGdb(command);
-        wait_gdb_anser(sendCommandGdb);
+        wait_gdb_answer(sendCommandGdb);
         ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk);
         if(parsed!=NULL){
             int find=FALSE;
@@ -296,7 +316,7 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
 char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *)){
     char * ret = NULL;
     int tk = sendCommandGdb("stack-info-frame\n");
-    wait_gdb_anser(sendCommandGdb);
+    wait_gdb_answer(sendCommandGdb);
     ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk);
     if(parsed!=NULL){    
         int find=FALSE;
@@ -341,7 +361,7 @@ void MI2getStackVariables(int (*sendCommandGdb)(char *), int thread,int  frame){
         char command[256];
         sprintf(command,"stack-list-variables --thread %d --frame %d --all-values\n", thread, frame);
         int tk=sendCommandGdb(command);
-        wait_gdb_anser(sendCommandGdb);
+        wait_gdb_answer(sendCommandGdb);
         ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk);
         if(parsed!=NULL){
             int find=FALSE;
