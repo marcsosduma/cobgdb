@@ -43,6 +43,7 @@ struct st_highlt {
     int color;
     wchar_t * token;
     int size;
+    int type;
     struct st_highlt * next;
 };
 
@@ -177,9 +178,23 @@ struct ST_MIInfo {
 
 typedef struct ST_MIInfo ST_MIInfo;
 
+enum types{
+    TP_SPACES,
+    TP_TOKEN,
+    TP_SYMBOL,
+    TP_NUMBER,
+    TP_COMMENT,
+    TP_STRING1,
+    TP_STRING2,
+    TP_ALPHA,
+    TP_RESERVED,
+    TP_OTHER
+};
+
 int show_info();
-// Test
+// Tests
 int testMI2();
+int testParser();
 
 // read_file.c
 int readCodFile(struct program_file * program);
@@ -237,8 +252,13 @@ int MI2verifyGdb(int (*sendCommandGdb)(char *));
 int MI2stepOut(int (*sendCommandGdb)(char *));
 int MI2variablesRequest(int (*sendCommandGdb)(char *));
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame);
+int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * lines );
 //variables.c
 int show_variables(int (*sendCommandGdb)(char *));
+int hover_variable(int level, int * notShow, int line_pos, int start_lin, 
+                   int end_lin, int lin, int start_linex_x,
+                   ST_DebuggerVariable * var,int (*sendCommandGdb)(char *), int bkg);
+int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));                   
 //debugger.c
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type);
 // output.c

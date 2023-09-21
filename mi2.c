@@ -182,7 +182,8 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
         sendCommandGdb(lastComand);
     }
     waitAnswer = TRUE;
-    running=TRUE;
+    showFile = TRUE;
+    running = TRUE;
 }
 
 int MI2stepInto(int (*sendCommandGdb)(char *)){
@@ -196,6 +197,7 @@ int MI2stepInto(int (*sendCommandGdb)(char *)){
     strcpy(command,"exec-step\n"); 
     sendCommandGdb(command);
     waitAnswer = TRUE;
+    showFile = TRUE;
     running=TRUE;
     return 0;
 }
@@ -206,6 +208,7 @@ int MI2stepOut(int (*sendCommandGdb)(char *)){
     strcpy(command,"exec-finish\n"); 
     sendCommandGdb(command);
     waitAnswer = TRUE;
+    showFile = TRUE;
     running=TRUE;
     return 0;
 }
@@ -216,6 +219,7 @@ int MI2start(int (*sendCommandGdb)(char *)){
     sendCommandGdb(command);
     waitAnswer = TRUE;
     running=TRUE;
+    showFile = TRUE;
     return 0;
 }
 
@@ -257,6 +261,7 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
         sendCommandGdb(command);
         wait_gdb_answer(sendCommandGdb);
         waitAnswer = TRUE;
+        showFile = TRUE;
         running=TRUE;
     }
 }
@@ -377,4 +382,15 @@ void MI2getStackVariables(int (*sendCommandGdb)(char *), int thread,int  frame){
 int MI2variablesRequest(int (*sendCommandGdb)(char *)){
     MI2getStackVariables(sendCommandGdb,1,0);
     return 0;
+}
+
+
+int findVariable(struct st_highlt * hight, int bkg, int start, int total){
+   
+}
+
+int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * line ){
+    char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
+    show_line_var(line->high, functionName, sendCommandGdb);
+    if(functionName!=NULL) free(functionName);
 }

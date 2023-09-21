@@ -149,6 +149,7 @@ int show_file(Lines * lines, int line_pos){
     char vbreak = ' ';
     char pline[252];
     char aux[100];
+    
     gotoxy(1,1);
     show_opt();
     int bkgColor=color_gray;
@@ -212,7 +213,8 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     int qtd_page = 0;
     char input_character;
     char command[256];
-
+    int dblAux = -1;
+    
     if(qtd_window_line>program_file.qtd_lines) qtd_window_line=program_file.qtd_lines;
     Lines * lines = program_file.lines;
     Lines * lb = NULL;
@@ -336,7 +338,9 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 break;
             case 's':
             case 'S':
+                dblAux= debug_line;
                 if(!waitAnswer) MI2stepInto(sendCommandGdb);
+                debug_line = dblAux;
                 break;
             case 'n':
             case 'N':
@@ -356,6 +360,24 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                         MI2goToCursor(sendCommandGdb, program_file.name_file, lb->file_line);
                     } 
                     showFile=TRUE;
+                }
+                break;
+            case 'h':
+            case 'H':
+                if(!waitAnswer){ 
+                    lb = lines;           
+                    for(int a=0;a<line_pos;a++) lb=lb->line_after;
+                    int check=hasCobolLine(lb->file_line);
+                    if(check>0){
+                        ctlVar=(ctlVar>10000)?1:ctlVar+1;
+                        waitAnswer = TRUE;
+                        int aux1=debug_line;
+                        int aux2=running;
+                        MI2hoverVariable(sendCommandGdb, lb);
+                        debug_line=aux1;
+                        running=aux2;      
+                        showFile=TRUE;
+                    } 
                 }
                 break;
             case 'v':
@@ -425,12 +447,12 @@ int main(int argc, char **argv) {
     SetConsoleOutputCP(CP_UTF8);
     #endif    
     if(argc<2){
-        printf("Informe GnuCOBOL file\n");
+        printf("Please provide the GnuCOBOL file.\n");
         return 0;
     }
     if(argc>1 && strncmp(argv[1],"--test",6)==0){
         #ifdef __WITH_TESTS_
-           // testParser();
+            testParser();
             testMI2();
         #else
             printf("Tests not included.\n");

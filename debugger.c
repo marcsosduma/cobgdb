@@ -18,19 +18,16 @@ char repeatTimeRegex[] = "(\"\\,\\s|^)\\'(\\s|0)\\'\\s\\<repeats\\s(\\[0-9]+)\\s
 
 void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *result) {
     char *value = strdup(valueStr);
-
     int isNegative = 0;
     if (value[0] == '-' || value[0] == '+') {
         isNegative = (value[0] == '-');
         memmove(value, value + 1, strlen(value));  // Remove the signal
     }
-
     char *wholeNumber = strtok(value, ".");
     char *decimals = strtok(NULL, ".");
     if (decimals == NULL) {
         decimals = "";
     }
-
     if (scale < 0) {
         decimals = "";
         int len = strlen(wholeNumber);
@@ -45,7 +42,6 @@ void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *
             decimals = "";
         }
     }
-
     char *valueResult = malloc(fieldSize + 1);
     strcpy(valueResult, wholeNumber);
     strcat(valueResult, decimals);
@@ -55,7 +51,6 @@ void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *
         char append[diff + 1];
         memset(append, '0', diff);
         append[diff] = '\0';
-
         if (fieldSize - scale < 0) {
             strcat(valueResult, append);
         } else {
@@ -71,7 +66,6 @@ void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *
             memmove(valueResult, valueResult + abs(diff), len - abs(diff) + 1);
         }
     }
-
     if (isSigned && isNegative) {
         char sign[2];
         sign[0] = valueResult[strlen(valueResult) - 1] + ZERO_SIGN_CHAR_CODE;
@@ -79,9 +73,7 @@ void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *
         valueResult[strlen(valueResult) - 1] = '\0';
         strcat(valueResult, sign);
     }
-
     strcpy(result, valueResult);
-
     free(value);
     free(valueResult);
 }
@@ -93,19 +85,16 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
         fieldSize=strlen(valueStr)-2;
     if (value[0] == '"') {
         memmove(value, value + 1, fieldSize+1);  // Remove comma
-        value[fieldSize]='\0';
-        
+        value[fieldSize]='\0';        
         char *endPtr;
         int signCharCode = value[strlen(value) - 1];
         char sign[2];
         sign[0] = '\0';
-
         if (signCharCode >= ZERO_SIGN_CHAR_CODE) {
             sign[0] = '-';
             sign[1] = '\0';
             value[strlen(value) - 1] = '\0';
         }
-
         if (strlen(value) < scale) {
             int diff = scale - strlen(value);
             char prefix[diff + 1];
@@ -120,13 +109,10 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
             suffix[diff] = '\0';
             strcat(value, suffix);
         }
-
         char *wholeNumber = malloc(fieldSize + 1);
         char *decimals = malloc(scale + 1);
-
         wholeNumber[0] = '\0';
         decimals[0] = '\0';
-
         if (strlen(value) >= abs(scale)) {
             strcpy(wholeNumber, value);
             if (abs(scale) > 0) {
@@ -136,7 +122,6 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
         }
         char *numericValue = malloc(fieldSize + scale + 3);  // +3 for . and signal
         numericValue[0] = '\0';
-
         strcat(numericValue, sign);
         strcat(numericValue, wholeNumber);
         if (strlen(decimals) > 0) {
@@ -155,10 +140,7 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
 static void replacestr(char *line, const char *search, const char *replace)
 {
      char *sp;
-
-     if ((sp = strstr(line, search)) == NULL) {
-         return;
-     }
+     if ((sp = strstr(line, search)) == NULL) return;
      int search_len = strlen(search);
      int replace_len = strlen(replace);
      int tail_len = strlen(sp+search_len);
@@ -174,9 +156,7 @@ char *CobolFieldDataParser(char *valueStr) {
         free(value);
         return NULL;
     }
-
     value = strchr(value, ' ') + 1;
-
     if (value[0] == '<') {
         if (strchr(value, ' ') == NULL) {
             free(toFree);
@@ -184,7 +164,6 @@ char *CobolFieldDataParser(char *valueStr) {
         }
         value = strchr(value, ' ') + 1;
     }
-
     int qtd = regex(repeatTimeRegex, value, m);
     if (qtd>0) {
         char replacement[250];
@@ -203,20 +182,13 @@ char *CobolFieldDataParser(char *valueStr) {
 
 
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
-    if (!valueStr) {
-        return NULL;
-    }
-    if (strncmp(valueStr, "0x", 2) == 0) {
-        valueStr=CobolFieldDataParser(valueStr);
-    }
-    if (!valueStr) {
-        return NULL;
-    }
+    if (!valueStr) return NULL;
+    if (strncmp(valueStr, "0x", 2) == 0) valueStr=CobolFieldDataParser(valueStr);
+    if (!valueStr) return NULL;
     if (strcmp(type, "numeric") == 0) {
         formatNumberParser(valueStr, fieldSize, scale);
         return valueStr;
-    }
-    else if (
+    } else if (
         strcmp(type, "numeric edited") == 0 ||
         strcmp(type, "alphanumeric") == 0 ||
         strcmp(type, "alphanumeric edited") == 0 ||
@@ -224,17 +196,15 @@ char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
         strcmp(type, "national edited") == 0
     ) {
         // AlphanumericValueParser parse to do
-        return valueStr;
-    }
-    else if (
+        return strdup(valueStr);
+    }else if (
         strcmp(type, "integer") == 0 ||
         strcmp(type, "group") == 0
     ) {
-        return valueStr;
-    }
-    else {
+        return strdup(valueStr);
+    } else {
         fprintf(stderr, "Type error: %s\n", type);
         return NULL;
     }
-    return valueStr;
+    return strdup(valueStr);
 }

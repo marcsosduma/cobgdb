@@ -21,19 +21,6 @@ extern int color_frame;
 boolean isProcedure = FALSE;
 int isProc=0;
 
-enum types{
-    TP_SPACES,
-    TP_TOKEN,
-    TP_SYMBOL,
-    TP_NUMBER,
-    TP_COMMENT,
-    TP_STRING1,
-    TP_STRING2,
-    TP_ALPHA,
-    TP_OTHER
-};
-
-
 wchar_t * toWUpper(wchar_t* str) {
   int j = 0;
   wchar_t ch;
@@ -182,9 +169,11 @@ void isReserved(struct st_highlt * h){
             h->color=color_blue;
             if(isProc==0 && wcsstr(L" PROCEDURE ",test)) isProc++;
             if(isProc==1 && wcsstr(L" DIVISION ",test)) isProcedure=TRUE;
+            h->type=TP_RESERVED;
         }
         if(isProcedure && wcsstr(COBOL_SPECIAL_WORDS, test)){
             h->color=color_pink;
+            h->type=TP_RESERVED;
         }        
     }
 }
@@ -197,7 +186,6 @@ int executeParse(){
     struct st_highlt * high = NULL;
     int pos=1;
     int tp_before=-1;
-    int type=-1;
     clearScreen();
     gotoxy(1,1);
     printf("\n");
@@ -221,63 +209,63 @@ int executeParse(){
             h->next=NULL;
             if(*wcharString==L' '){
                 h->token=wcharString;
-                type=TP_SPACES;
+                h->type=TP_SPACES;
                 h->size = parseSpaces(wcharString);
                 h->color = color_black;
                 wcharString+=h->size;
             }else if(*wcharString==L'\''){
                 h->token=wcharString;
-                type=TP_STRING1;
+                h->type=TP_STRING1;
                 h->size = parseStringHigh(wcharString);
                 h->color = color_yellow;
                 wcharString+=h->size;
             }else if(*wcharString==L'"'){
                 h->token=wcharString;
-                type=TP_STRING2;
+                h->type=TP_STRING2;
                 h->size = parseStringHigh(wcharString);
                 h->color = color_yellow;
                 wcharString+=h->size;
             }else if(iswdigit(*wcharString)){
                 h->token=wcharString;
                 h->color = color_green;
-                type=TP_NUMBER;
+                h->type=TP_NUMBER;
                 h->size = parseDigitOrAlpha(wcharString, h);
                 isReserved(h);
                 wcharString+=h->size;
             }else if(*wcharString==L'.'){
                 h->token=wcharString;
-                type=TP_SYMBOL;
+                h->type=TP_SYMBOL;
                 h->size = 1;
                 h->color = color_white;
                 wcharString+=h->size;
             }else if(iswalpha(*wcharString)){
                 h->token=wcharString;
-                type=TP_ALPHA;
+                h->type=TP_ALPHA;
                 h->size = parseAlpha(wcharString);
                 h->color = color_white;
                 isReserved(h);
                 wcharString+=h->size;
             }else if(*wcharString==L'*' && tp_before==TP_SPACES && pos==7){
                 h->token=wcharString;
-                type=TP_COMMENT;
+                h->type=TP_COMMENT;
                 h->size = wcslen(h->token);
                 h->color=color_dark_green;
                 wcharString+=h->size;
                 break;
             }else if(!iswalpha(*wcharString) && *wcharString!=L' ' && *wcharString!=L'\n' && *wcharString!=L'\0'){
                 h->token=wcharString;
-                type=TP_SYMBOL;
+                h->type=TP_SYMBOL;
                 h->size = parseSymbols(wcharString);
                 h->color=color_green;
                 if(wcsncmp(h->token,L"*>",2)==0){
                     h->color=color_dark_green;
-                    type=TP_COMMENT;
+                    h->type=TP_COMMENT;
                     h->size = wcslen (h->token);
                     wcharString+=h->size;
                     break;
                 }else if(tp_before==TP_SPACES && wcsncmp(h->token,L">>",2)==0){
                     h->color=color_dark_green;
-                    type=TP_COMMENT;
+                    h->type=TP_COMMENT;
                     h->size = wcslen (h->token);
                     wcharString+=h->size;
                     break;
@@ -285,14 +273,14 @@ int executeParse(){
                 wcharString+=h->size;
             }else{
                 h->token=wcharString;
-                type=TP_OTHER;
+                h->type=TP_OTHER;
                 h->size = wcslen(wcharString);
                 h->color=color_gray;
                 wcharString+=h->size;
                 break;
             }
             tk_before=h;
-            tp_before=type;
+            tp_before=h->type;
             pos++;
         }while(*wcharString!=L'\0');
         if(high->token!=NULL && high->size>0){
