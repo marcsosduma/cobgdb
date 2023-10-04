@@ -24,6 +24,7 @@ int WIDTH=80;
 int HEIGHT=25;
 int changeLine=FALSE;
 int color_frame=color_light_blue;
+char decimal_separator = '.';
 
 ST_Line * LineDebug=NULL;
 ST_Attribute * Attributes=NULL;
@@ -439,13 +440,17 @@ int main(int argc, char **argv) {
     char nameExecFile[256];
     char baseName[256];
     char nameCFile[256];
-
+    struct lconv *locale_info = localeconv();
     setlocale(LC_CTYPE, "");
     setlocale(LC_ALL,"");
     #if defined(_WIN32)
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
     #endif    
+
+    if (locale_info != NULL) {
+        decimal_separator = locale_info->decimal_point[0];
+    }
     if(argc<2){
         printf("Please provide the GnuCOBOL file.\n");
         return 0;

@@ -319,7 +319,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                 int len = wcstombs(NULL, wcBuffer, 0);
                 char *chval = (char *)malloc(len + 1);
                 wcstombs(chval, wcBuffer, len + 1);
-                ST_DebuggerVariable * var =  findVariableByCobol(functionName, chval);
+                ST_DebuggerVariable * var =  findVariableByCobol(functionName, toUpper(chval));
                 if(var!=NULL){
                     int notShow=FALSE;
                     qtd++;

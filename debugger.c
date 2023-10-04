@@ -7,11 +7,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <locale.h>
 #include "cobgdb.h"
 #include "regex_gdb.h"
 
 extern char m[10][512];
-
+extern char decimal_separator;
 char repeatTimeRegex[] = "(\"\\,\\s|^)\\'(\\s|0)\\'\\s\\<repeats\\s(\\[0-9]+)\\stimes\\>";
 
 #define ZERO_SIGN_CHAR_CODE 112
@@ -81,6 +82,9 @@ void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *
 
 void formatNumberParser(char *valueStr, int fieldSize, int scale) {
     char *value = strdup(valueStr);
+    char *originalLocale = setlocale(LC_NUMERIC, NULL);
+
+    setlocale(LC_NUMERIC, "C");
     if(fieldSize<0)
         fieldSize=strlen(valueStr)-2;
     if (value[0] == '"') {
@@ -127,6 +131,7 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
         if (strlen(decimals) > 0) {
             strcat(numericValue, ".");
             strcat(numericValue, decimals);
+            // sprintf(numericValue,"%c%s",decimal_separator,decimals);
         }
         sprintf(valueStr, "%.*f", scale, atof(numericValue));
         free(wholeNumber);
@@ -134,6 +139,7 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
         free(numericValue);
     }
     free(value);
+    setlocale(LC_NUMERIC, originalLocale);
 }
 
 

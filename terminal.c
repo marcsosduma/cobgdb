@@ -166,48 +166,6 @@ int getche(void)
 }
 #endif
 
-void get_terminal_size(int *width, int *height) {
-#if defined(_WIN32)
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-    *width = (int)(csbi.srWindow.Right-csbi.srWindow.Left+1);
-    *height = (int)(csbi.srWindow.Bottom-csbi.srWindow.Top+1);
-#elif defined(__linux__)
-    struct winsize ws;
-    ioctl(STDIN_FILENO, TIOCGWINSZ, &ws);
-    *width = (int)(ws.ws_col);
-    *height = (int)(ws.ws_row);
-#endif // Windows/Linux
-}
-
-void set_terminal_size(int width, int height){
-#if defined(_WIN32)
-    CONSOLE_SCREEN_BUFFER_INFO csbiInfo2;
-    HANDLE hConsoleOut = GetStdHandle( STD_OUTPUT_HANDLE );
-    SetConsoleSize(hConsoleOut, width, height);
-    //GetConsoleScreenBufferInfo( hConsoleOut, &csbiInfo2 );
-#elif defined(__linux__)
-   //signal(SIGWINCH, winsz_handler);
-   struct winsize w;
-   char buffer[80]="";
-   sprintf(buffer, "\033[8;%d;%dt\n", height, width);
-   ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-   printf("%s",buffer);
-   fflush(stdout);
-   tcdrain(STDOUT_FILENO);
-#endif // Windows/Linux
-}
-
-void gotoxy(int x, int y){
-    #if defined(_WIN32)
-    COORD pos = {x-1, y-1};
-    HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleCursorPosition(output, pos);
-    #elif defined(__linux__)
-    printf("\033[%d;%dH", (y), (x));
-    #endif
-}
-
 #if defined(_WIN32)
 static int is_readable_console(HANDLE h)
 {
@@ -256,6 +214,48 @@ int key_press(){
   disableRawMode();
   return ch_lin;
 #endif // Windows/Linux
+}
+
+void get_terminal_size(int *width, int *height) {
+#if defined(_WIN32)
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    *width = (int)(csbi.srWindow.Right-csbi.srWindow.Left+1);
+    *height = (int)(csbi.srWindow.Bottom-csbi.srWindow.Top+1);
+#elif defined(__linux__)
+    struct winsize ws;
+    ioctl(STDIN_FILENO, TIOCGWINSZ, &ws);
+    *width = (int)(ws.ws_col);
+    *height = (int)(ws.ws_row);
+#endif // Windows/Linux
+}
+
+void set_terminal_size(int width, int height){
+#if defined(_WIN32)
+    CONSOLE_SCREEN_BUFFER_INFO csbiInfo2;
+    HANDLE hConsoleOut = GetStdHandle( STD_OUTPUT_HANDLE );
+    SetConsoleSize(hConsoleOut, width, height);
+    //GetConsoleScreenBufferInfo( hConsoleOut, &csbiInfo2 );
+#elif defined(__linux__)
+   //signal(SIGWINCH, winsz_handler);
+   struct winsize w;
+   char buffer[80]="";
+   sprintf(buffer, "\033[8;%d;%dt\n", height, width);
+   ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+   printf("%s",buffer);
+   fflush(stdout);
+   tcdrain(STDOUT_FILENO);
+#endif // Windows/Linux
+}
+
+void gotoxy(int x, int y){
+    #if defined(_WIN32)
+    COORD pos = {x-1, y-1};
+    HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleCursorPosition(output, pos);
+    #elif defined(__linux__)
+    printf("\033[%d;%dH", (y), (x));
+    #endif
 }
 
 #ifdef _WIN32
@@ -418,16 +418,6 @@ void cls_screen(HANDLE hConsole)
 
     SetConsoleCursorPosition(hConsole, csbi.dwCursorPosition);
 }
-
-/* usage */
-/*
-int main() {
-  HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-  SetConsoleSize(hStdout, 80, 24);    
-  //char key = getchar();
-  return 0;
-}
-*/
 #endif
 
 char * get_textcolor_code(const int textcolor) { // Linux only
