@@ -16,9 +16,10 @@ extern int color_frame;
 int showOne = FALSE;
 int expand = FALSE;
 wchar_t wcBuffer[512];
+ST_DebuggerVariable * currentVar;
 
 int show_opt_var(){
-    char * opt = " COBGDB - (R)return (ENTER)expand/contract";
+    char * opt = " COBGDB - (R)return (ENTER)expand/contract (C)change var";
     char aux[100];
     sprintf(aux,"%-80s\r", opt);
     gotoxy(1,1);
@@ -50,7 +51,11 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
         }
         sprintf(varcobol,"%.*s%c%s: ",level*2," ",var->show,var->cobolName);
         printBK(" ", color_white, color_frame);  
-        bkg=(line_pos==lin)?color_gray:color_black;
+        bkg=color_black;
+        if(line_pos==lin){
+            bkg = color_gray;
+            currentVar = var;
+        }
         print_colorBK(color_pink, bkg);
         int nm = strlen(varcobol)-start_linex_x;
         int start_linex_x2=0;
@@ -111,6 +116,28 @@ ST_DebuggerVariable * firstVar(ST_DebuggerVariable * var){
     return var;
 }
 
+int change_var(int (*sendCommandGdb)(char *),int lin){
+    char aux[500];
+    int bkg= color_dark_red;
+
+    gotoxy(10,lin+2);
+    print_colorBK(color_white, color_blue);
+    printf("%-61ls",L" Change Variable");
+    printf("%ls",L"-");
+    gotoxy(10,lin+3);
+    print_colorBK(color_yellow, bkg);
+    sprintf(aux," %s: ",currentVar->cobolName);
+    printf("%-62s",aux);
+    gotoxy(10+strlen(aux),lin+3);
+    lin++;
+    print_colorBK(color_green, bkg);
+    fflush(stdout);
+    readchar(aux,50);    
+    MI2changeVariable(sendCommandGdb, currentVar, aux);
+    MI2variablesRequest(sendCommandGdb);
+    ctlVar=(ctlVar>10000)?1:ctlVar+1;
+}
+
 int show_variables(int (*sendCommandGdb)(char *)){
     gotoxy(1,1);
     int lin=0;    
@@ -122,6 +149,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
     char aux[100];
     int bkg;
 
+    currentVar= NULL;
     char input_character= ' ';
     ST_DebuggerVariable * var = firstVar(var);
     int old_lin=lin;
@@ -133,6 +161,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
             show_opt_var();
             gotoxy(1,2);
             showOne = FALSE;
+            currentVar = NULL;
             while(var!=NULL){
                 if(var->parent==NULL){
                     lin=print_variable(0, &notShow, line_pos, start_window_line, 
@@ -212,6 +241,15 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 expand=TRUE;
                 var=firstVar(var);
                 lin=0;
+                break;
+            case 'c':
+            case 'C':
+                if(currentVar!=NULL){
+                    change_var(sendCommandGdb, line_pos);
+                    var=firstVar(var);
+                    lin=0;
+                }
+                break;
             case 'r':
             case 'R':
                 break;
@@ -410,3 +448,5 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     }
     free(wcBuffer);
 }
+
+

@@ -17,8 +17,9 @@ char repeatTimeRegex[] = "(\"\\,\\s|^)\\'(\\s|0)\\'\\s\\<repeats\\s(\\[0-9]+)\\s
 
 #define ZERO_SIGN_CHAR_CODE 112
 
-void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *result) {
+char * formatNumber(char *valueStr, int fieldSize, int scale, int isSigned) {
     char *value = strdup(valueStr);
+    char *result = malloc(strlen(value)+1);
     int isNegative = 0;
     if (value[0] == '-' || value[0] == '+') {
         isNegative = (value[0] == '-');
@@ -77,6 +78,7 @@ void formatNumber(char *valueStr, int fieldSize, int scale, int isSigned, char *
     strcpy(result, valueResult);
     free(value);
     free(valueResult);
+    return result;
 }
 
 
@@ -101,14 +103,14 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
         }
         if (strlen(value) < scale) {
             int diff = scale - strlen(value);
-            char prefix[diff + 1];
+            char prefix[diff+1];
             memset(prefix, '0', diff);
             prefix[diff] = '\0';
             strcat(prefix, value);
             strcpy(value, prefix);
         } else if (scale < 0) {
             int diff = abs(scale);
-            char suffix[diff + 1];
+            char suffix[diff+1];
             memset(suffix, '0', diff);
             suffix[diff] = '\0';
             strcat(value, suffix);
@@ -184,6 +186,55 @@ char *CobolFieldDataParser(char *valueStr) {
             sprintf(value,"\"%s",value);
     }
     return value;
+}
+
+char* formatAlpha(const char* valueStr, int fieldSize) {
+    const char* value = valueStr;
+    if (value[0] == '"') {
+        value = &value[1];
+    }
+    size_t length = strlen(value);
+    if (value[length - 1] == '"') {
+        length--;
+    }
+    int diff = fieldSize - length;
+    if (diff > 0) {
+        char* formattedValue = (char*)malloc(fieldSize + 1);
+        strncpy(formattedValue, value, length);
+        for (int i = 0; i < diff; i++) {
+            formattedValue[length + i] = ' ';
+        }
+        formattedValue[fieldSize] = '\0';
+        return formattedValue;
+    } else if (diff < 0) {
+        char* formattedValue = (char*)malloc(fieldSize + 1);
+        strncpy(formattedValue, value, fieldSize);
+        formattedValue[fieldSize] = '\0';
+        return formattedValue;
+    } else {
+        char* formattedValue = strdup(value);
+        return formattedValue;
+    }
+}
+
+char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type) {
+    if (!valueStr) return NULL;
+    if (strcmp(type, "numeric") == 0) {
+        formatNumber(valueStr, fieldSize, scale, 0);
+        return valueStr;
+    } else if (
+        strcmp(type, "group") == 0 ||  strcmp(type, "numeric edited") == 0 ||
+        strcmp(type, "alphanumeric") == 0 || strcmp(type, "alphanumeric edited") == 0 ||
+        strcmp(type, "national") == 0 || strcmp(type, "national edited") == 0
+    ){
+        return formatAlpha(valueStr, fieldSize);
+    }else if (strcmp(type, "integer") == 0 ) {
+        return strdup(valueStr);
+    }else {
+        fprintf(stderr, "Type error: %s\n", type);
+        return NULL;
+    }
+    return strdup(valueStr);
 }
 
 

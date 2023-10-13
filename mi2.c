@@ -384,13 +384,60 @@ int MI2variablesRequest(int (*sendCommandGdb)(char *)){
     return 0;
 }
 
-
-int findVariable(struct st_highlt * hight, int bkg, int start, int total){
-   
-}
-
 int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * line ){
     char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
     show_line_var(line->high, functionName, sendCommandGdb);
     if(functionName!=NULL) free(functionName);
+}
+
+char* cleanRawValue(const char* rawValue) {
+    const char* containsQuotes = "\"";
+    char* cleanedRawValue = strdup(rawValue);
+
+    if (cleanedRawValue && cleanedRawValue[0] == '\"') {
+        memmove(cleanedRawValue, cleanedRawValue + 1, strlen(cleanedRawValue));
+    }
+    size_t length = strlen(cleanedRawValue);
+    if (length > 0 && cleanedRawValue[length - 1] == '\"') {
+        cleanedRawValue[length - 1] = '\0';
+    }
+    char* currentPos = cleanedRawValue;
+    char* result = NULL;
+    while (1) {
+        currentPos = strstr(currentPos, containsQuotes);
+        if (!currentPos) {
+            break;
+        }
+        memmove(currentPos + 1, currentPos, strlen(currentPos) + 1);
+        *currentPos = '\\';
+        currentPos += 2;
+    }
+    return cleanedRawValue;
+}
+
+
+int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue){
+    int hasCobGetFieldStringFunction = FALSE;
+    char aux[256];
+    char command[512];
+    char * cleanedRawValue = cleanRawValue(rawValue);
+    if (var->attribute!=NULL && strcmp(var->attribute->type,"integer")==0){
+        sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
+        int tk=sendCommandGdb(command);
+        wait_gdb_answer(sendCommandGdb);
+    }else if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
+        sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
+        int tk=sendCommandGdb(command);
+        wait_gdb_answer(sendCommandGdb);
+    } else{
+        strcpy(aux, var->cName);
+        if(strncmp(var->cName,"f_",2)==0) strcat(aux, ".data");
+        char * finalValue = NULL;
+        if(var->attribute!=NULL){
+            finalValue=formatValueVar(rawValue, var->size, var->attribute->scale, var->attribute->type);
+            sprintf(command,"data-evaluate-expression \"(void)memcpy(%s,\\\"%s\\\",%d)\"\n", aux, finalValue, var->size);
+            sendCommandGdb(command);
+            wait_gdb_answer(sendCommandGdb);
+        }
+    }
 }

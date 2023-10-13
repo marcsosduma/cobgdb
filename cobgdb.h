@@ -222,6 +222,7 @@ void print_no_resetBK(char * s, int textcolor, int backgroundcolor);
 void print_color_reset();
 void print_color(int textcolor);
 void print_colorBK(const int textcolor, const int backgroundcolor);
+int readchar(char * str, int size);
 // parser.c
 void SourceMap(char fileGroup[][512]);
 int parser(char * file_name, int fileN);
@@ -253,6 +254,7 @@ int MI2stepOut(int (*sendCommandGdb)(char *));
 int MI2variablesRequest(int (*sendCommandGdb)(char *));
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame);
 int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * lines );
+int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue);
 //variables.c
 int show_variables(int (*sendCommandGdb)(char *));
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 
@@ -261,6 +263,7 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
 int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));                   
 //debugger.c
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type);
+char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);
 // output.c
 char * openOuput(char *target);
 //highlight.c

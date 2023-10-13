@@ -19,7 +19,7 @@
 #define clrscr() printf("\e[1;1H\e[2J")
 #endif // Windows/Linux
 #define BUFSIZE 8192
-//#define DEBUG 0
+//#define DEBUG 1
 
 extern char * gdbOutput;
 extern int waitAnswer;

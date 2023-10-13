@@ -13,6 +13,7 @@
 #define maxViewWidth 200
 #define maxViewHeight 100
 void SetConsoleSize(HANDLE hStdout, int cols, int rows );
+#define VK_BACKSPACE 8
 #elif defined(__linux__)
 #include <sys/ioctl.h> // ioctl, TIOCGWINSZ
 #include <stdio.h>
@@ -44,6 +45,9 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 
 char color[200];
 
+void cursorON();
+void cursorOFF();
+
 #if defined(__linux__)
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define VK_DOWN 40
@@ -53,6 +57,7 @@ char color[200];
 #define VK_RIGHT 39
 #define VK_LEFT 37
 #define VK_ENTER 13
+#define VK_BACKSPACE 127
 
 struct editorConfig {
 	  int cx, cy;
@@ -199,12 +204,17 @@ int key_press(){
 
     if (is_readable_console(hIn)){ 
             ReadConsoleInput( hIn, &inp, 1, &num_of_events);
-            ReadConsoleInput( hIn, &inp, 1, &num_of_events);        
-            switch (inp.EventType)
-            {
-            case KEY_EVENT:
-                return inp.Event.KeyEvent.wVirtualKeyCode;
-                break;
+            ReadConsoleInput( hIn, &inp, 1, &num_of_events); 
+            if (inp.Event.KeyEvent.uChar.AsciiChar != 0) {
+                char character = inp.Event.KeyEvent.uChar.AsciiChar;
+                return character;
+            } else {
+                switch (inp.EventType)
+                {
+                    case KEY_EVENT:
+                    return inp.Event.KeyEvent.wVirtualKeyCode;
+                    break;
+                }
             }
     }
     //SetConsoleMode(hIn, fdwSaveOldMode);
@@ -215,6 +225,41 @@ int key_press(){
   return ch_lin;
 #endif // Windows/Linux
 }
+
+int readchar(char * str, int size) {
+    char c =' ';
+    int i = 0;
+    str[0] = '\0';
+    cursorON();
+    while (1) {
+        do{
+            c = key_press();
+            fflush(stdout);
+        }while(c<=0);
+        if (c == 13) {
+            break;
+        }
+        if ((c == VK_BACKSPACE | c==37) && i > 0) {
+            putchar(8);
+            putchar(' ');
+            putchar(8);
+            i--;
+            str[i] = '\0';
+        }else if(c==39 && strlen(str) < size){
+            putchar(' ');
+            str[i++]=' ';
+            str[i]='\0';
+        } else if (strlen(str) < size && c >= 32) {
+            str[i] = c;
+            putchar(c);
+            i++;
+            str[i] = '\0';
+        }
+    }
+    cursorOFF();
+    return 0;
+}
+
 
 void get_terminal_size(int *width, int *height) {
 #if defined(_WIN32)
