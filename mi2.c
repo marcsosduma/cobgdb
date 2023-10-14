@@ -415,7 +415,6 @@ char* cleanRawValue(const char* rawValue) {
     return cleanedRawValue;
 }
 
-
 int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue){
     int hasCobGetFieldStringFunction = FALSE;
     char aux[256];
@@ -423,21 +422,24 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
     char * cleanedRawValue = cleanRawValue(rawValue);
     if (var->attribute!=NULL && strcmp(var->attribute->type,"integer")==0){
         sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
-        int tk=sendCommandGdb(command);
+        sendCommandGdb(command);
         wait_gdb_answer(sendCommandGdb);
     }else if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
+        // TODO
         sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
-        int tk=sendCommandGdb(command);
+        sendCommandGdb(command);
         wait_gdb_answer(sendCommandGdb);
     } else{
         strcpy(aux, var->cName);
         if(strncmp(var->cName,"f_",2)==0) strcat(aux, ".data");
         char * finalValue = NULL;
         if(var->attribute!=NULL){
-            finalValue=formatValueVar(rawValue, var->size, var->attribute->scale, var->attribute->type);
+            finalValue=formatValueVar(cleanedRawValue, var->size, var->attribute->scale, var->attribute->type);
             sprintf(command,"data-evaluate-expression \"(void)memcpy(%s,\\\"%s\\\",%d)\"\n", aux, finalValue, var->size);
             sendCommandGdb(command);
             wait_gdb_answer(sendCommandGdb);
+            free(finalValue);
         }
     }
+    free(cleanedRawValue);
 }
