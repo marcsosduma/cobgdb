@@ -95,7 +95,7 @@ void createXtermProcess(char *xterm_args[]) {
         perror("fork");
         exit(EXIT_FAILURE);
     }
-    if (child_pid == 0) { // Processo filho
+    if (child_pid == 0) { // Child process
         if (execvp("xterm", xterm_args) == -1) {
             perror("execvp");
             exit(EXIT_FAILURE);
@@ -103,12 +103,12 @@ void createXtermProcess(char *xterm_args[]) {
     }
 }
 
-// Emular a função createTerminal
+// Open an xterm terminal if necessary.
 void createTerminal(char * sleepVal, const char *target) {
-    char title[100]; // Tamanho máximo do título
-    snprintf(title, sizeof(title), "GnuCOBOL Debug - %s", target);
-    char param[100]; // Tamanho máximo do título
-    snprintf(param, sizeof(param), "/usr/bin/tty; echo 'GnuCOBOL DEBUG'; sleep %s;", sleepVal);
+    char title[100]; // Maximum Title Length.
+    snprintf(title, sizeof(title)-1, "GnuCOBOL Debug - %s", target);
+    char param[100]; 
+    snprintf(param, sizeof(param)-1, "/usr/bin/tty; echo 'GnuCOBOL DEBUG'; sleep %s;", sleepVal);
     char *xterm_args[] = {
         "xterm",
         "-title",title,
