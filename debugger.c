@@ -19,7 +19,6 @@ char repeatTimeRegex[] = "(\"\\,\\s|^)\\'(\\s|0)\\'\\s\\<repeats\\s(\\[0-9]+)\\s
 
 char * formatNumber(char *valueStr, int fieldSize, int scale, int isSigned) {
     char *value = strdup(valueStr);
-    char *result = malloc(strlen(value)+1);
     int isNegative = 0;
     if (value[0] == '-' || value[0] == '+') {
         isNegative = (value[0] == '-');
@@ -75,7 +74,7 @@ char * formatNumber(char *valueStr, int fieldSize, int scale, int isSigned) {
         valueResult[strlen(valueResult) - 1] = '\0';
         strcat(valueResult, sign);
     }
-    strcpy(result, valueResult);
+    char * result = strdup(valueResult);
     free(value);
     free(valueResult);
     return result;
@@ -220,8 +219,7 @@ char* formatAlpha(const char* valueStr, int fieldSize) {
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type) {
     if (!valueStr) return NULL;
     if (strcmp(type, "numeric") == 0) {
-        formatNumber(valueStr, fieldSize, scale, 0);
-        return valueStr;
+        return formatNumber(valueStr, fieldSize, scale, 0);
     } else if (
         strcmp(type, "group") == 0 ||  strcmp(type, "numeric edited") == 0 ||
         strcmp(type, "alphanumeric") == 0 || strcmp(type, "alphanumeric edited") == 0 ||

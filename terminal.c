@@ -194,17 +194,11 @@ int key_press(){
 #if defined(_WIN32)
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     INPUT_RECORD inp;
-    DWORD num_of_events;
-    DWORD fdwSaveOldMode;
-    int ret = 0;
-    DWORD n = 0;
-    INPUT_RECORD ir;
-
-    //GetConsoleMode(hIn, &fdwSaveOldMode);
+    DWORD numEvents;
 
     if (is_readable_console(hIn)){ 
-            ReadConsoleInput( hIn, &inp, 1, &num_of_events);
-            ReadConsoleInput( hIn, &inp, 1, &num_of_events); 
+            ReadConsoleInput( hIn, &inp, 1, &numEvents);
+            ReadConsoleInput( hIn, &inp, 1, &numEvents); 
             if (inp.Event.KeyEvent.uChar.AsciiChar != 0) {
                 char character = inp.Event.KeyEvent.uChar.AsciiChar;
                 return character;
@@ -217,7 +211,22 @@ int key_press(){
                 }
             }
     }
-    //SetConsoleMode(hIn, fdwSaveOldMode);
+    /*
+    if (PeekConsoleInput(hIn, &inp, 1, &numEvents) && numEvents > 0) {
+        if (ReadConsoleInput(hIn, &inp, 1, &numEvents)) {
+            if (inp.EventType == KEY_EVENT && inp.Event.KeyEvent.bKeyDown) {
+                if (inp.Event.KeyEvent.uChar.AsciiChar != 0) {
+                    return inp.Event.KeyEvent.uChar.AsciiChar;
+                } else if (inp.Event.KeyEvent.uChar.UnicodeChar != 0) {
+                    return inp.Event.KeyEvent.uChar.UnicodeChar;
+                } else {
+                    return inp.Event.KeyEvent.wVirtualKeyCode;
+                }
+            }
+        }
+    }
+    */
+    
 #elif defined(__linux__)
   enableRawMode();
   int ch_lin= readKeyLinux();
