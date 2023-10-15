@@ -35,12 +35,18 @@ int start_gdb(char * name);
 void free_memory()
 {
     Lines * lines = program_file.lines;
-    while(lines!=NULL){
-        Lines * this_line = lines;
-        lines=lines->line_after;
-        if(this_line->line!=NULL) free(this_line->line);
-        if(this_line->high!=NULL) freeHighlight(this_line->high);
-        free(this_line);
+    Lines *current_line;
+
+    while (lines != NULL) {
+        current_line = lines;
+        lines = lines->line_after;
+        if (current_line->line != NULL) {
+            free(current_line->line);
+        }
+        if (current_line->high != NULL) {
+            freeHighlight(current_line->high);
+        }
+        free(current_line);
     }
 }
 
@@ -120,7 +126,7 @@ Lines * set_window_pos(int * line_pos){
 }
 
 int show_opt(){
-    char * opt = " COBGDB - (R)run  (N)next  (S)step  (C)continue (G)cursor (V)variables (Q)quit";
+    char * opt = " COBGDB - (R)run (N)next (S)step (C)continue (G)cursor (V/H)variables (Q)quit";
     char aux[100];
     sprintf(aux,"%-80s\r", opt);
     gotoxy(1,1);

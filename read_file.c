@@ -131,98 +131,81 @@ int isAbsolutPath(char * path){
 }
 
 int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp) {
-    // Check if either line, len or fp are NULL pointers
-    if(line == NULL || len == NULL || fp == NULL) {
+    if (line == NULL || len == NULL || fp == NULL) {
         errno = EINVAL;
         return -1;
     }
-    
-    // Use a chunk array of 128 bytes as parameter for fgets
-    char chunk[128];
-
-    // Allocate a block of memory for *line if it is NULL or smaller than the chunk array
-    if(*line == NULL || *len < sizeof(chunk)) {
+    char chunk[512];
+    if (*line == NULL || *len < sizeof(chunk)) {
         *len = sizeof(chunk);
-        if((*line = malloc(*len)) == NULL) {
+        if ((*line = malloc(*len)) == NULL) {
             errno = ENOMEM;
             return -1;
         }
     }
-
-    // "Empty" the string
     (*line)[0] = '\0';
-
-    while(fgets(chunk, sizeof(chunk), fp) != NULL) {
-        // Resize the line buffer if necessary
+    while (fgets(chunk, sizeof(chunk), fp) != NULL) {
         size_t len_used = strlen(*line);
         size_t chunk_used = strlen(chunk);
-
-        if(*len - len_used < chunk_used) {
-            // Check for overflow
-            if(*len > SIZE_MAX / 2) {
+        if (*len - len_used < chunk_used) {
+            if (*len > SIZE_MAX / 2) {
                 errno = EOVERFLOW;
                 return -1;
             } else {
                 *len *= 2;
             }
-            
-            if((*line = realloc(*line, *len)) == NULL) {
+            char *new_line = realloc(*line, *len);
+            if (new_line == NULL) {
+                free(*line);
                 errno = ENOMEM;
                 return -1;
             }
+            *line = new_line;
         }
-
-        // Copy the chunk to the end of the line buffer
         memcpy(*line + len_used, chunk, chunk_used);
         len_used += chunk_used;
         (*line)[len_used] = '\0';
-
-        // Check if *line contains '\n', if yes, return the *line length
-        if((*line)[len_used - 1] == '\n') {
+        if ((*line)[len_used - 1] == '\n') {
             return len_used;
         }
     }
-
     return -1;
 }
 
-typedef struct lista Lista;
-
-int readCodFile(struct program_file * program) {
+int readCodFile(struct program_file *program) {
     FILE *fp = fopen(program->name_file, "r");
-    if(fp == NULL) {
+    if (fp == NULL) {
         perror("Unable to open file!");
         exit(1);
     }
 
-    // Read lines from a text file using our own a portable getline implementation
     char *line = NULL;
     size_t len = 0;
-    program->lines = NULL;
-
-    Lines * line_before = NULL;
+    Lines *lines = NULL;
+    Lines *line_before = NULL;
     int qtd = 0;
-    while(my_getline(&line, &len, fp) != -1) {
-        // fputs(line, stdout);
-        // fputs("|*\n", stdout);
-        //printf("line length: %zd -> %s\n", strlen(line), line);
-        Lines* new_line = (Lines*) malloc(sizeof(Lines));
-        new_line->line_after=NULL;
-        new_line->line_before=NULL;
-        new_line->high=NULL;
-        if(program->lines == NULL){
-             program->lines = new_line;             
-        }else{
+
+    while (my_getline(&line, &len, fp) != -1) {
+        Lines *new_line = (Lines *)malloc(sizeof(Lines));
+        new_line->line_after = NULL;
+        new_line->line_before = NULL;
+        new_line->high = NULL;
+
+        if (lines == NULL) {
+            lines = new_line;
+        } else {
             new_line->line_before = line_before;
-            line_before->line_after = new_line;            
+            line_before->line_after = new_line;
         }
+
         line_before = new_line;
         new_line->line = line;
-        new_line->file_line=qtd+1;
+        new_line->file_line = qtd + 1;
         qtd++;
         line = NULL;
     }
+
     fclose(fp);
-    //free(line);
-    program->qtd_lines=qtd;
+    program->lines = lines;
+    program->qtd_lines = qtd;
 }

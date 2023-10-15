@@ -268,5 +268,5 @@ char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);
 char * openOuput(char *target);
 //highlight.c
 int executeParse();
-int freeHighlight(struct st_highlt * hight);
+void freeHighlight(struct st_highlt * hight);
 int printHighlight(struct st_highlt * hight, int bkg, int start, int tot);

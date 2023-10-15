@@ -147,13 +147,15 @@ int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
     free(wcBuffer);
 }
 
-int freeHighlight(struct st_highlt * hight){
-    struct st_highlt * h = hight;
-    struct st_highlt * ant = hight;
-    while(h!=NULL){
-        ant=h;
-        h=h->next;
-        free(ant);
+void freeHighlight(struct st_highlt * hight){
+    if (hight->token != NULL) {
+            free(hight->token);
+            hight->token=NULL;
+    }
+    while (hight != NULL) {
+        struct st_highlt *current = hight;
+        hight = hight->next;
+        free(current);
     }
 }
 
