@@ -50,37 +50,61 @@ void free_memory()
     }
 }
 
-int cobc_compile(char * file){
-    char * param[] = {
-                    "-g ",
-                    "-fsource-location ",
-                    "-ftraceall ",
-                    "-Q ",
-                    "--coverage ",
-                    "-A ",
-                    "--coverage ",
-                    "-v ",
-                    "-O0 ",
-                    "-x "};
+int cobc_compile(char * file, char values[10][256], int arg_count){
+    char *param[20]; 
+
+    // Inicialize os primeiros 10 elementos com os valores iniciais.
+    char *initial_params[] = {
+        "-g ",
+        "-fsource-location ",
+        "-ftraceall ",
+        "-Q ",
+        "--coverage ",
+        "-A ",
+        "--coverage ",
+        "-v ",
+        "-O0 ",
+        "-x "
+    };
+    int param_count = 10;
+    for (int i = 0; i < param_count; i++) {
+        param[i] = initial_params[i];
+    }
+    // Adicione os valores dinâmicos a partir de arg_count.
+    for (int i = 0; i < arg_count && param_count < 20; i++) {
+        char *param_value = malloc(strlen(values[i]) + 8);  // +8 para acomodar "-param " e o valor.
+        if (param_value == NULL) {
+            // Lida com falha na alocação de memória (pode ser necessário tratar isso de forma mais robusta).
+            return 1;
+        }
+        snprintf(param_value, strlen(values[i]) + 8, "%s ", values[i]);
+        param[param_count] = param_value;
+        param_count++;
+    }
 
     char compiler[256] = "cobc ";
-    int tot = (int)( sizeof(param) / sizeof(param[0]));
-    for(int a=0;a< tot;a++){
-        strcat(compiler,param[a]);
+    
+    for (int a = 0; a < param_count; a++) {
+        strcat(compiler, param[a]);
+        free(param[a]);  // Free the dynamically allocated memory for the values.
     }
-    strcat(compiler,file);
-    printf("%s\n",compiler);
-    FILE *pfd = popen( compiler, "r" );
-    if ( pfd == 0 ) {
-        printf( "failed to open pipe\n" );
+
+    strcat(compiler, file);
+    printf("%s\n", compiler);
+
+    FILE *pfd = popen(compiler, "r");
+    if (pfd == NULL) {
+        printf("failed to open pipe\n");
         return 1;
     }
-    while ( !feof( pfd ) ) {
+
+    while (!feof(pfd)) {
         char buf[1024] = {0};
-        fgets( buf, sizeof(buf) - 1, pfd );
-        printf( "%s", buf );
+        fgets(buf, sizeof(buf) - 1, pfd);
+        printf("%s", buf);
     }
-    pclose( pfd );
+
+    pclose(pfd);
     return 0;
 }
 
@@ -227,8 +251,6 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     Lines * lb = NULL;
     int line_file=0;
     int bstop = 0;
-    //startBuffer();
-
     //setvbuf(stdout, NULL, _IOFBF, 8192); // Habilita o buffering de saída com um buffer de 4 KB
     cursorOFF();
     clearScreen();
@@ -416,16 +438,16 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 break;
         }
         show_info();
-        //printf("Tecla = %d", input_character);
+        //printf("Key = %d", input_character);
     }
 }
 
-int loadfile(char * nameCobFile) {
+int loadfile(char * nameCobFile, char values[10][256], int arg_count) {
     int width=0, height=0;
     int qtd_page = 0;
     int input_character;
     strcpy(program_file.name_file, nameCobFile);
-    cobc_compile(program_file.name_file);
+    cobc_compile(program_file.name_file, values, arg_count);
     set_terminal_size(80, 25);
     #if defined(_WIN32)
     Sleep(200);
@@ -447,6 +469,9 @@ int main(int argc, char **argv) {
     char baseName[256];
     char nameCFile[256];
     struct lconv *locale_info = localeconv();
+    char values[10][256];   // Create an array of strings to store the arguments
+    int arg_count = 0;      // Initialize a counter for storing arguments
+
     setlocale(LC_CTYPE, "");
     setlocale(LC_ALL,"");
     #if defined(_WIN32)
@@ -469,15 +494,27 @@ int main(int argc, char **argv) {
             printf("Tests not included.\n");
         #endif
     }else{
+        // Iterate through the arguments
+        for (int i = 1; i < argc; i++) {
+            if (argv[i][0] == '-') {
+                // Check if the argument starts with "-"
+                if (arg_count < 10) {
+                    strncpy(values[arg_count], argv[i], sizeof(values[0]) - 1);
+                    values[arg_count][sizeof(values[0]) - 1] = '\0';  // Ensure the string is terminated
+                    arg_count++;
+                }
+            }
+        }
         strcpy(program_file.name_file,argv[1]);
-        cobc_compile(program_file.name_file);
+        //cobc_compile(program_file.name_file, values, arg_count);
         fileNameWithoutExtension(program_file.name_file, &baseName[0]);
         strcpy(nameExecFile, baseName);
         #if defined(_WIN32)
         strcat(nameExecFile,".exe");
         #endif
-        printf("Name: %s",nameExecFile);
-        loadfile(program_file.name_file);
+        printf("Name: %s\n",nameExecFile);
+        loadfile(program_file.name_file, values, arg_count);
+        //while(key_press()<=0);
         strcpy(nameCFile,baseName);
         strcat(nameCFile,".c");
         printf("Parser starting...\n");

@@ -11,7 +11,9 @@ To run the example program:
 1. On Windows, install MinGW and the REGEX library (contributions from MinGW).
 2. Execute the "make" command to compile the code.
 3. Run the example program:
-   cobgdb customer.cob
+   cobgdb customer.cob -lpdcurses  
+   
+In the example above, -lpdcurses is an example of arguments that can be indirectly passed to cobc by cobgdb, even if it is not used by cobgdb itself.
 
 On Linux, it is recommended to use Xterm to view the application.
 
