@@ -44,7 +44,12 @@ char * formatNumber(char *valueStr, int fieldSize, int scale, int isSigned) {
         }
     }
     char *valueResult = malloc(fieldSize + 1);
-    strcpy(valueResult, wholeNumber);
+    if(strlen(wholeNumber)>fieldSize){
+        strncpy(valueResult, wholeNumber, fieldSize);
+        valueResult[fieldSize]='\0';
+    }else{
+        strcpy(valueResult, wholeNumber);
+    }
     strcat(valueResult, decimals);
 
     int diff = fieldSize - strlen(valueResult);

@@ -225,8 +225,7 @@ int key_press(){
             }
         }
     }
-    */
-    
+    */  
 #elif defined(__linux__)
   enableRawMode();
   int ch_lin= readKeyLinux();
@@ -269,7 +268,6 @@ int readchar(char * str, int size) {
     return 0;
 }
 
-
 void get_terminal_size(int *width, int *height) {
 #if defined(_WIN32)
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -289,7 +287,6 @@ void set_terminal_size(int width, int height){
     CONSOLE_SCREEN_BUFFER_INFO csbiInfo2;
     HANDLE hConsoleOut = GetStdHandle( STD_OUTPUT_HANDLE );
     SetConsoleSize(hConsoleOut, width, height);
-    //GetConsoleScreenBufferInfo( hConsoleOut, &csbiInfo2 );
 #elif defined(__linux__)
    //signal(SIGWINCH, winsz_handler);
    struct winsize w;

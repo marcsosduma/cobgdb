@@ -23,6 +23,8 @@ char lastComand[200];
 int subroutine=-1;
 
 char nonOutput[] = "(([0-9]*|undefined)[\\*\\+\\-\\=\\~\\@\\&\\^])([^\\*\\+\\-\\=\\~\\@\\&\\^]{1,})";
+//char nonOutput[] = "(([0-9]*|undefined)[*+-=~@&^])([^*+-=~@&^]{1,})";
+
 char gdbRegex[]  = "([0-9]*|undefined)\\(gdb\\)";
 char numRegex[]  = "[0-9]+";
 char gcovRegex[] = "\"([0-9a-z_\\-\\/\\s\\:\\\\]+\\.o)\"";
@@ -435,7 +437,11 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
         char * finalValue = NULL;
         if(var->attribute!=NULL){
             finalValue=formatValueVar(cleanedRawValue, var->size, var->attribute->scale, var->attribute->type);
-            sprintf(command,"data-evaluate-expression \"(void)memcpy(%s,\\\"%s\\\",%d)\"\n", aux, finalValue, var->size);
+            //sprintf(command,"interpreter-exec console \"set %s = \\\"%s\\\"\"\n", aux, finalValue);
+            //sprintf(command,"data-evaluate-expression \"(void)memcpy(%s,\\\"%s\\\",%d)\"\n", aux, finalValue, var->size);
+            int qtt=strlen(finalValue);
+            if(qtt>var->size) qtt=var->size;
+            sprintf(command,"data-evaluate-expression \"(void)strncpy(%s,\\\"%s\\\",%d)\"\n", aux, finalValue, qtt);
             sendCommandGdb(command);
             wait_gdb_answer(sendCommandGdb);
             free(finalValue);

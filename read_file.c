@@ -70,8 +70,7 @@ char * Trim(char * s){
         buf[jx] = '\0';
         strncpy(s, buf, jx);  /* always looks as far as the null, but who cares? */
         free(buf);            /* no good leak goes unpunished */
-        return s;             /* modifies s in place *and* returns it for swank */
-    
+        return s;             /* modifies s in place *and* returns it for swank */  
 }
 
 char* subString (const char* input, int offset, int len, char* dest)
@@ -80,7 +79,7 @@ char* subString (const char* input, int offset, int len, char* dest)
   if ((offset + len) > input_len){
      if(input!=NULL) strcpy(dest, input);
      return NULL;
-  }
+  }  
   char * org = strdup(input);
   memcpy (dest, org + offset, len);
   dest[len]='\0';
