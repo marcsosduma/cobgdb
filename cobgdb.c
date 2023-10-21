@@ -67,6 +67,7 @@ int cobc_compile(char * file, char values[10][256], int arg_count){
         "-x "
     };
     int param_count = 10;
+    int initFree = param_count;
     for (int i = 0; i < param_count; i++) {
         param[i] = initial_params[i];
     }
@@ -86,7 +87,7 @@ int cobc_compile(char * file, char values[10][256], int arg_count){
     
     for (int a = 0; a < param_count; a++) {
         strcat(compiler, param[a]);
-        free(param[a]);  // Free the dynamically allocated memory for the values.
+        if(a>=initFree) free(param[a]);  // Free the dynamically allocated memory for the values.
     }
 
     strcat(compiler, file);
