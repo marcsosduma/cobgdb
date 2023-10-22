@@ -142,53 +142,26 @@ int readKeyLinux() {
 		return c;
 	}
 }
-
-int getch(void) 
-{ 
-    struct termios oldattr, newattr; 
-    int ch; 
-    tcgetattr(STDIN_FILENO, &oldattr); 
-    newattr = oldattr; 
-    newattr.c_lflag &= ~(ICANON | ECHO); 
-    tcsetattr(STDIN_FILENO, TCSANOW, &newattr); 
-    read(STDIN_FILENO, &ch, 1);
-    //ch = getchar(); 
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr); 
-    return ch; 
-} 
-/* reads from keypress, echoes */ 
-int getche(void) 
-{ 
-    struct termios oldattr, newattr; 
-    int ch; 
-    tcgetattr(STDIN_FILENO, &oldattr); 
-    newattr = oldattr; 
-    newattr.c_lflag &= ~(ICANON); 
-    tcsetattr(STDIN_FILENO, TCSANOW, &newattr); 
-    ch = getchar(); 
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr); 
-    return ch; 
-}
 #endif
 
-#if defined(_WIN32)
-static int is_readable_console(HANDLE h)
-{
-    int ret = 0;
-    DWORD n = 0;
-    INPUT_RECORD ir;
-
-    if (PeekConsoleInputA(h, &ir, 1, &n) && n > 0) {
-        if (ir.EventType == KEY_EVENT) {
-            ret = 1;
-        }
-        else {
-           ReadConsoleInputA(h, &ir, 1, &n);
-        }
-    }
-    return ret;
-}
-#endif
+//#if defined(_WIN32)
+//static int is_readable_console(HANDLE h)
+//{
+//    int ret = 0;
+//    DWORD n = 0;
+//    INPUT_RECORD ir;
+//
+//    if (PeekConsoleInputA(h, &ir, 1, &n) && n > 0) {
+//        if (ir.EventType == KEY_EVENT) {
+//            ret = 1;
+//        }
+//        else {
+//           ReadConsoleInputA(h, &ir, 1, &n);
+//        }
+//    }
+//    return ret;
+//}
+//#endif
 
 int key_press(){
 #if defined(_WIN32)
@@ -196,36 +169,46 @@ int key_press(){
     INPUT_RECORD inp;
     DWORD numEvents;
 
-    if (is_readable_console(hIn)){ 
-            ReadConsoleInput( hIn, &inp, 1, &numEvents);
-            ReadConsoleInput( hIn, &inp, 1, &numEvents); 
-            if (inp.Event.KeyEvent.uChar.AsciiChar != 0) {
-                char character = inp.Event.KeyEvent.uChar.AsciiChar;
-                return character;
-            } else {
-                switch (inp.EventType)
-                {
-                    case KEY_EVENT:
-                    return inp.Event.KeyEvent.wVirtualKeyCode;
-                    break;
-                }
-            }
-    }
-    /*
+    //if (is_readable_console(hIn)){ 
+    //        ReadConsoleInput( hIn, &inp, 1, &numEvents);
+    //        ReadConsoleInput( hIn, &inp, 1, &numEvents); 
+    //        if (inp.Event.KeyEvent.uChar.AsciiChar != 0) {
+    //            char character = inp.Event.KeyEvent.uChar.AsciiChar;
+    //            return character;
+    //        } else {
+    //            switch (inp.EventType)
+    //            {
+    //                case KEY_EVENT:
+    //                return inp.Event.KeyEvent.wVirtualKeyCode;
+    //                break;
+    //            }
+    //        }
+    //}
     if (PeekConsoleInput(hIn, &inp, 1, &numEvents) && numEvents > 0) {
         if (ReadConsoleInput(hIn, &inp, 1, &numEvents)) {
-            if (inp.EventType == KEY_EVENT && inp.Event.KeyEvent.bKeyDown) {
-                if (inp.Event.KeyEvent.uChar.AsciiChar != 0) {
-                    return inp.Event.KeyEvent.uChar.AsciiChar;
-                } else if (inp.Event.KeyEvent.uChar.UnicodeChar != 0) {
-                    return inp.Event.KeyEvent.uChar.UnicodeChar;
+            if (inp.EventType == KEY_EVENT){
+                if (inp.Event.KeyEvent.bKeyDown && inp.Event.KeyEvent.uChar.AsciiChar != 0) {
+                    char key = inp.Event.KeyEvent.uChar.AsciiChar;
+                    if(key<0){
+                          ReadConsoleInput( hIn, &inp, 1, &numEvents); 
+                          key=0;
+                    }
+                    return (int)key;
                 } else {
-                    return inp.Event.KeyEvent.wVirtualKeyCode;
+                    int virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
+                    if (virtualKeyCode==219) {
+                        ReadConsoleInput( hIn, &inp, 1, &numEvents); 
+                        return 0; // accents problem...
+                    }
+                    if(!inp.Event.KeyEvent.bKeyDown) return 0;
+                    FlushConsoleInputBuffer(hIn);
+                    return virtualKeyCode;
                 }
             }
         }
     }
-    */  
+    return 0;
+      
 #elif defined(__linux__)
   enableRawMode();
   int ch_lin= readKeyLinux();
