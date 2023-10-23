@@ -53,7 +53,7 @@ void free_memory()
 int cobc_compile(char * file, char values[10][256], int arg_count){
     char *param[20]; 
 
-    // Inicialize os primeiros 10 elementos com os valores iniciais.
+    // Initialize the first 10 elements with the initial values.
     char *initial_params[] = {
         "-g ",
         "-fsource-location ",
@@ -66,16 +66,14 @@ int cobc_compile(char * file, char values[10][256], int arg_count){
         "-O0 ",
         "-x "
     };
-    int param_count = 10;
+    int param_count = sizeof(initial_params) / sizeof(initial_params[0]);
     int initFree = param_count;
     for (int i = 0; i < param_count; i++) {
         param[i] = initial_params[i];
     }
-    // Adicione os valores dinâmicos a partir de arg_count.
     for (int i = 0; i < arg_count && param_count < 20; i++) {
-        char *param_value = malloc(strlen(values[i]) + 8);  // +8 para acomodar "-param " e o valor.
+        char *param_value = malloc(strlen(values[i]) + 8);
         if (param_value == NULL) {
-            // Lida com falha na alocação de memória (pode ser necessário tratar isso de forma mais robusta).
             return 1;
         }
         snprintf(param_value, strlen(values[i]) + 8, "%s ", values[i]);
@@ -206,19 +204,28 @@ int show_file(Lines * lines, int line_pos){
             if(show_line->high==NULL){
                 show_line->line[strcspn(show_line->line,"\n")]='\0';
                 int len=strlen(show_line->line);
+                wchar_t *wcharString = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
+                #if defined(_WIN32)
+                MultiByteToWideChar(CP_UTF8, 0, show_line->line, -1, wcharString,(len + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
+                #else
+                mbstowcs(wcharString, show_line->line, strlen(show_line->line) + 1);
+                #endif
+                len = wcslen(wcharString);
                 //if(len>0) show_line->line[strcspn(show_line->line,"\n")]='\0';
                 if(line_pos==i)
                     print_colorBK(color_green, bkgColor);
                 else
                     print_colorBK(color_white, color_black);
-                int nm = len -start_line_x;
-                if(nm>0){
-                    printf("%s", &show_line->line[start_line_x]);
-                    nm=(72-nm>0)?72-nm:72;
-                    printf("%*s", nm, " ");
+                int nm = len - start_line_x;
+                int qtdMove = (72 < nm)? 72 :len - start_line_x;
+                if(qtdMove>0){
+                    printf("%.*ls",qtdMove, &wcharString[start_line_x]);
+                    nm=72-qtdMove;
+                    if(nm>0) printf("%*s", nm, " ");
                 }else{
                     printf("%72s", " ");
                 }
+                free(wcharString);
             }else{
                 bkgColor=(line_pos==i)?color_gray:-1;
                 printHighlight(show_line->high, bkgColor, start_line_x, 72);
@@ -227,7 +234,6 @@ int show_file(Lines * lines, int line_pos){
             if(show_line == NULL){
                 if(line_pos>i) line_pos=i-1;
             }
-            //gotoxy(80,i+2);
             print_no_resetBK(" ",color_white, color_frame);
         }else{
             gotoxy(1,i+2);
@@ -256,6 +262,9 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     cursorOFF();
     clearScreen();
     while(program_file.lines!=NULL && !bstop){
+        #if defined(_WIN32)
+        showFile=win_size_verify(showFile);
+        #endif
         if(showFile){
             //setvbuf(stdout, NULL, _IONBF, 8192);
             show_opt();
@@ -496,13 +505,17 @@ int main(int argc, char **argv) {
         #endif
     }else{
         // Iterate through the arguments
+        boolean withHigh=TRUE;
         for (int i = 1; i < argc; i++) {
             if (argv[i][0] == '-') {
                 // Check if the argument starts with "-"
                 if (arg_count < 10) {
                     strncpy(values[arg_count], argv[i], sizeof(values[0]) - 1);
                     values[arg_count][sizeof(values[0]) - 1] = '\0';  // Ensure the string is terminated
-                    arg_count++;
+                    if(strcmp(values[arg_count],"-nh")==0)
+                        withHigh=FALSE;
+                    else
+                        arg_count++;
                 }
             }
         }
@@ -524,9 +537,9 @@ int main(int argc, char **argv) {
 		strcpy(fileGroup[0],nameCFile);
 		strcpy(fileGroup[1], "");
 		SourceMap(fileGroup);
-        executeParse(); 
+        if(withHigh) executeParse(); 
         printf("Parser end...\n");
-        //printf("A localidade corrente agora é %s \n",setlocale(LC_ALL,""));
+        //printf("The current locale is %s \n",setlocale(LC_ALL,""));
         //while(key_press()<=0);
         #if defined(__linux__)
         ttyName=openOuput(program_file.name_file);

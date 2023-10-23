@@ -17,6 +17,7 @@
        ACCEPT WK-KEY.
        DISPLAY "THE END".
        001-END-PRG.
+           *> CALL "PRG_MSG" USING "017","1","2"
            STOP RUN.
            EXIT.
        002-SHOW.

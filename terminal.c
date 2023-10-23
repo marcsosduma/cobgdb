@@ -47,6 +47,10 @@ char color[200];
 
 void cursorON();
 void cursorOFF();
+void clearScreen();
+
+int TERM_WIDTH=80;
+int TERM_HEIGHT=25;
 
 #if defined(__linux__)
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -266,10 +270,15 @@ void get_terminal_size(int *width, int *height) {
 }
 
 void set_terminal_size(int width, int height){
+    TERM_WIDTH = width;
+    TERM_HEIGHT = height;
 #if defined(_WIN32)
-    CONSOLE_SCREEN_BUFFER_INFO csbiInfo2;
-    HANDLE hConsoleOut = GetStdHandle( STD_OUTPUT_HANDLE );
-    SetConsoleSize(hConsoleOut, width, height);
+    HANDLE hConsole = GetStdHandle( STD_OUTPUT_HANDLE );
+    SetForegroundWindow(hConsole);
+    SetConsoleSize(hConsole, width, height);
+    SMALL_RECT sr = {0,0,TERM_WIDTH,TERM_HEIGHT};
+    SetConsoleWindowInfo(hConsole, TRUE, &sr);
+
 #elif defined(__linux__)
    //signal(SIGWINCH, winsz_handler);
    struct winsize w;
@@ -281,6 +290,33 @@ void set_terminal_size(int width, int height){
    tcdrain(STDOUT_FILENO);
 #endif // Windows/Linux
 }
+
+#if defined(_WIN32)
+int win_size_verify(int showFile){
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    COORD consoleSize;
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    BOOL isMaximized = IsZoomed(hConsole);
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    consoleSize = GetLargestConsoleWindowSize(hConsole);
+    if (isMaximized==TRUE || csbi.dwSize.X != TERM_WIDTH || csbi.dwSize.Y != TERM_HEIGHT) {
+        ShowWindow(hConsole, SW_RESTORE);
+        SetConsoleSize(hConsole, TERM_WIDTH, TERM_HEIGHT);
+        SMALL_RECT sr = {0,0,TERM_WIDTH,TERM_HEIGHT};
+        SetConsoleWindowInfo(hConsole, TRUE, &sr);
+        cursorOFF();
+        clearScreen();
+        Sleep(100);
+        return TRUE;
+    }
+    return showFile;
+}
+#else
+int win_size_verify(int showFile){
+    // TODO
+}
+#endif
+
 
 void gotoxy(int x, int y){
     #if defined(_WIN32)

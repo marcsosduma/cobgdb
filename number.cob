@@ -1,6 +1,6 @@
         >>SOURCE FORMAT IS FREE
 IDENTIFICATION DIVISION.
-program-id. GCACCEPT9.
+program-id. number.
 *>***********************************************************************************
 *> GnuCOBOL
 *> Purpose:    SHOWS HOW TO ACCEPT & CHECK A NUMBER WITH DCIMALS & SIGN FROM A FILED ON SCREEN
@@ -115,7 +115,8 @@ Accept-Field.
         move FieldZ to FieldX
         display FieldX                             at 0527 with Background-Color white Foreground-Color blue reverse-video
 
-        display 'correct format number '                 at 1505 with Background-Color white Foreground-Color green reverse-video
+        display 'correct format number                                         '
+                at 1505 with Background-Color white Foreground-Color green reverse-video
         display 'Edited Number.......:'                  at 0905 with Background-Color white Foreground-Color blue reverse-video
         display  FieldZ                                  at 0927 with Background-Color white Foreground-Color blue reverse-video
         display 'Number in memory....:'                  at 1105 with Background-Color white Foreground-Color blue reverse-video
