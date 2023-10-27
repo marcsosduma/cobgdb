@@ -11,6 +11,8 @@ endif
 #
 # Windows
 #
+# objdump -x cobgdb.exe | findstr /R /C:"DLL"
+#
 ifeq ($(WINMODE),1)
 CPP      = g++.exe
 CC       = gcc.exe
