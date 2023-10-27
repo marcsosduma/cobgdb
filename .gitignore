@@ -12,11 +12,14 @@ simple
 simple.c
 simple.c.h
 simple.c.l.h
+simple.exe
 customer
 customer.c
 customer.c.h
 customer.c.l.h
+customer.exe
 number
 number.c
 number.c.h
 number.c.l.h
+number.exe
