@@ -7,7 +7,7 @@ To compile the code on Windows, MinGW and the C regular expression libraries ava
 To run the example program:
 
 1. On Windows, install MingW. A copy of the library libgnurx was included to handle regular expressions (https://github.com/coapp-packages/libgnurx).
-2. Execute the "make" command to compile the code.
+2. Execute the "mingw32-make" command to compile the code.
 3. Run the example program:
    cobgdb customer.cob -lpdcurses  
    
