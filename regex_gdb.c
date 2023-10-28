@@ -8,7 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#if defined(_WIN32)
+#include "libgnurx/regex.h"
+#else
 #include <regex.h>
+#endif
 
 #define ARRAY_SIZE(array) (sizeof((array)) / sizeof((array)[0]))
 

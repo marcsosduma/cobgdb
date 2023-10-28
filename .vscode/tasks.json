@@ -3,7 +3,7 @@
         {
             "type": "cppbuild",
             "label": "C/C++: gcc.exe build active file",
-            "command": "make",
+            "command": "mingw32-make",
             "args": [],
             "options": {
                 "cwd": "${workspaceFolder}"

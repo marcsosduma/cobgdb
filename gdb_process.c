@@ -314,7 +314,7 @@ int sendCommandGdb(char * command)
       #ifdef DEBUG
       printf("%s\n",test);
       #endif
-      if((strcmp(test,"(gdb) ")==0 && dwRead<0) || (dwRead<0 && count0==5)){
+      if((strcmp(test,"(gdb) ")==0 && dwRead<0) || (dwRead<0 && count0==3)){
         return -1;
       }
    }

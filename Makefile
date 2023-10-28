@@ -10,22 +10,22 @@ endif
 
 #
 # Windows
-#
 # objdump -x cobgdb.exe | findstr /R /C:"DLL"
 #
 ifeq ($(WINMODE),1)
 CPP      = g++.exe
 CC       = gcc.exe
 RES      = 
-OBJ      = cobgdb.o terminal.o read_file.o regex_gdb.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o
-LINKOBJ  = cobgdb.o terminal.o read_file.o regex_gdb.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o
-LIBS     = -lregex
+OBJ      = cobgdb.o terminal.o read_file.o regex_gdb.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o regex.o
+LINKOBJ  = cobgdb.o terminal.o read_file.o regex_gdb.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o regex.o
+LIBS     = 
 INCS     = 
 CXXINCS  = 
 BIN      = cobgdb.exe
 CXXFLAGS = $(CXXINCS) -Wfatal-errors
 CFLAGS   = $(INCS) -fdiagnostics-color=always -g
 RM       = del
+CP       = copy
 else
 #
 # Linux
@@ -42,11 +42,17 @@ BIN      = cobgdb
 CXXFLAGS = $(CXXINCS) -Wfatal-errors
 CFLAGS   = $(INCS) -fdiagnostics-color=always -g
 RM       = rm -f
+CP		 = cp
 endif
 
-.PHONY: all all-before all-after clean clean-custom
+.PHONY: all all-before all-after clean clean-custom copy
 
-all: all-before $(BIN) all-after
+all: all-before $(BIN) all-after copy
+
+ifeq ($(WINMODE),1)
+copy:
+	$(CP) $(BIN) windows
+endif
 
 clean: clean-custom
 	${RM} $(OBJ)
@@ -98,3 +104,8 @@ output.o: output.c
 
 highlight.o: highlight.c
 	$(CC) -c highlight.c -o highlight.o $(CFLAGS)
+
+ifeq ($(WINMODE),1)
+regex.o: ./libgnurx/regex.c
+	$(CC) -c ./libgnurx/regex.c -o regex.o $(CFLAGS)
+endif

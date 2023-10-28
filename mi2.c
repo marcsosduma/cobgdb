@@ -92,7 +92,6 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                     if(parsed->outOfBandRecord->type!=NULL && strcmp(parsed->outOfBandRecord->type,"exec")==0){
                         if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"running")==0){
                             running=TRUE;
-                            //showFile=TRUE;
                         }else if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"stopped")==0){
                             ST_TableValues * reason = parsed->outOfBandRecord->output;
                             if(reason!=NULL && reason->key!=NULL && strcmp(reason->key,"reason")==0){
