@@ -462,20 +462,6 @@ boolean procedureFixRegex(struct st_parse line_parsed[100], int qtt_tk, char * n
     return ret;
 }
 
-//char subroutineRegex[] = "\\sPerform\\s";
-boolean subroutineRegex(struct st_parse line_parsed[100], int qtt_tk){
-    boolean ret = FALSE;
-    struct st_parse * m;
-    int qtt = 0;
-    while(qtt<qtt_tk){
-        m=tk_val(line_parsed, qtt_tk, qtt);        
-        if(m->size!=7 || strncasecmp(m->token,"Perform", 7)!=0){ qtt++; continue;}
-        ret = TRUE;
-        break;
-    }
-    return ret;
-}
-
 //char fixOlderFormat[] = "cob\\_trace\\_stmt";
 char *istrstr(const char *haystack, const char *needle) {
     while (*haystack) {
@@ -581,9 +567,11 @@ boolean dataStorageRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[]
             if(m->size!=2 || strncmp(m->token,"/*", 2)!=0) {p1++; continue;}
             p1++;
             strcpy(mm[idx],"");
+            int words=0;
             while(p1<qtt_tk){
                 m=tk_val(line_parsed, qtt_tk, p1++);
                 if(m->size==2 && strncmp(m->token,"*/", 2)==0) {idx++; break;}
+                if(words++>0) strcat(mm[idx]," ");
                 int len = strlen(mm[idx]);
                 strncat(mm[idx], m->token,m->size);
                 mm[idx][(len+m->size)]='\0';
@@ -636,9 +624,11 @@ boolean fieldRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_M
             if(m->size<2 || strncmp(m->token,"/*", 2)!=0) {p1++; continue;}
             p1++;
             strcpy(mm[idx],"");
+            int words=0;
             while(p1<qtt_tk){
                 m=tk_val(line_parsed, qtt_tk, p1++);
                 if(m->size>1 && strncmp(m->token,"*/", 2)==0) {idx++; break;}
+                if(words++>0) strcat(mm[idx]," ");
                 int len = strlen(mm[idx]);
                 strncat(mm[idx], m->token,m->size);
                 mm[idx][(len+m->size)]='\0';
@@ -806,10 +796,9 @@ int parser(char * file_name, int fileN){
         boolean bprocedureRegex = procedureRegex(line_parsed, qtt_tk, &tmp[0], &isPerform);
         if(bprocedureRegex){
                 int lineCobol = atoi(tmp);
-                if(LineAtu!=NULL && fileNameCompare(LineAtu->fileCobol, fileCobol) && LineAtu->lineCobol == lineCobol) {
+                if(LineAtu!=NULL && fileNameCompare(LineAtu->fileCobol, fileCobol)==0 && performLine==-2 && LineAtu->lineCobol == lineCobol) {
                     PopLine();
                 }
-                //int qt=regex(subroutineRegex, lines->line, m);
                 if(isPerform)
                     performLine = -2;
                 else
@@ -818,9 +807,6 @@ int parser(char * file_name, int fileN){
         }
         // fix new codegen - new
         //qtd=regex(procedureFixRegex, lines->line, m);
-        if(strstr(lines->line,"line 116")!=NULL){
-            int aaa=0;
-        }
         boolean bprocedureFixRegex = procedureFixRegex(line_parsed, qtt_tk, &tmp[0]);
         if(bprocedureFixRegex>0 && LineAtu!=NULL){
             int lineC = atoi(tmp);
@@ -954,7 +940,6 @@ ST_Line * getLineCobol(char * fileC, int lineC){
 void getVersion(char vrs[]){
     strcpy(vrs, version);
 }
-
 
 int getLinesCount(){
     int tot = 0;
