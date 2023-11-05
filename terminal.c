@@ -173,21 +173,6 @@ int key_press(){
     INPUT_RECORD inp;
     DWORD numEvents;
 
-    //if (is_readable_console(hIn)){ 
-    //        ReadConsoleInput( hIn, &inp, 1, &numEvents);
-    //        ReadConsoleInput( hIn, &inp, 1, &numEvents); 
-    //        if (inp.Event.KeyEvent.uChar.AsciiChar != 0) {
-    //            char character = inp.Event.KeyEvent.uChar.AsciiChar;
-    //            return character;
-    //        } else {
-    //            switch (inp.EventType)
-    //            {
-    //                case KEY_EVENT:
-    //                return inp.Event.KeyEvent.wVirtualKeyCode;
-    //                break;
-    //            }
-    //        }
-    //}
     if (PeekConsoleInput(hIn, &inp, 1, &numEvents) && numEvents > 0) {
         if (ReadConsoleInput(hIn, &inp, 1, &numEvents)) {
             if (inp.EventType == KEY_EVENT){
@@ -278,6 +263,7 @@ void set_terminal_size(int width, int height){
     SetConsoleSize(hConsole, width, height);
     SMALL_RECT sr = {0,0,TERM_WIDTH,TERM_HEIGHT};
     SetConsoleWindowInfo(hConsole, TRUE, &sr);
+    SetForegroundWindow(GetConsoleWindow());
 
 #elif defined(__linux__)
    //signal(SIGWINCH, winsz_handler);
@@ -300,12 +286,15 @@ int win_size_verify(int showFile){
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     consoleSize = GetLargestConsoleWindowSize(hConsole);
     if (isMaximized==TRUE || csbi.dwSize.X != TERM_WIDTH || csbi.dwSize.Y != TERM_HEIGHT) {
-        ShowWindow(hConsole, SW_RESTORE);
+        if (isMaximized) {
+            ShowWindow(hConsole, SW_RESTORE); 
+        }
         SetConsoleSize(hConsole, TERM_WIDTH, TERM_HEIGHT);
-        SMALL_RECT sr = {0,0,TERM_WIDTH,TERM_HEIGHT};
+        SMALL_RECT sr = {0,0,TERM_WIDTH-1,TERM_HEIGHT-1};
         SetConsoleWindowInfo(hConsole, TRUE, &sr);
         cursorOFF();
         clearScreen();
+        SetForegroundWindow(GetConsoleWindow());
         Sleep(100);
         return TRUE;
     }
@@ -313,10 +302,20 @@ int win_size_verify(int showFile){
 }
 #else
 int win_size_verify(int showFile){
-    // TODO
+    struct winsize w;
+    int ret=showFile;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    if(w.ws_row != TERM_HEIGHT || w.ws_col != TERM_WIDTH) {
+        w.ws_row = TERM_HEIGHT;
+        w.ws_col = TERM_WIDTH;
+        printf("\033[H\033[J");
+        printf("\033[8;%d;%dt", TERM_HEIGHT, TERM_WIDTH);
+        usleep(1500000);
+        ret=1;
+    }
+    return ret;
 }
 #endif
-
 
 void gotoxy(int x, int y){
     #if defined(_WIN32)

@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "cobgdb.h"
-#include "regex_gdb.h"
+#define MAX_MATCH_LENGTH 512
 //#define DEBUG 0
 
 extern ST_Line * LineDebug;
@@ -22,22 +22,74 @@ extern int changeLine;
 char lastComand[200];
 int subroutine=-1;
 
-char nonOutput[] = "(([0-9]*|undefined)[\\*\\+\\-\\=\\~\\@\\&\\^])([^\\*\\+\\-\\=\\~\\@\\&\\^]{1,})";
-//char nonOutput[] = "(([0-9]*|undefined)[*+-=~@&^])([^*+-=~@&^]{1,})";
-
-char gdbRegex[]  = "([0-9]*|undefined)\\(gdb\\)";
-char numRegex[]  = "[0-9]+";
-char gcovRegex[] = "\"([0-9a-z_\\-\\/\\s\\:\\\\]+\\.o)\"";
-
 void MI2log(char * log){
     #ifdef DEBUG
     printf("%s\n", log);
     #endif
 }
 
+//char nonOutput[] = "(([0-9]*|undefined)[\\*\\+\\-\\=\\~\\@\\&\\^])([^\\*\\+\\-\\=\\~\\@\\&\\^]{1,})";
+int fNonOutput(char * line, char mm[][MAX_MATCH_LENGTH]){
+   if(line==NULL) return 0;
+    int len=strlen(line);
+    if(len<1) return 0;
+    char ch = line[0];
+    int qtt=0, ret = 0, pos=0, pos1=0, pos2=0, pos3=0, find=0;
+    if(qtt<len){
+        ch=line[qtt];
+        if((ch>='0' && ch<='9')){
+            while((ch>='0' && ch<='9') && qtt<len){
+                mm[0][pos++]=ch;
+                mm[1][pos1++]=ch;
+                qtt++;
+                ch=line[qtt];
+            }
+            mm[0][pos]='\0';
+            mm[1][pos1]='\0';
+            find++;
+        }else if(ch=='u' && len>=9 && strncmp(line, "undefined", 9)==0){
+            strcpy(mm[0],"undefined");
+            strcpy(mm[1],"undefined");
+            qtt+=9;
+            find++;
+        }
+        if(qtt<len){
+            ch=line[qtt];
+            if(ch=='*' || ch=='+' || ch=='-' || ch=='=' || ch=='~' || ch=='@' || ch=='&' || ch=='^'){
+                mm[0][pos++]=ch;
+                mm[2][pos2++]=ch;
+                mm[0][pos]='\0';
+                mm[2][pos2]='\0';
+                find++;
+            }else{
+                return 0;
+            }
+        }
+        if(qtt<len){
+            qtt++;
+            ch=line[qtt];
+            int fd = 0;
+            while(ch != '*' && ch != '+' && ch != '-' && ch != '=' &&
+                    ch != '~' && ch != '@' && ch != '&' && ch != '^' && ch != ',' 
+                    && qtt<len) {
+                mm[0][pos++]=ch;
+                mm[3][pos3++]=ch;
+                qtt++;
+                ch=line[qtt];
+                fd++;
+            }
+            if(fd) ret=find+1;
+            mm[0][pos]='\0';
+            mm[3][pos3]='\0';
+        }
+    }
+    return ret;
+}
+
 int couldBeOutput(char * line) {
-    int qtd=regex(nonOutput, line, m);
-    if(qtd==0) return 1;
+    int qtd = fNonOutput(line, m);
+    if(qtd==0) 
+        return 1;
     return 0;
 }
 
@@ -59,6 +111,38 @@ ST_Line * hasLineCobol(ST_MIInfo * parsed){
     return hasLine;
 }
 
+//char gdbRegex[]  = "([0-9]*|undefined)\\(gdb\\)";
+int fGdbRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
+   if(line==NULL) return 0;
+   int len=strlen(line);
+   char ch;
+   ch = line[0];
+   int pos=0;
+   int ret=0;
+   strcpy(mm[0],"");
+   strcpy(mm[1],"");
+   if((ch>='0' && ch<='9')){
+        while(ch>='0' && ch<='9' && pos<len){
+            mm[0][pos]=ch;
+            mm[1][pos]=ch;
+            ch=line[++pos];
+        }
+        mm[0][pos]='\0';
+        mm[1][pos]='\0';
+   }else if(len>=9 && strncmp(line, "undefined", 9)==0){
+        strcpy(mm[0],"undefined");
+        strcpy(mm[1],"undefined");
+        pos+=9;
+   }
+   len = strlen(&line[pos]);
+   if(len>=5 & strncmp(&line[pos],"(gdb)",5)){
+    strcat(m[0],"(gdb)");
+    strcat(m[1],"(gdb)");
+    ret=1;
+   }
+   return ret;
+}
+
 ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
    if(gdbOutput==NULL) return NULL;
    char * line = strtok(gdbOutput, "\n");
@@ -70,7 +154,8 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
       printf( " %s\n", line ); //printing each token
       #endif
       if(couldBeOutput(line)){
-            int qtd = regex(gdbRegex, line, m);
+            //int qtd = regex(gdbRegex, line, m);
+            int qtd=fGdbRegex(line, m);
             if (qtd==0) {
                 MI2log(line);
             }

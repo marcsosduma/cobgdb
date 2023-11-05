@@ -149,7 +149,7 @@ Lines * set_window_pos(int * line_pos){
 }
 
 int show_opt(){
-    char * opt = " COBGDB - (R)run (N)next (S)step (C)continue (G)cursor (V/H)variables (Q)quit";
+    char * opt = " COBGDB - (R)run (N/S)step (B)breakpoint (G)go (C)cursor (V/H)var (Q)quit";
     char aux[100];
     sprintf(aux,"%-80s\r", opt);
     gotoxy(1,1);
@@ -258,13 +258,11 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     Lines * lb = NULL;
     int line_file=0;
     int bstop = 0;
-    //setvbuf(stdout, NULL, _IOFBF, 8192); // Habilita o buffering de saída com um buffer de 4 KB
+    //setvbuf(stdout, NULL, _IOFBF, 8192); 
     cursorOFF();
     clearScreen();
     while(program_file.lines!=NULL && !bstop){
-        #if defined(_WIN32)
         showFile=win_size_verify(showFile);
-        #endif
         if(showFile){
             //setvbuf(stdout, NULL, _IONBF, 8192);
             show_opt();
@@ -385,12 +383,12 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             case 'N':
                 if(!waitAnswer) MI2stepOver(sendCommandGdb);
                 break;
-            case 'c':
-            case 'C':
-                if(!waitAnswer) MI2stepOut(sendCommandGdb);
-                break;
             case 'g':
             case 'G':
+                if(!waitAnswer) MI2stepOut(sendCommandGdb);
+                break;
+            case 'c':
+            case 'C':
                 if(!waitAnswer){ 
                     lb = lines;           
                     for(int a=0;a<line_pos;a++) lb=lb->line_after;

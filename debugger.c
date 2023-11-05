@@ -9,11 +9,10 @@
 #include <stdlib.h>
 #include <locale.h>
 #include "cobgdb.h"
-#include "regex_gdb.h"
+#define MAX_MATCH_LENGTH 512
 
 extern char m[10][512];
 extern char decimal_separator;
-char repeatTimeRegex[] = "(\"\\,\\s|^)\\'(\\s|0)\\'\\s\\<repeats\\s(\\[0-9]+)\\stimes\\>";
 
 #define ZERO_SIGN_CHAR_CODE 112
 
@@ -148,16 +147,43 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
     setlocale(LC_NUMERIC, originalLocale);
 }
 
-
-static void replacestr(char *line, const char *search, const char *replace)
-{
-     char *sp;
-     if ((sp = strstr(line, search)) == NULL) return;
-     int search_len = strlen(search);
-     int replace_len = strlen(replace);
-     int tail_len = strlen(sp+search_len);
-     memmove(sp+replace_len,sp+search_len,tail_len+1);
-     memcpy(sp, replace, replace_len);
+//char repeatTimeRegex[] = "(\"\\,\\s|^)\\'(\\s|0)\\'\\s\\<repeats\\s(\\[0-9]+)\\stimes\\>";
+int fRepeatTimeRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
+    if(line==NULL) return 0;
+    int len=strlen(line);
+    if(len<8) return 0;
+    if(strstr(line,"<repeats")==NULL) return 0;
+    if(strstr(line,"times>")==NULL) return 0;
+    char ch = line[0];
+    int pos=0, pos1=0, pos2=0;
+    while(ch==' ' || ch==','){
+        pos++;
+        ch = line[pos];
+    }
+    if(ch=='\'' || ch=='"'){
+        pos++;
+        ch = line[pos];
+        while(ch!='\'' && ch!='"'){
+            mm[0][pos1++]=ch;
+            ch = line[++pos];
+        }
+        mm[0][pos1]='\0';
+    }
+    ch=line[++pos];
+    while(ch==' ') ch = line[++pos];
+    len = strlen(&line[pos]);
+    if(len<8 || strncmp(&line[pos],"<repeats",8)!=0) return 0;
+    pos+=8;
+    ch=line[pos];
+    while(ch!=' ') ch = line[++pos];
+    ch=line[++pos];
+    if(ch<'0' || ch>'9') return 0;
+    do{
+        mm[1][pos2++]=ch;
+        ch=line[++pos];
+    }while(ch>='0' && ch<='9');
+    mm[1][pos2]='\0';
+    return 2;
 }
 
 char *CobolFieldDataParser(char *valueStr) {
@@ -176,18 +202,18 @@ char *CobolFieldDataParser(char *valueStr) {
         }
         value = strchr(value, ' ') + 1;
     }
-    int qtd = regex(repeatTimeRegex, value, m);
+    //int qtd = regex(repeatTimeRegex, value, m);
+    int qtd = fRepeatTimeRegex(value, m);
     if (qtd>0) {
-        char replacement[250];
-        strcpy(replacement,"");
-        int size = atoi(m[3]);
+        int size = atoi(m[1]);
+        char * replacement = malloc(size+3);
+        strcpy(replacement,"\"");
         for(int i=0;i<size;i++){
-            strcat(replacement,m[2]);            
+            strcat(replacement,m[0]);            
         }
         strcat(replacement,"\"");
-        replacestr(value, m[0], replacement);
-        if(strncmp(value,"\"",1)!=0)
-            sprintf(value,"\"%s",value);
+        free(value);
+        value = replacement;
     }
     return value;
 }
@@ -234,8 +260,7 @@ char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type) {
     }else if (strcmp(type, "integer") == 0 ) {
         return strdup(valueStr);
     }else {
-        fprintf(stderr, "Type error: %s\n", type);
-        return NULL;
+        return formatAlpha(valueStr, fieldSize);
     }
     return strdup(valueStr);
 }
@@ -263,8 +288,7 @@ char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
     ) {
         return strdup(valueStr);
     } else {
-        fprintf(stderr, "Type error: %s\n", type);
-        return NULL;
+        return strdup(valueStr);
     }
     return strdup(valueStr);
 }

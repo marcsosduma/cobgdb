@@ -8,20 +8,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include "cobgdb.h"
-#include "regex_gdb.h"
 //#define DEBUG 
-
-char octalMatch[] = "^[0-7]{3}";
-char outOfBandRecordRegex[] = "^(([0-9]*|undefined)([\\*\\+\\=])|([\\~\\@\\&]))";
-char resultRecordRegex[] = "^([0-9]*)\\^(done|running|connected|error|exit)";
-char newlineRegex[] = "^\r\n?";
-char variableRegex[] = "^([a-zA-Z_\\-][a-zA-Z0-9_\\-]*)";
-char asyncClassRegex[] = "^([a-zA-Z0-9_\\-]*),";
+#define MAX_MATCH_LENGTH 512
 
 char m[10][512];
-char * pathRegex = "^\\.?([a-zA-Z_\\-][a-zA-Z0-9_\\-]*)";
-char * indexRegex = "^\\[([0-9]+)\\]($|\\.)";
-
 
 void parseValue(char * output, ST_TableValues * values);
 struct ST_TableValues * parseResult(char * output);
@@ -55,6 +45,21 @@ ST_TableValues * newTableValues(){
     values->value=NULL;
     values->key = NULL;
     return values;
+}
+
+//char octalMatch[] = "^[0-7]{3}";
+int fOctalMatch(char * line, char mm[][MAX_MATCH_LENGTH]){
+    if(strlen(line)<3) return -1;
+    for(int a=0;a<3;a++){
+        char ch = line[a];
+        if(line[a]>='0' && line[a]<='7'){
+            mm[0][a]=line[a];
+        }else{
+            return -1;
+        }
+    }
+    mm[0][3]='\0';
+    return 1;
 }
 
 char * parseString(char * str){
@@ -97,8 +102,8 @@ char * parseString(char * str){
                 char match[10][512];
                 char * aux=malloc(strlen(str)+1);
                 subString(str,i, strlen(str)-i, aux);
-                int qtd=regex(octalMatch, aux, match);
-                free(aux);
+                //int qtd=regex(octalMatch, aux, match);
+                int qtd=fOctalMatch(aux, &match[0]);
                 if(qtd>0){
                     strncpy(chrUTF8, (char *) &match[0], 3);
                     chrUTF8[3] = '\0';
@@ -108,6 +113,7 @@ char * parseString(char * str){
                 }else{
                   ret[x++]=str[i];  
                 }
+                free(aux);
             }
             escaped = FALSE;
         }else{
@@ -243,15 +249,39 @@ ST_TableValues * parseCommaValue(char * output){
     return values;
 }
 
+
+//char variableRegex[] = "^([a-zA-Z_\\-][a-zA-Z0-9_\\-]*)";
+int fVariableRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
+    if(line==NULL) return -1;
+    int len=strlen(line);
+    if(len<1) return -1;
+    int qtt=0;
+    char ch = line[0];
+    if(!(ch>='a' && ch<='z' ) && !(ch>='A' && ch<='Z') && ch!='_' && ch!='-') return -1;
+    int ret = 1;
+    int pos=0;
+    while(qtt<len){
+        ch=line[qtt++];
+        if((ch>='a' && ch<='z' ) || (ch>='A' && ch<='Z') || ch=='_' || ch=='-' || (ch>='0' && ch<='9')){
+            mm[0][pos++]=ch;
+        }else{
+            break;
+        }
+    }
+    mm[0][pos]='\0';
+    return ret;
+}
+
 ST_TableValues * parseResult(char * output){
     char match[10][512];
     struct ST_TableValues * values = NULL;
-    int qtd=regex(variableRegex, output, match);
+    //int qtd=regex(variableRegex, output, match);
+    int qtd = fVariableRegex(output,match);
     if(qtd>0){
         subString(output,strlen(match[0])+1, strlen(output)-strlen(match[0])-1, output);
         values = newTableValues();
-        values->key = malloc(strlen(match[1])+1);
-        strcpy(values->key, match[1]);
+        values->key = malloc(strlen(match[0])+1);
+        strcpy(values->key, match[0]);
         parseValue(output, values);
     }
     return values;
@@ -265,12 +295,124 @@ struct ST_TableValues * parseCommaResult(char * output){
     return values;
 }
 
+//char outOfBandRecordRegex[] = "^(([0-9]*|undefined)([\\*\\+\\=])|([\\~\\@\\&]))";
+int fOutOfBandRecordRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
+   if(line==NULL) return 0;
+   int len=strlen(line);
+   char ch;
+   ch = line[0];
+   int pos=0;
+   int ret=0;
+   if((ch>='0' && ch<='9') || (ch=='*' || ch=='+' || ch =='=')){
+        while(ch>='0' && ch<='9' && pos<len){
+            mm[0][pos]=ch;
+            mm[1][pos]=ch;
+            mm[2][pos]=ch;
+            ch=line[++pos];
+        }
+        mm[0][pos]='\0';
+        mm[1][pos]='\0';
+        mm[2][pos]='\0';
+        int p1=0;
+        if(pos<len){
+            ch = line[pos];
+            if(ch=='*' || ch=='+' || ch =='='){
+                mm[0][pos]=ch;
+                mm[1][pos++]=ch;
+                mm[3][p1++]=ch;
+                ret=4;
+            }
+        }
+        mm[0][pos]='\0';
+        mm[1][pos]='\0';
+        mm[3][p1]='\0';
+        
+   }else if(ch=='~' || ch=='@' || ch =='&'){
+        mm[0][0]=ch;
+        mm[0][1]='\0';
+        mm[1][0]=ch;
+        mm[1][1]='\0';
+        ret=2;
+   }else if(len>=9 && strncmp(line, "undefined", 9)==0){
+        strcpy(mm[0],"undefined");
+        strcpy(mm[1],"undefined");
+        ret=2;
+   }
+   return ret;
+}
+
+//char asyncClassRegex[] = "^([a-zA-Z0-9_\\-]*),";
+int fAsyncClassRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
+   if(line==NULL) return -1;
+    int len=strlen(line);
+    if(len<1) return -1;
+    int qtt=0;
+    char ch = line[0];
+    if(!(ch>='a' && ch<='z' ) && !(ch>='A' && ch<='Z') && ch!='_' && ch!='-') return -1;
+    int ret = 0;
+    int pos=0;
+    int pos1=0;
+    while(qtt<len){
+        ch=line[qtt++];
+        if((ch>='a' && ch<='z' ) || (ch>='A' && ch<='Z') || ch=='_' || ch=='-' || (ch>='0' && ch<='9') || ch==','){
+            mm[0][pos++]=ch;
+            if(ch!=','){
+                mm[1][pos1++]=ch;
+            }else{
+                ret=2;
+                break;
+            }
+        }else{
+            break;
+        }
+    }
+    mm[0][pos]='\0';
+    mm[1][pos1]='\0';
+    return ret;
+}
+
+//char resultRecordRegex[] = "^([0-9]*)\\^(done|running|connected|error|exit)";
+int fResultRecordRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
+   char * values[]={"done","running","connected","error","exit"};
+   if(line==NULL) return 0;
+   int len=strlen(line);
+   if(len<1) return 0;
+   char ch;
+   ch = line[0];
+   int pos=0;
+   int pos1=0;
+   int ret=0;
+   if((ch>='0' && ch<='9') || (ch=='^')){
+        while(((ch>='0' && ch<='9') || (ch=='^')) && pos<len){
+            mm[0][pos++]=ch;
+            if(ch!='^')
+                mm[1][pos1++]=ch;
+            ch=line[pos];
+        }
+        mm[0][pos]='\0';
+        mm[1][pos1]='\0';
+        strcpy(mm[2],"");
+        for(int x=0;x<5;x++){
+            int len = strlen(values[x]);
+            int l = strlen(&line[pos]);
+            if(l>=len && strncmp(&line[pos], values[x], len)==0){
+                strcat(mm[0], values[x]);
+                strcat(mm[2], values[x]);
+                ret=3;
+                break;
+            }
+        }
+   }
+   return ret;
+}
+
 ST_MIInfo * parseMI(char * out){
     #ifdef DEBUG
     printf("%s\n", out);
     #endif
     char * output = strdup(out);
     char match[10][512];
+    //char match1[10][512];
     ST_MIInfo * MIInfo = malloc(sizeof(ST_MIInfo));
     MIInfo->token= 0;
     MIInfo->outOfBandRecord=NULL;
@@ -280,7 +422,8 @@ ST_MIInfo * parseMI(char * out){
     ST_OutOfBandRecord * outOfBandRecord= NULL;
     ST_ResultRecords * resultRecords = NULL;
     while(1){
-        qtd=regex(outOfBandRecordRegex, output, match);
+        //qtd=regex(outOfBandRecordRegex, output, match);
+        qtd=fOutOfBandRecordRegex(output, match);
         if(qtd==0) break;
         #ifdef DEBUG
         printf("m[0]: %s\n", match[0]);
@@ -295,7 +438,9 @@ ST_MIInfo * parseMI(char * out){
         }
         if(qtd>3 && strlen(match[3])>0){
             char classMatch[10][512];
-            int qtd2 = regex(asyncClassRegex, output, classMatch);
+            //char classMatch1[10][512];
+            //int qtd2 = regex(asyncClassRegex, output, classMatch);
+            int qtd2 = fAsyncClassRegex(output, classMatch);
             subString(output,strlen(classMatch[1]), strlen(output)-strlen(classMatch[1]), output);
             ST_OutOfBandRecord * asyncRecord = malloc(sizeof(ST_OutOfBandRecord));            
             if(outOfBandRecord==NULL) outOfBandRecord = asyncRecord;
@@ -331,7 +476,8 @@ ST_MIInfo * parseMI(char * out){
             streamRecord->content=parseCString(output);
         }
     }
-    qtd = regex(resultRecordRegex, output, match);
+    //qtd = regex(resultRecordRegex, output, match);
+    qtd = fResultRecordRegex(output, match);
     if(qtd>0){
         subString(output,strlen(match[0]), strlen(output)-strlen(match[0]), output);
         if (strlen(match[1])>0 && MIInfo->token == 0) {
@@ -362,7 +508,6 @@ ST_MIInfo * parseMI(char * out){
     return MIInfo;
 }
 
-
 void freeTableValues(ST_TableValues * start){
         ST_TableValues * sch=start;
         if(sch->next_array!=NULL){
@@ -384,7 +529,6 @@ void freeTableValues(ST_TableValues * start){
 }
 
 void freeParsed(ST_MIInfo * parsed) {
-    //return;
     if(parsed==NULL)
         return;    
     if(parsed->outOfBandRecord!=NULL){
@@ -408,6 +552,79 @@ void freeParsed(ST_MIInfo * parsed) {
     free(parsed);
 }
 
+//char * pathRegex = "^\\.?([a-zA-Z_\\-][a-zA-Z0-9_\\-]*)";
+int fPathRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
+   if(line==NULL) return -1;
+    int len=strlen(line);
+    if(len<1) return -1;
+    char ch = line[0];
+    int qtt=0, ret = 0, idx=0, pos=0, pos1=0, find=0;
+    while(qtt<len){
+        ch=line[qtt];
+        if((ch>='a' && ch<='z' ) || (ch>='A' && ch<='Z') || ch=='_' 
+            || ch=='-' || (ch>='0' && ch<='9' && pos1>0) 
+            || (ch=='.' && pos==0)){
+            mm[idx][pos++]=ch;
+            if(ch!='.'){
+                mm[idx+1][pos1++]=ch;
+                find++;
+            }
+            qtt++;
+        }else{
+            if(find){
+                mm[idx][pos]='\0';
+                mm[idx+1][pos1]='\0';
+                pos=0;pos1=0;find=0;
+                idx+=2; ret+=2;
+            }else{
+                break;
+            }
+            if(idx==10) break;
+        }
+    }
+    if(find) ret+=2;
+    mm[idx][pos]='\0';
+    mm[idx+1][pos1]='\0';
+    return ret;
+}
+
+//char * indexRegex = "^\\[([0-9]+)\\]($|\\.)";
+int fIndexRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
+   if(line==NULL) return 0;
+    int len=strlen(line);
+    if(len<1) return 0;
+    char ch = line[0];
+    int qtt=1, ret = 0, idx=0, pos=1, pos1=0, pos2=0, find=0;
+    if(ch!='[') return 0;
+    strcpy(mm[0],"[");
+    if(qtt<len){
+        ch=line[qtt];
+        while(ch>='0' && ch<='9' && qtt<len){
+            mm[0][pos++]=ch;
+            mm[1][pos1++]=ch;
+            qtt++;
+            ch=line[qtt];
+        }
+        ch=line[qtt];
+        if(ch!=']') return 0;
+        mm[0][pos++]=ch;
+        mm[0][pos]='\0';
+        mm[1][pos1]='\0';
+        ret=3;
+        if(qtt<len){
+            ch=line[++qtt];
+            if(ch=='.' || ch=='$'){
+                mm[0][pos++]=ch;
+                mm[2][pos2++]=ch;
+            }
+            mm[0][pos]='\0';
+            mm[2][pos2]='\0';
+            qtt++;
+        }
+    }
+    return ret;
+}
+
 ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, boolean * find) {
     if(start==NULL)
         return start;    
@@ -419,7 +636,8 @@ ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, bo
         if(key==NULL){
             if(start==NULL || strlen(path)<1)
                 return start;
-            int qtd=regex(pathRegex, path, m);
+            //int qtd=regex(pathRegex, path, m);
+            int qtd=fPathRegex(path, m);
             if(qtd>0){
                 subString(path, strlen(m[0]),strlen(path)-strlen(m[0]), path);
                 key = strdup(m[1]);
@@ -428,11 +646,12 @@ ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, bo
                 subString(path, 1,strlen(path)-1, path);
                 continue;
             }else {
-                qtd=regex(indexRegex, path, m);
-                if(qtd>0){
+                //int qt=regex(indexRegex, path, m);
+                int qt=fIndexRegex(path, m);
+                if(qt>0){
                     subString(path, strlen(m[0]),strlen(path)-strlen(m[0]), path);
                     idx=atoi(m[1]);
-                    int qtd=regex(pathRegex, path, m);
+                    int qtd=fPathRegex(path, m);
                     ST_TableValues * sch=start;
                     while((idx--)>0){
                         sch=sch->array;

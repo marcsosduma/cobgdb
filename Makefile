@@ -16,8 +16,8 @@ ifeq ($(WINMODE),1)
 CPP      = g++.exe
 CC       = gcc.exe
 RES      = 
-OBJ      = cobgdb.o terminal.o read_file.o regex_gdb.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o regex.o
-LINKOBJ  = cobgdb.o terminal.o read_file.o regex_gdb.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o regex.o
+OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o string_parser.o
+LINKOBJ  = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o string_parser.o
 LIBS     = 
 INCS     = 
 CXXINCS  = 
@@ -33,8 +33,8 @@ else
 CPP      = g++
 CC       = gcc
 RES      = 
-OBJ      = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o regex_gdb.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o
-LINKOBJ  = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o regex_gdb.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o
+OBJ      = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
+LINKOBJ  = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
 LIBS     = 
 INCS     = 
 CXXINCS  = 
@@ -47,11 +47,12 @@ endif
 
 .PHONY: all all-before all-after clean clean-custom copy
 
-all: all-before $(BIN) all-after copy
+all: all-before $(BIN) all-after
 
 ifeq ($(WINMODE),1)
 copy:
 	$(CP) $(BIN) windows
+	$(RM) $(BIN)
 endif
 
 clean: clean-custom
@@ -68,9 +69,6 @@ terminal.o: terminal.c
 
 read_file.o: read_file.c
 	$(CC) -c read_file.c -o read_file.o $(CFLAGS)
-
-regex_gdb.o: regex_gdb.c
-	$(CC) -c regex_gdb.c -o regex_gdb.o $(CFLAGS)
 
 parser.o: parser.c
 	$(CC) -c parser.c -o parser.o $(CFLAGS)
@@ -105,7 +103,5 @@ output.o: output.c
 highlight.o: highlight.c
 	$(CC) -c highlight.c -o highlight.o $(CFLAGS)
 
-ifeq ($(WINMODE),1)
-regex.o: ./libgnurx/regex.c
-	$(CC) -c ./libgnurx/regex.c -o regex.o $(CFLAGS)
-endif
+string_parser.o: string_parser.c
+	$(CC) -c string_parser.c -o string_parser.o $(CFLAGS)

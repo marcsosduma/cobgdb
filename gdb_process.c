@@ -365,6 +365,7 @@ int start_gdb(char * name){
                          "gdb-set mi-async on\n",
                          "gdb-set print repeats 1000\n",
                          "gdb-set charset UTF-8\n",
+                         "gdb-set env TERM=xterm\n",
                          //"-environment-directory "+cwd+"\n",
                          //"-file-exec-and-symbols "+file+"\n",
                          ""

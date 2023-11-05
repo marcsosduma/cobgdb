@@ -8,18 +8,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <ctype.h>
 #include <errno.h>
 #include "cobgdb.h"
-#include "regex_gdb.h"
 #ifndef EOVERFLOW
 #define EOVERFLOW 132
 #endif
+#define MAX_MATCH_LENGTH 512
+//#define debug 0
 
 char* toUpper(char* str);
 int fileNameCompare(char * fileOne, char * fileTwo);
-//#define debug 0
-
-//
+// external variables
 extern ST_Line * LineDebug;
 extern ST_Attribute * Attributes;
 extern ST_DebuggerVariable * DebuggerVariable;
@@ -31,7 +31,7 @@ ST_DebuggerVariable * AtuDebuggerVariable;
 
 static char cwd[512]="";
 static char cleanedFile[256];
-static char version[100];
+static char version[100]="";
 
 
 // File C structure
@@ -54,7 +54,6 @@ struct ST_CFILE {
 // FILE C
 
 // LINES TO DEBUG
-
 ST_Attribute * GetAttributes(char * key){
     ST_Attribute * searchAttribute = Attributes;
     while(searchAttribute!=NULL){
@@ -64,12 +63,36 @@ ST_Attribute * GetAttributes(char * key){
     return searchAttribute;
 }
 
-
-char * flagMatchers[]={"0x[0-9][0-9][0-9]1","0x[0-9][0-9][0-9]2","0x[0-9][0-9][0-9]4","0x[0-9][0-9][0-9]8","0x[0-9][0-9]1[0-9]","0x[0-9][0-9]2[0-9]",
-                      "0x[0-9][0-9]4[0-9]","0x[0-9][0-9]8[0-9]","0x[0-9]1[0-9][0-9]","0x[0-9]2[0-9][0-9]","0x[0-9]4[0-9][0-9]","0x[0-9]8[0-9][0-9]",
-                      "0x1[0-9][0-9][0-9]"};
-
 int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp);
+
+int strpos(char *str1, char *str2)
+{
+    int b=strlen(str2);
+    for(int a=0;a<strlen(str1);a++){
+        if(strncmp(&str1[a], str2, b)==0){
+            return a;
+        }
+    }
+    return -1;
+}
+
+int searchflagMatchers(char * flagStr){
+    // 0xNNN1 0xNNN2 0xNNN4 0xNNN8 0xNN1N 0xNN2N 0xNN4N 0xNN8N 0xN1NN 0xN2NN 0xN4NN 0xN8NN 0x1NNN   
+    if(flagStr==NULL || strlen(flagStr)<6) return -1;
+    char dig[10];
+    int s = 0;
+    int ret=-1;
+    for(int x=5;x>1;x--){
+        subString(flagStr, x, 1, dig );
+        int qtd=strpos("1248", dig);
+        if(qtd>=0){
+            ret = qtd+s;
+            break;
+        }
+        s+=4;
+    }
+    return ret;
+}
 
 void buildFlags(ST_Attribute * attribute){  
         if (attribute->flagStr==NULL) {
@@ -78,11 +101,9 @@ void buildFlags(ST_Attribute * attribute){
         }
         char m[10][512];
         int a=0;
-        for(int idx=0;idx<(sizeof(flagMatchers)/sizeof(flagMatchers[0]));idx++){
-            int qtd=regex(flagMatchers[idx], attribute->flagStr, m);
-            if(qtd){
-                attribute->flags[a++]=idx;
-            }
+        int qtd = searchflagMatchers(attribute->flagStr);
+        if(qtd>=0){
+            attribute->flags[a++]=qtd;
         }
         attribute->flags[a++]=-1;
 }
@@ -136,7 +157,6 @@ int PopAttribute(){
     }
 }
 
-
 char * VariableType(char * type_org){
     char *org[]={"0x00","0x01","0x02","0x10","0x11","0x12","0x13","0x14","0x15","0x16","0x17",
                 "0x18","0x19","0x1A","0x1B","0x24","0x20","0x21","0x22","0x23","0x40","0x41",
@@ -146,7 +166,8 @@ char * VariableType(char * type_org){
                 "national","national edited","integer","group",""};
     int idx=0;  
     while(strlen(org[idx])>0){
-        if(strcmp(org[idx],type_org)==0) return ret[idx];
+        if(strcmp(org[idx],type_org)==0) 
+            return ret[idx];
         idx++;
     }
     return "";
@@ -288,8 +309,10 @@ int PopLine(){
         LineAtu = LineAtu->before;
         if(LineAtu==NULL)
             LineDebug = NULL;
-        else  
+        else{  
             LineAtu->next=NULL;
+            if(LineDebug->last!=NULL) LineDebug->last=LineAtu;
+        }
         if(toRemove->fileCobol!=NULL) free(toRemove->fileCobol);
         if(toRemove->fileC!=NULL) free(toRemove->fileC);
         free(toRemove);
@@ -347,20 +370,363 @@ void cleanedCFileName(char *dst, char *filename) {
     dst[len - 2] = 0;
 }
 
+boolean fileCobolRegex(struct st_parse line_parsed[100], int qtt_tk, char * fileName){
+    int pos=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    struct st_parse * m1;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=2 || strncmp(m->token,"/*", 2)!=0){ pos++; qtt++; continue;}
+        m=tk_val(line_parsed, qtt_tk, pos+1);      
+        if(m->size!=9 || strncasecmp(m->token,"Generated", 9)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+2);        
+        if(m->size!=4 || strncasecmp(m->token,"from", 4)!=0){ break;}
+        m1=tk_val(line_parsed, qtt_tk, pos+3);        
+        if(m1->type!=TP_ALPHA) { break;}
+        m=tk_val(line_parsed, qtt_tk, pos+4);        
+        if(m->size!=2 || strncmp(m->token,"*/", 2)!=0){ break;}
+        strncpy(fileName, m1->token, m1->size);
+        fileName[m1->size]='\0';
+        ret = TRUE;
+        break;
+    }
+    return ret;
+}
+
+//char procedureRegex[] = "/\\*\\sLine:\\s([0-9]+)(\\s+:\\sEntry\\s)?";
+boolean procedureRegex(struct st_parse line_parsed[100], int qtt_tk, char * numberLine, boolean * isPerform){
+    int pos=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    struct st_parse * m1;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=2 || strncmp(m->token,"/*", 2)!=0){ pos++; qtt++; continue;}
+        m=tk_val(line_parsed, qtt_tk, pos+1);        
+        if(m->size!=4 || strncasecmp(m->token,"Line", 4)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+2);      
+        if(m->size!=1 || strncmp(m->token,":", 1)!=0){ break;}
+        m1=tk_val(line_parsed, qtt_tk, pos+3);        
+        if(m1->type!=TP_NUMBER){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+4);        
+        if(m->size!=1 || strncmp(m->token,":", 1)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+5);        
+        if(m->size==5 && strncasecmp(m->token,"Entry", 5)==0){ break;}
+        strncpy(numberLine, m1->token, m1->size);
+        numberLine[m1->size]='\0';
+        ret = TRUE;
+        int qtt = pos+4;
+        *isPerform = FALSE;
+        while(qtt<qtt_tk){
+            m=tk_val(line_parsed, qtt_tk, qtt);        
+            if(m->size!=7 || strncasecmp(m->token,"Perform", 7)!=0){ qtt++; continue;}
+            *isPerform = TRUE;
+            break;
+        }
+        break;
+    }
+    return ret;
+}
+
+//char procedureFixRegex[] = "#line\\s([0-9]+)\\s\".*\\.c\"";
+boolean procedureFixRegex(struct st_parse line_parsed[100], int qtt_tk, char * numberLine){
+    int pos=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    struct st_parse * m1;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=5 || strncasecmp(m->token,"#line", 5)!=0){ break;}
+        m1=tk_val(line_parsed, qtt_tk, pos+1);        
+        if(m1->type!=TP_NUMBER){ break;}
+        int p1= pos+2;
+        while(p1<qtt_tk){
+            m=tk_val(line_parsed, qtt_tk, p1);
+            if(m->size>3){
+                char * cmp = (m->token + m->size - 3);
+                if(strncasecmp(cmp,".c\"",3)==0){
+                    ret = TRUE;
+                    strncpy(numberLine, m1->token, m1->size);
+                    numberLine[m1->size]='\0';
+                    break;
+                }
+            }
+            p1++;
+        }
+        break;
+    }
+    return ret;
+}
+
+//char subroutineRegex[] = "\\sPerform\\s";
+boolean subroutineRegex(struct st_parse line_parsed[100], int qtt_tk){
+    boolean ret = FALSE;
+    struct st_parse * m;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, qtt);        
+        if(m->size!=7 || strncasecmp(m->token,"Perform", 7)!=0){ qtt++; continue;}
+        ret = TRUE;
+        break;
+    }
+    return ret;
+}
+
+//char fixOlderFormat[] = "cob\\_trace\\_stmt";
+char *istrstr(const char *haystack, const char *needle) {
+    while (*haystack) {
+        const char *h = haystack;
+        const char *n = needle;
+        while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+            h++;
+            n++;
+        }
+        if (!*n)
+            return (char *)haystack;
+        haystack++;
+    }
+    return NULL;
+}
+boolean fixOlderFormat(char * value){
+    if(value==NULL || istrstr(value,"cob_trace_stmt")!=NULL) return TRUE;
+    return FALSE;
+}
+
+//char frame_ptrFindRegex[] = "frame\\_ptr--;";
+boolean frame_ptrFindRegex(char * value){
+    if(value==NULL || istrstr(value,"frame_ptr--;")!=NULL) return TRUE;
+    return FALSE;
+}
+
+//char attributeRegex[] = "static\\sconst\\scob_field_attr\\s(a_[0-9]+).*\\{(0x[0-9]*),\\s*([0-9-]*),\\s*([0-9-]*),\\s*(0x[0-9]{4}),.*";
+boolean attributeRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
+    int pos=0;
+    int idx=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    struct st_parse * m1;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=6 || strncasecmp(m->token,"static", 6)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+1);        
+        if(m->size!=5 || strncasecmp(m->token,"const", 5)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+2);        
+        if(m->size!=14 || strncasecmp(m->token,"cob_field_attr", 14)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+3);        
+        if(m->size==0){ break;}
+        strncpy(mm[idx],m->token,m->size);
+        mm[idx++][m->size]='\0';
+        m=tk_val(line_parsed, qtt_tk, pos+4);    
+        if(m->size!=1 || strncmp(m->token,"=", 1)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+5);    
+        if(m->size!=1 || strncmp(m->token,"{", 1)!=0){ break;}
+        int p1= pos+6;
+        while(p1<qtt_tk){
+            m=tk_val(line_parsed, qtt_tk, p1);
+            if(strncmp(m->token,",", m->size)==0) {p1++; continue;}
+            if(strncmp(m->token,"}", m->size)==0) {break;}
+            if(m->size>0){
+                strncpy(mm[idx],m->token,m->size);
+                mm[idx++][m->size]='\0';
+                ret = TRUE;
+            }
+            p1++;
+        }
+        break;
+    }
+    return ret;
+}
+
+//char dataStorageRegex[] = "static\\s+(.*)\\s+(b\\_[0-9]+)(\\;|\\[[0-9]+\\]).*/\\*\\s+([0-9a-z\\_\\-]+).*\\s+\\*/.*";
+boolean dataStorageRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
+    int pos=0;
+    int idx=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    struct st_parse * m1;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=6 || strncasecmp(m->token,"static", 6)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+1);        
+        strcmp(mm[idx],"");
+        if(m->size>0) strncpy(mm[idx],m->token,m->size);
+        mm[idx][m->size]='\0';
+        idx++;
+        m=tk_val(line_parsed, qtt_tk, pos+2);        
+        if(m->size<2 || strncasecmp(m->token,"b_", 2)!=0){ break;}
+        strncpy(mm[idx],m->token,m->size);
+        mm[idx++][m->size]='\0';
+        int p1= pos+3;
+        m=tk_val(line_parsed, qtt_tk, pos+3);
+        if(m->size==1 && strncmp(m->token,"[", 1)==0){
+             strcpy(mm[idx],"");
+            while(p1<qtt_tk){
+                m=tk_val(line_parsed, qtt_tk, p1++);
+                int len = strlen(mm[idx]);
+                strncat(mm[idx], m->token,m->size);
+                mm[idx][(len+m->size)]='\0';
+                if(m->size==1 && strncmp(m->token,"]", 1)==0) {idx++;break;}
+            }
+        }else{
+            strcmp(mm[idx++],"");
+        }
+        while(p1<qtt_tk){
+            m=tk_val(line_parsed, qtt_tk, p1);
+            if(m->size!=2 || strncmp(m->token,"/*", 2)!=0) {p1++; continue;}
+            p1++;
+            strcpy(mm[idx],"");
+            while(p1<qtt_tk){
+                m=tk_val(line_parsed, qtt_tk, p1++);
+                if(m->size==2 && strncmp(m->token,"*/", 2)==0) {idx++; break;}
+                int len = strlen(mm[idx]);
+                strncat(mm[idx], m->token,m->size);
+                mm[idx][(len+m->size)]='\0';
+                ret = TRUE;
+            }            
+        }
+        break;
+    }
+    return ret;
+}
+
+//char fieldRegex[] = "static\\s+cob_field\\s+([0-9a-z\\_]+)\\s+\\=\\s+\\{([0-9]+)\\,\\s+([0-9a-z\\_]+).+\\&(a\\_[0-9]+).*/\\*\\s+([0-9a-z\\_\\-]+)\\s+\\*/";
+boolean fieldRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
+    int pos=0;
+    int idx=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    struct st_parse * m1;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=6 || strncasecmp(m->token,"static", 6)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+1);        
+        if(m->size!=9 || strncasecmp(m->token,"cob_field", 9)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+2);        
+        strcmp(mm[idx],"");
+        if(m->size>0) strncpy(mm[idx],m->token,m->size);
+        mm[idx++][m->size]='\0';
+        m=tk_val(line_parsed, qtt_tk, pos+3);        
+        if(m->size==0 || strncmp(m->token,"=", 1)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+4);
+        if(m->size<0 || strncmp(m->token,"{", 1)!=0) { break;}
+        int p1 = pos+5;
+        while(p1<qtt_tk){
+            m=tk_val(line_parsed, qtt_tk, p1);
+            if(m->size>0 && strncmp(m->token,",", 1)==0) { p1++;continue;}
+            if(m->size>0 && strncmp(m->token,"&", 1)==0) { p1++;continue;}
+            if(m->size<1 || strncmp(m->token,"}", 1)==0) { break;}
+            strncpy(mm[idx],m->token,m->size);
+            mm[idx++][m->size]='\0';
+            while(p1<qtt_tk && m->size>0 && strncmp(m->token,"}", 1)!=0
+                    && strncmp(m->token,",", 1)!=0){
+                p1++;
+                m=tk_val(line_parsed, qtt_tk, p1);
+             }
+        }
+        p1++;
+        while(p1<qtt_tk){
+            m=tk_val(line_parsed, qtt_tk, p1);
+            if(m->size<2 || strncmp(m->token,"/*", 2)!=0) {p1++; continue;}
+            p1++;
+            strcpy(mm[idx],"");
+            while(p1<qtt_tk){
+                m=tk_val(line_parsed, qtt_tk, p1++);
+                if(m->size>1 && strncmp(m->token,"*/", 2)==0) {idx++; break;}
+                int len = strlen(mm[idx]);
+                strncat(mm[idx], m->token,m->size);
+                mm[idx][(len+m->size)]='\0';
+                ret = TRUE;
+            }            
+        }
+        break;
+    }
+    return ret;
+}
+
+//char functionRegex[] = "/\\*\\sProgram\\slocal\\svariables\\sfor\\s'(.*)'\\s\\*/";
+boolean functionRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
+    int pos=0;
+    int idx=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=2 || strncmp(m->token,"/*", 2)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+1);        
+        if(m->size!=7 || strncasecmp(m->token,"Program",7)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+2);        
+        if(m->size!=5 || strncasecmp(m->token,"local", 5)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+3);        
+        if(m->size!=9 || strncasecmp(m->token,"variables", 9)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+4);        
+        if(m->size!=3 || strncasecmp(m->token,"for", 3)!=0){ break;}
+        int p1 = pos+5;
+        strcpy(mm[idx],"");
+        while(p1<qtt_tk){
+            m=tk_val(line_parsed, qtt_tk, p1++);
+            if(m->size==2 && strncmp(m->token,"*/", 2)==0) { break;}
+            int len = strlen(mm[idx]);
+            strncat(mm[idx], m->token,m->size);
+            mm[idx][(len+m->size)]='\0';
+            ret = TRUE;
+        }            
+        break;
+    }
+    return ret;
+}
+
+//char versionRegex[] = "/\\*\\sGenerated by\\s+cobc\\s([0-9a-z\\-\\.]+)\\s+\\*/";
+boolean versionRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
+    int pos=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=2 || strncmp(m->token,"/*", 2)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+1);      
+        if(m->size!=9 || strncasecmp(m->token,"Generated", 9)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+2);        
+        if(m->size!=2 || strncasecmp(m->token,"by", 2)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+3);        
+        if(m->size!=4 || strncasecmp(m->token,"cobc", 4)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+4);        
+        strncpy(mm[0], m->token, m->size);
+        mm[0][m->size]='\0';
+        ret = TRUE;
+        break;
+    }
+    return ret;
+}
+
+//char fileIncludeRegex[] = "\\#include\\s+\\\"([0-9a-z_\\-\\.\\s]+)\\\"";
+boolean fileIncludeRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
+    int pos=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=8 || strncasecmp(m->token,"#include", 8)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+1);      
+        if(m->size<1 || strncmp(m->token,"\"", 1)!=0){ break;}
+        strncpy(mm[0], m->token, m->size);
+        mm[0][m->size]='\0';
+        ret = TRUE;
+        break;
+    }
+    return ret;
+}
+
 int parser(char * file_name, int fileN){
-    char procedureRegex[] = "/\\*\\sLine:\\s([0-9]+)(\\s+:\\sEntry\\s)?";
-    //const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s\\:]+)\s+\*\//i;
-    char fileCobolRegex[] = "/\\*\\sGenerated from\\s+([\\.0-9/a-z\\-]+\\w)"; // \\s+([0-9a-z\\/\\_\\-\\.\\s:]+)\\s+\\*/";
-    char versionRegex[] = "/\\*\\sGenerated by\\s+cobc\\s([0-9a-z\\-\\.]+)\\s+\\*/";
-    char subroutineRegex[] = "\\sPerform\\s";
-    char procedureFixRegex[] = "#line\\s([0-9]+)\\s\".*\\.c\"";
-    char fixOlderFormat[] = "cob\\_trace\\_stmt";
-    char attributeRegex[] = "static\\sconst\\scob_field_attr\\s(a_[0-9]+).*\\{(0x[0-9]*),\\s*([0-9-]*),\\s*([0-9-]*),\\s*(0x[0-9]{4}),.*";
-    char dataStorageRegex[] = "static\\s+(.*)\\s+(b\\_[0-9]+)(\\;|\\[[0-9]+\\]).*/\\*\\s+([0-9a-z\\_\\-]+).*\\s+\\*/.*";
-    char fieldRegex[] = "static\\s+cob_field\\s+([0-9a-z\\_]+)\\s+\\=\\s+\\{([0-9]+)\\,\\s+([0-9a-z\\_]+).+\\&(a\\_[0-9]+).*/\\*\\s+([0-9a-z\\_\\-]+)\\s+\\*/";
-    char fileIncludeRegex[] = "\\#include\\s+\\\"([0-9a-z_\\-\\.\\s]+)\\\"";
-    char functionRegex[] = "/\\*\\sProgram\\slocal\\svariables\\sfor\\s'(.*)'\\s\\*/";
-    char frame_ptrFindRegex[] = "frame\\_ptr--;";
     char m[10][512];
     char fileCobol[1024];
     char functionName[512];
@@ -370,8 +736,9 @@ int parser(char * file_name, int fileN){
     int performLine = -1;
     struct ST_CFILE program_cfile;
     int qtd = 0;
-    int isVersion2_2_or_3_1_1=0;
-    char *path = NULL;
+    boolean isVersion2_2_or_3_1_1=FALSE;
+    char *path = NULL;    
+    char tmp[300];
 
     normalizePath(file_name);
 
@@ -393,101 +760,125 @@ int parser(char * file_name, int fileN){
     strcpy(program_cfile.name_cfile, file_name);
     
     readCFile(&program_cfile);
-    Clines * lines = program_cfile.clines;    
+    Clines * lines = program_cfile.clines;  
+    boolean bfileCobolRegex=FALSE;
+    struct st_parse line_parsed[100];
+    int qtt_tk;
     //gotoxy(1,1); noColor();
     for(int lineNumber=0;lineNumber<program_cfile.qtd_clines;lineNumber++){
         #ifdef debug
         printf("%s", lines->line);
         #endif
-        qtd=regex(fileCobolRegex, lines->line, m);
-        if(qtd>0){
-            //char * test= realpath(m[1], buffer);
-            //char sep = '/';
-            if(!isAbsolutPath(m[1])){
-                char tmp1[512];
-                strcpy(tmp1,getFileNameFromPath(m[1]));
-                sprintf(fileCobol,"%s%c%s",cwd,sep,tmp1);
-            }else{
-                strcpy(fileCobol, m[1]);
-            }            
-            if(fileN==0){
-                strcpy(program_file.name_file, fileCobol);
+        qtt_tk=0;
+        lineParse(lines->line, line_parsed, &qtt_tk);
+        if(!bfileCobolRegex){            
+            bfileCobolRegex = fileCobolRegex(line_parsed, qtt_tk, &tmp[0]);
+            if(bfileCobolRegex){
+                char * test= realpath(tmp, buffer);
+                if(!isAbsolutPath(tmp)){
+                    char tmp1[512];
+                    strcpy(tmp1,getFileNameFromPath(tmp));
+                    sprintf(fileCobol,"%s%c%s",cwd,sep,tmp1);
+                }else{
+                    strcpy(fileCobol, tmp);
+                }            
+                if(fileN==0){
+                    strcpy(program_file.name_file, fileCobol);
+                }
             }
         }
-        qtd=regex(functionRegex, lines->line, m);
-        if(qtd>0){
-            strcpy(functionName,toLower(m[1]));
-            strcat(functionName, "_");
+        
+        //qtd=regex(functionRegex1, lines->line, m);
+        boolean bfunctionRegex = functionRegex(line_parsed, qtt_tk, m);
+        if(bfunctionRegex){
+            if(m[0][0]=='\'' || m[0][0]=='"'){
+                char dest[100];
+                subString(m[0],1,strlen(m[0])-2, dest);
+                strcpy(functionName,toLower(dest));
+                strcat(functionName, "_");
+            }else{
+                strcpy(functionName,toLower(m[0]));
+                strcat(functionName, "_");
+            }
         }
-        qtd=regex(procedureRegex, lines->line, m);
-        if(qtd==2){
-                int lineCobol = atoi(m[1]);
+
+        boolean isPerform=FALSE;
+        boolean bprocedureRegex = procedureRegex(line_parsed, qtt_tk, &tmp[0], &isPerform);
+        if(bprocedureRegex){
+                int lineCobol = atoi(tmp);
                 if(LineAtu!=NULL && fileNameCompare(LineAtu->fileCobol, fileCobol) && LineAtu->lineCobol == lineCobol) {
                     PopLine();
                 }
-                int qt=regex(subroutineRegex, lines->line, m);
-                if(qt>0)
+                //int qt=regex(subroutineRegex, lines->line, m);
+                if(isPerform)
                     performLine = -2;
                 else
                     performLine = -1;
                 PushLine(fileCobol, lineCobol, fileC, lineNumber + 2);
         }
         // fix new codegen - new
-        qtd=regex(procedureFixRegex, lines->line, m);
-        if(qtd>0 && LineAtu!=NULL){
-            int lineC = atoi(m[1]);
-            int isOldFormat = (lines->line_before!=NULL)?regex(fixOlderFormat, lines->line_before->line, m):0;
+        //qtd=regex(procedureFixRegex, lines->line, m);
+        if(strstr(lines->line,"line 116")!=NULL){
+            int aaa=0;
+        }
+        boolean bprocedureFixRegex = procedureFixRegex(line_parsed, qtt_tk, &tmp[0]);
+        if(bprocedureFixRegex>0 && LineAtu!=NULL){
+            int lineC = atoi(tmp);
+            boolean isOldFormat = (lines->line_before!=NULL)?fixOlderFormat(lines->line_before->line):FALSE;
             if(isVersion2_2_or_3_1_1 || !isOldFormat){
                 LineAtu->lineC = lineC;                    
             }
         }
         //Attributes
-        qtd=regex(attributeRegex, lines->line, m);
-        if(qtd>0){
-            int digits=atoi(m[3]);
-            int scale=atoi(m[4]);
+        //qtd=regex(attributeRegex, lines->line, m);
+        boolean battributeRegex = attributeRegex(line_parsed, qtt_tk, m);
+        if(battributeRegex){
+            int digits=atoi(m[2]);
+            int scale=atoi(m[3]);
             char key[256];
             strcpy(key, cleanedFile); 
             strcat(key,".");
-            strcat(key,m[1]);
-            PushAttribute(key, m[1],  VariableType(m[2]), digits, scale, m[5]);
+            strcat(key,m[0]);
+            PushAttribute(key, m[0],  VariableType(m[1]), digits, scale, m[4]);
         }
         //DebuggerVariable
-        qtd=regex(dataStorageRegex, lines->line, m);
-        if(qtd>0){
+        //qtd=regex(dataStorageRegex, lines->line, m);
+        boolean bdataStorageRegex = dataStorageRegex(line_parsed, qtt_tk, m);
+        if(bdataStorageRegex){
             int size=0;
-            if(m[3][0]=='['){
+            if(m[2][0]=='['){
                 char dest[100];
-                subString(m[3],1,strlen(m[3])-1, dest);
+                subString(m[2],1,strlen(m[2])-1, dest);
                 size = atoi(dest);
             }
             ST_Attribute* new_attrib = (ST_Attribute*) malloc(sizeof(ST_Attribute));
-            char * type =  VariableType(m[1]);
+            char * type =  VariableType(m[0]);
             new_attrib->type = (char *) malloc(strlen(type)+1);
             strcpy(new_attrib->type, type);
             new_attrib->digits=0;
             new_attrib->scale=0;
-            PushDebuggerVariable(m[4], m[2], functionName, new_attrib , size);
-            AtuDebuggerVariable->dataSotorage=DebuggerVariable_Set(functionName, m[2] );
-            AtuDebuggerVariable->variablesByC=DebuggerVariable_Set(functionName, m[2] );
-            AtuDebuggerVariable->variablesByCobol=DebuggerVariable_Set(functionName, toUpper(m[4]) );
+            PushDebuggerVariable(m[3], m[1], functionName, new_attrib , size);
+            AtuDebuggerVariable->dataSotorage=DebuggerVariable_Set(functionName, m[1] );
+            AtuDebuggerVariable->variablesByC=DebuggerVariable_Set(functionName, m[1] );
+            AtuDebuggerVariable->variablesByCobol=DebuggerVariable_Set(functionName, toUpper(m[3]) );
         }
 
-        qtd=regex(fieldRegex, lines->line, m);
-        if(qtd>0){
+        //qtd=regex(fieldRegex, lines->line, m);
+        boolean bfieldRegex = fieldRegex(line_parsed, qtt_tk, m);
+        if(bfieldRegex){
             char tmp1[256];
             //sprintf(tmp1,"%s.%s",cleanedFile,m[4]);
             strcpy(tmp1,cleanedFile);
             strcat(tmp1,".");
-            strcat(tmp1,m[4]);
+            strcat(tmp1,m[3]);
             ST_Attribute * attribute = GetAttributes(tmp1);
             //sprintf(tmp1,"%s.%s",functionName,m[3]);
             strcpy(tmp1,functionName);
             strcat(tmp1,".");
-            strcat(tmp1,m[3]);
+            strcat(tmp1,m[2]);
             ST_DebuggerVariable * dataStorage = GetDataSotorage(tmp1);
-            int size = atoi(m[2]);
-            PushDebuggerVariable(m[5], m[1], functionName, attribute, size);
+            int size = atoi(m[1]);
+            PushDebuggerVariable(m[4], m[0], functionName, attribute, size);
             AtuDebuggerVariable->variablesByC = DebuggerVariable_Set(functionName, AtuDebuggerVariable->cName );
             if(dataStorage!=NULL){
                 AddChildDebuggerVariable(dataStorage, AtuDebuggerVariable);
@@ -498,19 +889,26 @@ int parser(char * file_name, int fileN){
             }
         }
 
-        qtd=regex(fileIncludeRegex, lines->line, m);
-        if(qtd>0){
-            m[1][strcspn(m[1], "\n")] = '\0';
-            parser(m[1], fileN);
+        //qtd=regex(fileIncludeRegex, lines->line, m);
+        boolean bfileIncludeRegex = fileIncludeRegex(line_parsed, qtt_tk, m);
+        if(bfileIncludeRegex){
+            m[0][strcspn(m[0], "\n")] = '\0';
+            if(m[0][0]=='\'' || m[0][0]=='"'){
+                char dest[100];
+                subString(m[0],1,strlen(m[0])-2, dest);
+                parser(dest, fileN);
+            }
         }
-        qtd=regex(versionRegex, lines->line, m);
-        if(qtd>0){
-            strcpy(version, m[1]);
-            if(strncmp(version,"2.2",3)==0 || strncmp(version,"3.1.1",5)==0) isVersion2_2_or_3_1_1 = 1;
+        //qtd=regex(versionRegex, lines->line, m);
+        boolean bversionRegex = versionRegex(line_parsed, qtt_tk, m);
+        if(bversionRegex){
+            strcpy(version, m[0]);
+            if(strncmp(version,"2.2",3)==0 || strncmp(version,"3.1.1",5)==0) isVersion2_2_or_3_1_1 = TRUE;
         }
         if(performLine==-2){
-            qtd=regex(frame_ptrFindRegex, lines->line, m);
-            if(qtd>0){
+            //qtd=regex(frame_ptrFindRegex, lines->line, m);
+            boolean bframe_ptrFindRegex= frame_ptrFindRegex(lines->line);
+            if(bframe_ptrFindRegex){
                 LineAtu->endPerformLine = lineNumber+1;
                 performLine=-1;
             }
@@ -628,13 +1026,7 @@ ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar){
 int fileNameCompare(char * fileOne, char * fileTwo){
 #if defined(_WIN32)
     int result=0;
-    char * f1=malloc(strlen(fileOne)+1);
-    strcpy(f1, fileOne);
-    char * f2=malloc(strlen(fileTwo)+1);
-    strcpy(f2, fileTwo);
-    result = strcmp(toUpper(f1),toUpper(f2));
-    free(f1);
-    free(f2);
+    result = strcasecmp(fileOne,fileTwo);
     return result;
 #elif defined(__linux__)
     return strcmp(fileOne,fileTwo);
@@ -654,4 +1046,3 @@ void SourceMap(char fileGroup[][512]){
     }
 
 }
-

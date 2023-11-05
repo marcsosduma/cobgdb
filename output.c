@@ -9,8 +9,13 @@
 
 // run system command and read output
 char *execCommand(const char *cmd) {
+    char initialColumns[100];
     char *result = malloc(BUFFER);
     result[0] = '\0';
+    if(getenv("COLUMNS")!=NULL)
+        strcpy(initialColumns,getenv("COLUMNS"));
+    else
+        strcpy(initialColumns,"80");
     setenv("COLUMNS", "500", 1);
 
     FILE *pipe = popen(cmd, "r");
@@ -33,6 +38,7 @@ char *execCommand(const char *cmd) {
         count++;
     }
     pclose(pipe);
+    setenv("COLUMNS", initialColumns, 1);
     return result;
 }
 

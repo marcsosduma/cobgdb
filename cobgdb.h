@@ -113,6 +113,14 @@ enum CobFlag {
     CONSTANT
 };
 
+struct st_parse {
+    char * token;
+    int size;
+    int type;
+    struct st_parse * next;
+};
+
+
 // ATTRIBUTTES - END
 // DebuggerVariable - START
 struct ST_DebuggerVariable {
@@ -271,3 +279,6 @@ char * openOuput(char *target);
 int executeParse();
 void freeHighlight(struct st_highlt * hight);
 int printHighlight(struct st_highlt * hight, int bkg, int start, int tot);
+//sting_parser.c
+void lineParse(char * line_to_parse, struct st_parse h[100], int *qtt );
+struct st_parse * tk_val(struct st_parse line_parsed[100], int qtt_tk, int pos);
