@@ -33,7 +33,6 @@ static char cwd[512]="";
 static char cleanedFile[256];
 static char version[100]="";
 
-
 // File C structure
 struct st_clines{
 	char * line;
@@ -841,8 +840,8 @@ int parser(char * file_name, int fileN){
             char * type =  VariableType(m[0]);
             new_attrib->type = (char *) malloc(strlen(type)+1);
             strcpy(new_attrib->type, type);
-            new_attrib->digits=0;
-            new_attrib->scale=0;
+            new_attrib->digits=0; new_attrib->scale=0; new_attrib->cName=NULL;  new_attrib->key=NULL;
+            new_attrib->flagStr=NULL; new_attrib->next=NULL; new_attrib->before=NULL; new_attrib->last=NULL;
             PushDebuggerVariable(m[3], m[1], functionName, new_attrib , size);
             AtuDebuggerVariable->dataSotorage=DebuggerVariable_Set(functionName, m[1] );
             AtuDebuggerVariable->variablesByC=DebuggerVariable_Set(functionName, m[1] );
@@ -1029,5 +1028,4 @@ void SourceMap(char fileGroup[][512]){
         parser(fileGroup[q], q);
         q++;
     }
-
 }

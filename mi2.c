@@ -377,31 +377,31 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
     char command[512];
     char st[100];
     strcpy(command,"data-evaluate-expression ");
-        if (thread != 0) {
-            sprintf(st,"--thread %d --frame %d ",thread, frame);
-            strcat(command,st);
+    if (thread != 0) {
+        sprintf(st,"--thread %d --frame %d ",thread, frame);
+        strcat(command,st);
+    }
+    if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
+        sprintf(st,"\"(char *)cob_get_field_str_buffered(&%s})\"", var->cName);
+        strcat(command,st);
+    } else if (strncmp(var->cName,"f_",2)==0) {
+        sprintf(st,"%s.data", var->cName);
+        strcat(command,st);
+    } else {
+            strcat(command,var->cName);
+    }
+    strcat(command,"\n");
+    int tk=sendCommandGdb(command);
+    wait_gdb_answer(sendCommandGdb);
+    ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk);
+    if(parsed!=NULL){
+        int find=FALSE;
+        ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "value", NULL, &find);
+        if(search!=NULL && search->value!=NULL){
+            var->value=debugParse(search->value, var->size, var->attribute->scale, var->attribute->type);
         }
-        if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
-            sprintf(st,"\"(char *)cob_get_field_str_buffered(&%s})\"", var->cName);
-            strcat(command,st);
-        } else if (strncmp(var->cName,"f_",2)==0) {
-            sprintf(st,"%s.data", var->cName);
-            strcat(command,st);
-        } else {
-             strcat(command,var->cName);
-        }
-        strcat(command,"\n");
-        int tk=sendCommandGdb(command);
-        wait_gdb_answer(sendCommandGdb);
-        ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk);
-        if(parsed!=NULL){
-            int find=FALSE;
-            ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "value", NULL, &find);
-            if(search!=NULL && search->value!=NULL){
-               var->value=debugParse(search->value, var->size, var->attribute->scale, var->attribute->type);
-            }
-            freeParsed(parsed);
-        } 
+        freeParsed(parsed);
+    } 
 }
 
 char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *)){

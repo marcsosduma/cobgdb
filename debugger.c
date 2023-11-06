@@ -266,6 +266,18 @@ char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type) {
 }
 
 
+char* dbStringValues(char* valueStr, int fieldSize) {
+    char* value = valueStr;
+    int shift = 0;
+    if (value[0] == '"') {
+        shift = 1;
+    }
+    int size = (fieldSize + shift) < strlen(valueStr) ? (fieldSize + shift) : strlen(valueStr);
+    char* result = malloc(size + 3);  // +3 for 2 x double quote and null character
+    snprintf(result, size + 3, "\"%.*s\"", size, value + shift);
+    return result;
+}
+
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
     if (!valueStr) return NULL;
     if (strncmp(valueStr, "0x", 2) == 0) valueStr=CobolFieldDataParser(valueStr);
@@ -281,7 +293,7 @@ char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
         strcmp(type, "national edited") == 0
     ) {
         // AlphanumericValueParser parse to do
-        return strdup(valueStr);
+        return dbStringValues(valueStr, fieldSize);
     }else if (
         strcmp(type, "integer") == 0 ||
         strcmp(type, "group") == 0
