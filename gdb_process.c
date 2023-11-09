@@ -41,11 +41,11 @@ void CreateChildProcess(void);
 int sendCommandGdb(char * command);
 void ErrorExit(char *);
 //TCHAR szCmdline[]=TEXT("gdb --interpreter=mi2 client.exe");
-char * gdbSet[]={"gdb-set target-async on\n", //old format
-                 "gdb-set mi-async on\n",
-                 "gdb-set print repeats 1000\n",
-                 "gdb-set charset UTF-8\n",
-                 "gdb-set new-console on\n",
+char * gdbSet[]={"-gdb-set target-async on\n", //old format
+                 "-gdb-set mi-async on\n",
+                 "-gdb-set print repeats 1000\n",
+                 "-gdb-set charset UTF-8\n",
+                 "-gdb-set new-console on\n",
                  //"-environment-directory "+cwd+"\n",
                  //"-file-exec-and-symbols "+file+"\n",
 
@@ -55,7 +55,7 @@ char * gdbSet[]={"gdb-set target-async on\n", //old format
 int start_gdb(char * name)
 {
 
-   char fixCommand[] = "gdb -q --interpreter=mi2 ";
+   char fixCommand[] = "gdb --quiet --interpreter=mi2 --readnow ";
    sprintf(command, "%s%s", fixCommand, name);
    SECURITY_ATTRIBUTES saAttr;
    int looking[]={0}; 
@@ -172,7 +172,7 @@ int sendCommandGdb(char * command)
    
    int tk = token;
    if(strlen(command)>0){
-      if(strcmp(command,"-gdb-exit\n")==0){
+      if(strcmp(command,"-gdb-exit\n")==0 || strncmp(command,"-gdb-set",8)==0){
          strcpy(chBuf,command);
          mustReturn=0;
          waitAnswer = 1;
@@ -252,11 +252,7 @@ int sendCommandGdb(char * command)
    int qtdAlloc = BUFSIZE;  
    int count0=0; 
    int mustReturn=1;
-   #if defined(_WIN32)
-   int l1 = 8;
-   #else
    int l1 = 7;
-   #endif
 
    int tk = token;
    if(strlen(command)>0){
@@ -307,7 +303,7 @@ int sendCommandGdb(char * command)
              return 0;
       strcpy(test,"");
       int lenOut=(gdbOutput!=NULL)?strlen(gdbOutput):0;
-      if(lenOut>=7){
+      if(lenOut>=l1){
         memcpy(test, &gdbOutput[(lenOut-l1)],6);
         test[6]='\0';
       }
@@ -324,30 +320,25 @@ int start_gdb(char * name){
 
     int fd1[2];
     int p2[2];
-    char tty[100];
+    char tty[100] = "";
     if(ttyName!=NULL){
-          sprintf(tty,"--tty=%s", ttyName);
-    }else{
-      strcmp(tty,"");
+          snprintf(tty, sizeof(tty), "--tty=%s", ttyName);
     }
     char *cmd[] = {"gdb", 
                    "--quiet", 
                    tty,
                    "--interpreter=mi2",
+                   "--readnow",
                    name, 
                    NULL
                    };
-    //char chBuf[256];
-
     pipe(fd1);
     pipe(p2);
-    fcntl(p2[0], F_SETFL, O_NONBLOCK);
-    /*
-    #ifdef F_SETPIPE_SZ
-    fcntl(fd1[0], F_SETPIPE_SZ, BUFSIZE);
-    fcntl(p2[0], F_SETPIPE_SZ, BUFSIZE);
-    #endif
-    */
+    int flf=fcntl(p2[0],F_GETFL,0) | O_NONBLOCK;
+    fcntl(p2[0], F_SETFL, flf);
+    flf = fcntl(fd1[1], F_GETFL, 0) | O_NONBLOCK;
+    fcntl(fd1[1], F_SETFL, flf);
+
     int pid = fork();
     if(pid==0){
         dup2(fd1[0], 0);
@@ -356,16 +347,15 @@ int start_gdb(char * name){
         close(p2[0]);
         execvp("gdb",cmd);
     }else{
-        //wait(NULL);
         close(fd1[0]);
         close(p2[1]);
 
         char chBuf[256];
-        char * gdbSet[]={"gdb-set target-async on\n", //old format
-                         "gdb-set mi-async on\n",
-                         "gdb-set print repeats 1000\n",
-                         "gdb-set charset UTF-8\n",
-                         "gdb-set env TERM=xterm\n",
+        char * gdbSet[]={"-gdb-set target-async on\n", //old format
+                         "-gdb-set mi-async on\n",
+                         "-gdb-set print repeats 1000\n",
+                         "-gdb-set charset UTF-8\n",
+                         "-gdb-set env TERM=xterm\n",
                          //"-environment-directory "+cwd+"\n",
                          //"-file-exec-and-symbols "+file+"\n",
                          ""
@@ -376,12 +366,12 @@ int start_gdb(char * name){
         int idx=0;
         while(strlen(gdbSet[idx])>=1){
            strcpy(chBuf, gdbSet[idx++]);
+           
            sendCommandGdb(chBuf);
         }        
         waitAnswer=1;
         debug(0, &sendCommandGdb );
         printf("\n->End of parent execution.\n");
-        //wait(NULL);
         waitpid(pid, NULL, 1);
     }
     return 0;   

@@ -274,7 +274,7 @@ char* dbStringValues(char* valueStr, int fieldSize) {
     }
     int size = (fieldSize + shift) < strlen(valueStr) ? (fieldSize + shift) : strlen(valueStr);
     char* result = malloc(size + 3);  // +3 for 2 x double quote and null character
-    snprintf(result, size + 3, "\"%.*s\"", size, value + shift);
+    snprintf(result, size + 3, "\"%.*s\"", size-shift, value + shift);
     return result;
 }
 

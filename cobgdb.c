@@ -10,6 +10,7 @@
 #include "cobgdb.h"
 #define __WITH_TESTS_ 
 struct program_file program_file;
+char file_cobol[512];
 int start_window_line = 0;
 int qtd_window_line = 23;
 int start_line_x = 0;
@@ -50,7 +51,7 @@ void free_memory()
     }
 }
 
-int cobc_compile(char * file, char values[10][256], int arg_count){
+int cobc_compile(char file[][512], char values[10][256], int arg_count){
     char *param[20]; 
 
     // Initialize the first 10 elements with the initial values.
@@ -81,14 +82,17 @@ int cobc_compile(char * file, char values[10][256], int arg_count){
         param_count++;
     }
 
-    char compiler[256] = "cobc ";
+    char compiler[512] = "cobc ";
     
     for (int a = 0; a < param_count; a++) {
         strcat(compiler, param[a]);
         if(a>=initFree) free(param[a]);  // Free the dynamically allocated memory for the values.
     }
-
-    strcat(compiler, file);
+    int nfile=0;
+    while(strlen(file[nfile])>1){
+        strcat(compiler, file[nfile++]);
+        strcat(compiler, " ");
+    }
     printf("%s\n", compiler);
 
     FILE *pfd = popen(compiler, "r");
@@ -182,9 +186,9 @@ int show_file(Lines * lines, int line_pos){
     
     gotoxy(1,1);
     show_opt();
-    int bkgColor=color_gray;
+    size_t  bkgColor=color_gray;
     char chExec = ' ';
-    for(int i=0;i<22;i++){
+    for(size_t i=0;i<22;i++){
         if(show_line != NULL){
             gotoxy(1,i+2);
             if(show_line->breakpoint=='S'){
@@ -197,13 +201,13 @@ int show_file(Lines * lines, int line_pos){
             }else{
                 chExec = (debug_line==show_line->file_line)?'!': ' ';
                 print_color(color_red);
-                printf("%c",(debug_line==show_line->file_line)?'!': ' ');
+                printf("%c",chExec);
             }     
             print_color(color_gray);
             printf("%-4d ", show_line->file_line);
             if(show_line->high==NULL){
                 show_line->line[strcspn(show_line->line,"\n")]='\0';
-                int len=strlen(show_line->line);
+                size_t  len=strlen(show_line->line);
                 wchar_t *wcharString = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
                 #if defined(_WIN32)
                 MultiByteToWideChar(CP_UTF8, 0, show_line->line, -1, wcharString,(len + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
@@ -216,8 +220,8 @@ int show_file(Lines * lines, int line_pos){
                     print_colorBK(color_green, bkgColor);
                 else
                     print_colorBK(color_white, color_black);
-                int nm = len - start_line_x;
-                int qtdMove = (72 < nm)? 72 :len - start_line_x;
+                int  nm = len - start_line_x;
+                int  qtdMove = (72 < nm)? 72 :len - start_line_x;
                 if(qtdMove>0){
                     printf("%.*ls",qtdMove, &wcharString[start_line_x]);
                     nm=72-qtdMove;
@@ -231,8 +235,8 @@ int show_file(Lines * lines, int line_pos){
                 printHighlight(show_line->high, bkgColor, start_line_x, 72);
             }
             show_line = show_line->line_after;
-            if(show_line == NULL){
-                if(line_pos>i) line_pos=i-1;
+            if(show_line == NULL && line_pos>i){
+                line_pos=i-1;
             }
             print_no_resetBK(" ",color_white, color_frame);
         }else{
@@ -252,6 +256,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     char input_character;
     char command[256];
     int dblAux = -1;
+    int check_size=0;
     
     if(qtd_window_line>program_file.qtd_lines) qtd_window_line=program_file.qtd_lines;
     Lines * lines = program_file.lines;
@@ -262,7 +267,6 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     cursorOFF();
     clearScreen();
     while(program_file.lines!=NULL && !bstop){
-        showFile=win_size_verify(showFile);
         if(showFile){
             //setvbuf(stdout, NULL, _IONBF, 8192);
             show_opt();
@@ -272,6 +276,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             print_color_reset();
             fflush(stdout);
         }
+        if(check_size<3) showFile=win_size_verify(showFile, &check_size);
         input_character =  key_press();
         switch (input_character)
         {
@@ -450,12 +455,15 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     }
 }
 
-int loadfile(char * nameCobFile, char values[10][256], int arg_count) {
-    int width=0, height=0;
-    int qtd_page = 0;
+int loadfile(char * nameCobFile) {
     int input_character;
     strcpy(program_file.name_file, nameCobFile);
-    cobc_compile(program_file.name_file, values, arg_count);
+    readCodFile(&program_file);
+}
+
+int initTerminal(){
+    int width=0, height=0;
+
     set_terminal_size(80, 25);
     #if defined(_WIN32)
     Sleep(200);
@@ -465,7 +473,6 @@ int loadfile(char * nameCobFile, char values[10][256], int arg_count) {
     get_terminal_size(&width, &height);
     printf("width= %d", width);
     printf(", height= %d\n", height);
-    readCodFile(&program_file);
 }
 
 int freeFile(){
@@ -479,6 +486,8 @@ int main(int argc, char **argv) {
     struct lconv *locale_info = localeconv();
     char values[10][256];   // Create an array of strings to store the arguments
     int arg_count = 0;      // Initialize a counter for storing arguments
+    char fileCGroup[10][512];
+    char fileCobGroup[10][512];
 
     setlocale(LC_CTYPE, "");
     setlocale(LC_ALL,"");
@@ -487,6 +496,7 @@ int main(int argc, char **argv) {
     SetConsoleOutputCP(CP_UTF8);
     #endif    
 
+    initTerminal();
     if (locale_info != NULL) {
         decimal_separator = locale_info->decimal_point[0];
     }
@@ -504,6 +514,7 @@ int main(int argc, char **argv) {
     }else{
         // Iterate through the arguments
         boolean withHigh=TRUE;
+        int nfile=0;
         for (int i = 1; i < argc; i++) {
             if (argv[i][0] == '-') {
                 // Check if the argument starts with "-"
@@ -515,28 +526,35 @@ int main(int argc, char **argv) {
                     else
                         arg_count++;
                 }
+            }else{
+                fileNameWithoutExtension(argv[i], &baseName[0]);
+                if(nfile==0){
+                    strcpy(program_file.name_file,argv[i]);
+                    strcpy(nameExecFile, baseName);
+                    #if defined(_WIN32)
+                    strcat(nameExecFile,".exe");
+                    #endif
+                    printf("Name: %s\n",nameExecFile);
+                }
+                strcpy(nameCFile,baseName);
+                strcat(nameCFile,".c");
+                strcpy(fileCobGroup[nfile],argv[i]);
+                normalizePath(fileCobGroup[nfile]);
+                normalizePath(nameCFile);
+                strcpy(fileCGroup[nfile],nameCFile);
+                nfile++;
             }
         }
-        strcpy(program_file.name_file,argv[1]);
+		strcpy(fileCobGroup[nfile], "");
+		strcpy(fileCGroup[nfile], "");
         //cobc_compile(program_file.name_file, values, arg_count);
-        fileNameWithoutExtension(program_file.name_file, &baseName[0]);
-        strcpy(nameExecFile, baseName);
-        #if defined(_WIN32)
-        strcat(nameExecFile,".exe");
-        #endif
-        printf("Name: %s\n",nameExecFile);
-        loadfile(program_file.name_file, values, arg_count);
-        //while(key_press()<=0);
-        strcpy(nameCFile,baseName);
-        strcat(nameCFile,".c");
+        cobc_compile(fileCobGroup, values, arg_count);
         printf("Parser starting...\n");
-        normalizePath(nameCFile);
-		char fileGroup[4][512];
-		strcpy(fileGroup[0],nameCFile);
-		strcpy(fileGroup[1], "");
-		SourceMap(fileGroup);
-        if(withHigh) executeParse(); 
+		SourceMap(fileCGroup);
         printf("Parser end...\n");
+        strcpy(file_cobol,program_file.name_file);
+        loadfile(file_cobol);
+        if(withHigh) executeParse(); 
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
         //while(key_press()<=0);
         #if defined(__linux__)

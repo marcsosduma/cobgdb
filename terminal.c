@@ -71,6 +71,7 @@ struct editorConfig {
 };
 
 struct editorConfig E;
+void print_colorBK(const int textcolor, const int backgroundcolor);
 
 void die(const char *s) {
 	write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -278,7 +279,7 @@ void set_terminal_size(int width, int height){
 }
 
 #if defined(_WIN32)
-int win_size_verify(int showFile){
+int win_size_verify(int showFile, int *check_size){
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     COORD consoleSize;
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -301,7 +302,7 @@ int win_size_verify(int showFile){
     return showFile;
 }
 #else
-int win_size_verify(int showFile){
+int win_size_verify(int showFile, int *check_size){
     struct winsize w;
     int ret=showFile;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
@@ -310,8 +311,14 @@ int win_size_verify(int showFile){
         w.ws_col = TERM_WIDTH;
         printf("\033[H\033[J");
         printf("\033[8;%d;%dt", TERM_HEIGHT, TERM_WIDTH);
+        print_colorBK(color_dark_red, color_black);
+        printf("%s\r", "Attempting to resize the screen, please wait...");
+        fflush(stdout);
+        *check_size=*check_size+1;
         usleep(1500000);
         ret=1;
+    }else{
+        *check_size = 0;
     }
     return ret;
 }

@@ -203,7 +203,9 @@ int show_info();
 // Tests
 int testMI2();
 int testParser();
-
+// cobgdb.c
+int loadfile(char * nameCobFile);
+int freeFile();
 // read_file.c
 int readCodFile(struct program_file * program);
 void GetFileParts(char *path, char *path_, char *base_, char *ext_);
@@ -231,7 +233,7 @@ void print_color_reset();
 void print_color(int textcolor);
 void print_colorBK(const int textcolor, const int backgroundcolor);
 int readchar(char * str, int size);
-int win_size_verify(int showFile);
+int win_size_verify(int showFile, int *check_size);
 // parser.c
 void SourceMap(char fileGroup[][512]);
 int parser(char * file_name, int fileN);

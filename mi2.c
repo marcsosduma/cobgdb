@@ -19,6 +19,7 @@ extern int running;
 extern int showFile;
 extern int waitAnswer;
 extern int changeLine;
+extern char file_cobol[512];
 char lastComand[200];
 int subroutine=-1;
 
@@ -104,8 +105,16 @@ ST_Line * hasLineCobol(ST_MIInfo * parsed){
         if(search2==NULL || search2->value==NULL) return NULL;
         int lineC = atoi(search2->value);
         hasLine =  getLineCobol( search1->value, lineC);
-        if(hasLine!=NULL) 
+        if(hasLine!=NULL){
             subroutine = hasLine->endPerformLine;
+            if(strcasecmp(hasLine->fileCobol, file_cobol)!=0){
+                freeFile();
+                strcpy(file_cobol, hasLine->fileCobol);
+                loadfile(file_cobol);
+                executeParse();
+            }
+
+        } 
 
     }
     return hasLine;
@@ -195,7 +204,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                                 }else if(strcmp(reason->value,"end-stepping-range")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
                                     if(hasLine==NULL){
-                                        sendCommandGdb("exec-next\n");
+                                        sendCommandGdb(lastComand);
                                     }else{
                                         waitAnswer=FALSE;
                                         debug_line = hasLine->lineCobol;
@@ -273,7 +282,7 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
 }
 
 int MI2stepInto(int (*sendCommandGdb)(char *)){
-    strcpy(lastComand,"exec-next\n"); 
+    strcpy(lastComand,"exec-step\n"); 
     char command[200];
     if(subroutine>0){
         sprintf(command,"%s%d\n","break-insert -f ",subroutine);
