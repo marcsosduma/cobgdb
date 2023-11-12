@@ -259,7 +259,7 @@ int MI2removeBreakPoint (int (*sendCommandGdb)(char *), Lines * lines, char * fi
 int MI2start(int (*sendCommandGdb)(char *));
 int MI2stepOver(int (*sendCommandGdb)(char *));
 int MI2stepInto(int (*sendCommandGdb)(char *));
-ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int token);
+ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int token, int * status);
 int MI2verifyGdb(int (*sendCommandGdb)(char *));
 int MI2stepOut(int (*sendCommandGdb)(char *));
 int MI2variablesRequest(int (*sendCommandGdb)(char *));

@@ -11,6 +11,7 @@
 #define __WITH_TESTS_ 
 struct program_file program_file;
 char file_cobol[512];
+char first_file[512];
 int start_window_line = 0;
 int qtd_window_line = 23;
 int start_line_x = 0;
@@ -31,7 +32,7 @@ ST_Line * LineDebug=NULL;
 ST_Attribute * Attributes=NULL;
 ST_DebuggerVariable * DebuggerVariable=NULL;
 
-int start_gdb(char * name);
+int start_gdb(char * name, char * cwd);
 
 void free_memory()
 {
@@ -206,7 +207,7 @@ int show_file(Lines * lines, int line_pos){
             print_color(color_gray);
             printf("%-4d ", show_line->file_line);
             if(show_line->high==NULL){
-                show_line->line[strcspn(show_line->line,"\n")]='\0';
+                if(show_line->line !=NULL) show_line->line[strcspn(show_line->line,"\n")]='\0';
                 size_t  len=strlen(show_line->line);
                 wchar_t *wcharString = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
                 #if defined(_WIN32)
@@ -345,7 +346,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 break;
             case 'b':    
             case 'B':    
-                if(!waitAnswer){ 
+                if(!waitAnswer){
                     lb = lines;           
                     for(int a=0;a<line_pos;a++) lb=lb->line_after;
                     int check=hasCobolLine(lb->file_line);
@@ -496,10 +497,10 @@ int main(int argc, char **argv) {
     SetConsoleOutputCP(CP_UTF8);
     #endif    
 
-    initTerminal();
     if (locale_info != NULL) {
         decimal_separator = locale_info->decimal_point[0];
     }
+    initTerminal();
     if(argc<2){
         printf("Please provide the GnuCOBOL file.\n");
         return 0;
@@ -553,6 +554,9 @@ int main(int argc, char **argv) {
 		SourceMap(fileCGroup);
         printf("Parser end...\n");
         strcpy(file_cobol,program_file.name_file);
+        char cwd[512];
+        getPathName(cwd, file_cobol);
+        strcpy(first_file, file_cobol);
         loadfile(file_cobol);
         if(withHigh) executeParse(); 
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
@@ -565,7 +569,7 @@ int main(int argc, char **argv) {
             return 0;
         } 
         #endif
-        start_gdb(nameExecFile);
+        start_gdb(nameExecFile,cwd);
         freeFile();
         //TODO: 
         //freeVariables();

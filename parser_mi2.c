@@ -39,11 +39,8 @@ char * streamRecordType(char * type){
 
 ST_TableValues * newTableValues(){
     ST_TableValues * values = malloc(sizeof(ST_TableValues));
-    values->next=NULL;
-    values->array=NULL;
-    values->next_array=NULL;
-    values->value=NULL;
-    values->key = NULL;
+    values->next=NULL; values->array=NULL; values->next_array=NULL;
+    values->value=NULL; values->key = NULL;
     return values;
 }
 
@@ -131,6 +128,7 @@ char * parseString(char * str){
 }
 
 char * parseCString(char * output){
+    //char remaining[8192];
     if(output[0]!='"')
         return NULL;
     int stringEnd = 1;
@@ -158,7 +156,6 @@ char * parseCString(char * output){
     char * aux = parseString(str);
     strcpy(str, aux);
     return str;
-
 } 
 
  struct ST_TableValues * parseTupleOrList(char * output){
@@ -299,39 +296,27 @@ struct ST_TableValues * parseCommaResult(char * output){
 int fOutOfBandRecordRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    if(line==NULL) return 0;
    int len=strlen(line);
-   char ch;
-   ch = line[0];
-   int pos=0;
-   int ret=0;
+   char ch = line[0];
+   int pos=0, ret=0;
    if((ch>='0' && ch<='9') || (ch=='*' || ch=='+' || ch =='=')){
         while(ch>='0' && ch<='9' && pos<len){
-            mm[0][pos]=ch;
-            mm[1][pos]=ch;
-            mm[2][pos]=ch;
+            mm[0][pos]=mm[1][pos]=mm[2][pos]=ch;
             ch=line[++pos];
         }
-        mm[0][pos]='\0';
-        mm[1][pos]='\0';
-        mm[2][pos]='\0';
+        mm[0][pos]=mm[1][pos]=mm[2][pos]='\0';
         int p1=0;
         if(pos<len){
             ch = line[pos];
             if(ch=='*' || ch=='+' || ch =='='){
-                mm[0][pos]=ch;
-                mm[1][pos++]=ch;
-                mm[3][p1++]=ch;
+                mm[0][pos]=mm[1][pos]=mm[3][p1++]=ch;
+                pos++;
                 ret=4;
             }
         }
-        mm[0][pos]='\0';
-        mm[1][pos]='\0';
-        mm[3][p1]='\0';
-        
+        mm[0][pos]= mm[1][pos]=mm[3][p1]='\0';        
    }else if(ch=='~' || ch=='@' || ch =='&'){
-        mm[0][0]=ch;
-        mm[0][1]='\0';
-        mm[1][0]=ch;
-        mm[1][1]='\0';
+        mm[0][0]=mm[1][0]=ch;
+        mm[0][1]=mm[1][1]='\0';
         ret=2;
    }else if(len>=9 && strncmp(line, "undefined", 9)==0){
         strcpy(mm[0],"undefined");
@@ -350,8 +335,7 @@ int fAsyncClassRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     char ch = line[0];
     if(!(ch>='a' && ch<='z' ) && !(ch>='A' && ch<='Z') && ch!='_' && ch!='-') return -1;
     int ret = 0;
-    int pos=0;
-    int pos1=0;
+    int pos=0, pos1=0;
     while(qtt<len){
         ch=line[qtt++];
         if((ch>='a' && ch<='z' ) || (ch>='A' && ch<='Z') || ch=='_' || ch=='-' || (ch>='0' && ch<='9') || ch==','){
@@ -366,22 +350,17 @@ int fAsyncClassRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
             break;
         }
     }
-    mm[0][pos]='\0';
-    mm[1][pos1]='\0';
+    mm[0][pos]= mm[1][pos1]='\0';
     return ret;
 }
 
 //char resultRecordRegex[] = "^([0-9]*)\\^(done|running|connected|error|exit)";
 int fResultRecordRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    char * values[]={"done","running","connected","error","exit"};
-   if(line==NULL) return 0;
+   if(line==NULL || line[0]=='\0') return 0;
    int len=strlen(line);
-   if(len<1) return 0;
-   char ch;
-   ch = line[0];
-   int pos=0;
-   int pos1=0;
-   int ret=0;
+   char ch = line[0];
+   int pos=0, pos1=0, ret=0;
    if((ch>='0' && ch<='9') || (ch=='^')){
         while(((ch>='0' && ch<='9') || (ch=='^')) && pos<len){
             mm[0][pos++]=ch;
@@ -389,8 +368,7 @@ int fResultRecordRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
                 mm[1][pos1++]=ch;
             ch=line[pos];
         }
-        mm[0][pos]='\0';
-        mm[1][pos1]='\0';
+        mm[0][pos]=  mm[1][pos1]='\0';
         strcpy(mm[2],"");
         for(int x=0;x<5;x++){
             int len = strlen(values[x]);
@@ -448,9 +426,7 @@ ST_MIInfo * parseMI(char * out){
             asyncRecord->type = asyncRecordType(match[3]);
             asyncRecord->asyncClass=malloc(strlen(classMatch[1])+1);
             strcpy(asyncRecord->asyncClass, classMatch[1]);
-            asyncRecord->output=NULL;
-            asyncRecord->content=NULL;
-            asyncRecord->next=NULL;
+            asyncRecord->output=NULL; asyncRecord->content=NULL; asyncRecord->next=NULL;
             while(TRUE){
                     ST_TableValues * values = parseCommaResult(output);
                     if(values!=NULL){
@@ -554,11 +530,10 @@ void freeParsed(ST_MIInfo * parsed) {
 
 //char * pathRegex = "^\\.?([a-zA-Z_\\-][a-zA-Z0-9_\\-]*)";
 int fPathRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
-   if(line==NULL) return -1;
+   if(line==NULL || line[0]=='\0') return -1;
     int len=strlen(line);
-    if(len<1) return -1;
-    char ch = line[0];
     int qtt=0, ret = 0, idx=0, pos=0, pos1=0, find=0;
+    char ch = line[0];
     while(qtt<len){
         ch=line[qtt];
         if((ch>='a' && ch<='z' ) || (ch>='A' && ch<='Z') || ch=='_' 
@@ -572,9 +547,8 @@ int fPathRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
             qtt++;
         }else{
             if(find){
-                mm[idx][pos]='\0';
-                mm[idx+1][pos1]='\0';
-                pos=0;pos1=0;find=0;
+                mm[idx][pos]= mm[idx+1][pos1]='\0';
+                pos=pos1=find=0;
                 idx+=2; ret+=2;
             }else{
                 break;
@@ -583,8 +557,7 @@ int fPathRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
         }
     }
     if(find) ret+=2;
-    mm[idx][pos]='\0';
-    mm[idx+1][pos1]='\0';
+    mm[idx][pos]= mm[idx+1][pos1]='\0';
     return ret;
 }
 
@@ -600,25 +573,21 @@ int fIndexRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     if(qtt<len){
         ch=line[qtt];
         while(ch>='0' && ch<='9' && qtt<len){
-            mm[0][pos++]=ch;
-            mm[1][pos1++]=ch;
+            mm[0][pos++]= mm[1][pos1++]=ch;
             qtt++;
             ch=line[qtt];
         }
         ch=line[qtt];
         if(ch!=']') return 0;
         mm[0][pos++]=ch;
-        mm[0][pos]='\0';
-        mm[1][pos1]='\0';
+        mm[0][pos]= mm[1][pos1]='\0';
         ret=3;
         if(qtt<len){
             ch=line[++qtt];
             if(ch=='.' || ch=='$'){
-                mm[0][pos++]=ch;
-                mm[2][pos2++]=ch;
+                mm[0][pos++]= mm[2][pos2++]=ch;
             }
-            mm[0][pos]='\0';
-            mm[2][pos2]='\0';
+            mm[0][pos]= mm[2][pos2]='\0';
             qtt++;
         }
     }

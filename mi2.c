@@ -20,8 +20,22 @@ extern int showFile;
 extern int waitAnswer;
 extern int changeLine;
 extern char file_cobol[512];
+extern char first_file[512];
 char lastComand[200];
 int subroutine=-1;
+
+enum GDB_STATUS {
+    GDB_RUNNING,
+    GDB_BREAKPOINT,
+    GDB_STEP_END,
+    GDB_LOCATION_REACHED,
+    GDB_END_STEPPING_RANGE,
+    GDB_FUNCTION_FINISHED,
+    GDB_STEP_OUT_END,
+    GDB_QUIT,
+    GDB_SIGNAL_STOP,
+    GDB_STOPPED
+};
 
 void MI2log(char * log){
     #ifdef DEBUG
@@ -94,6 +108,15 @@ int couldBeOutput(char * line) {
     return 0;
 }
 
+void loadCobSourceFile(char * atualFile, char * newFile){
+    if(strcasecmp(atualFile, newFile)!=0){
+        freeFile();
+        strcpy(file_cobol, newFile);
+        loadfile(file_cobol);
+        executeParse();
+    }
+}
+
 ST_Line * hasLineCobol(ST_MIInfo * parsed){
     boolean find=FALSE;
     ST_Line * hasLine = NULL;
@@ -107,13 +130,7 @@ ST_Line * hasLineCobol(ST_MIInfo * parsed){
         hasLine =  getLineCobol( search1->value, lineC);
         if(hasLine!=NULL){
             subroutine = hasLine->endPerformLine;
-            if(strcasecmp(hasLine->fileCobol, file_cobol)!=0){
-                freeFile();
-                strcpy(file_cobol, hasLine->fileCobol);
-                loadfile(file_cobol);
-                executeParse();
-            }
-
+            loadCobSourceFile(file_cobol, hasLine->fileCobol);
         } 
 
     }
@@ -152,7 +169,8 @@ int fGdbRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    return ret;
 }
 
-ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
+ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
+   *status=GDB_RUNNING;
    if(gdbOutput==NULL) return NULL;
    char * line = strtok(gdbOutput, "\n");
    int lineChange=FALSE;
@@ -173,6 +191,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                 ST_MIInfo * parsed = parseMI(line);
                 if (parsed->resultRecords!=NULL){
                     if(strcmp(parsed->resultRecords->resultClass,"error")==0 || strcmp(parsed->resultRecords->resultClass,"done")==0 ) {
+                        *status=GDB_STEP_END;
                         waitAnswer=FALSE;
                         running=FALSE;
                         showFile=TRUE;
@@ -186,15 +205,18 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                     if(parsed->outOfBandRecord->type!=NULL && strcmp(parsed->outOfBandRecord->type,"exec")==0){
                         if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"running")==0){
                             running=TRUE;
+                            *status=GDB_RUNNING;
                         }else if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"stopped")==0){
                             ST_TableValues * reason = parsed->outOfBandRecord->output;
                             if(reason!=NULL && reason->key!=NULL && strcmp(reason->key,"reason")==0){
                                 if(strcmp(reason->value,"breakpoint-hit")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
                                     if(hasLine==NULL){
+                                        *status = GDB_BREAKPOINT;
                                         sendCommandGdb("exec-next\n");
                                         lineChange=TRUE;
                                     }else{
+                                        *status = GDB_STEP_END;
                                         debug_line = hasLine->lineCobol;
                                         changeLine = TRUE;
                                         waitAnswer=FALSE;
@@ -204,8 +226,10 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                                 }else if(strcmp(reason->value,"end-stepping-range")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
                                     if(hasLine==NULL){
+                                        *status = GDB_END_STEPPING_RANGE;
                                         sendCommandGdb(lastComand);
                                     }else{
+                                        *status = GDB_STEP_END;
                                         waitAnswer=FALSE;
                                         debug_line = hasLine->lineCobol;
                                         changeLine = TRUE;
@@ -215,8 +239,10 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                                 }else if(strcmp(reason->value,"location-reached")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
                                     if(hasLine==NULL){
+                                        *status = GDB_LOCATION_REACHED;
                                         sendCommandGdb(lastComand);
                                     }else{
+                                        *status = GDB_STEP_END;
                                         debug_line = hasLine->lineCobol;
                                         changeLine = TRUE;
                                         running = FALSE;                                        
@@ -226,8 +252,10 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                                 }else if(strcmp(reason->value,"function-finished")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
                                     if(hasLine==NULL){
+                                        *status = GDB_FUNCTION_FINISHED;
                                         sendCommandGdb(lastComand);
                                     }else{
+                                        *status = GDB_STEP_OUT_END;
                                         debug_line = hasLine->lineCobol;
                                         changeLine = TRUE;
                                         running = FALSE;                                        
@@ -235,20 +263,25 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
                                         waitAnswer=FALSE;
                                     }
                                 }else if(strcmp(reason->value,"signal-received")==0){
+                                        *status = GDB_SIGNAL_STOP;
                                         showFile=TRUE;
                                         waitAnswer=FALSE;
                                         running=FALSE;
+                                        loadCobSourceFile(file_cobol, first_file);
                                 }else if(strcmp(reason->value,"exited-normally")==0){
+                                        *status = GDB_STEP_OUT_END;
                                         showFile=TRUE;
                                         waitAnswer=FALSE;
                                         running=FALSE;
                                         debug_line=-1;
-
+                                        loadCobSourceFile(file_cobol, first_file);
                                 }else if(strcmp(reason->value,"exited")==0){
+                                        *status = GDB_STOPPED;
                                         showFile=TRUE;
                                         waitAnswer=FALSE;
                                         running=FALSE;
                                         debug_line=-1;
+                                        loadCobSourceFile(file_cobol, first_file);
                                 }
                             }
                         }
@@ -262,10 +295,19 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk){
    strcpy(gdbOutput,"");
    if(lineChange){
         sendCommandGdb("");
-        MI2onOuput(sendCommandGdb, -1);
+        int status;
+        MI2onOuput(sendCommandGdb, -1, &status);
    }
    return parsedRet;
 }
+
+void wait_gdb_answer(int (*sendCommandGdb)(char *)){
+    if(gdbOutput!=NULL) strcpy(gdbOutput,"");
+    do{
+        sendCommandGdb("");
+    }while(strlen(gdbOutput)==0 && strcmp(gdbOutput,"\n")!=0);
+}
+
 
 int MI2stepOver(int (*sendCommandGdb)(char *)){
     strcpy(lastComand,"exec-next\n"); 
@@ -282,15 +324,23 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
 }
 
 int MI2stepInto(int (*sendCommandGdb)(char *)){
-    strcpy(lastComand,"exec-step\n"); 
+    int status;
     char command[200];
+    strcpy(lastComand,"exec-step\n"); 
     if(subroutine>0){
-        sprintf(command,"%s%d\n","break-insert -f ",subroutine);
+        sprintf(command,"%s%d\n","break-insert -t ",subroutine);
         sendCommandGdb(command);
-        MI2verifyGdb(sendCommandGdb);
+        do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, -1, &status);
+        }while(status==GDB_RUNNING);
     }
     strcpy(command,"exec-step\n"); 
     sendCommandGdb(command);
+    do{
+        sendCommandGdb("");
+        MI2onOuput(sendCommandGdb, -1, &status);
+    }while(status==GDB_RUNNING);
     waitAnswer = TRUE;
     showFile = TRUE;
     running=TRUE;
@@ -298,7 +348,7 @@ int MI2stepInto(int (*sendCommandGdb)(char *)){
 }
 
 int MI2stepOut(int (*sendCommandGdb)(char *)){
-    strcpy(lastComand,"exec-finish\n"); 
+    strcpy(lastComand,"exec-next\n"); 
     char command[200];
     strcpy(command,"exec-finish\n"); 
     sendCommandGdb(command);
@@ -319,17 +369,10 @@ int MI2start(int (*sendCommandGdb)(char *)){
 }
 
 int MI2verifyGdb(int (*sendCommandGdb)(char *)){
+    int status;
     sendCommandGdb("");
-    MI2onOuput(sendCommandGdb, -1);
+    MI2onOuput(sendCommandGdb, -1, &status);
     return 0;
-}
-
-void wait_gdb_answer(int (*sendCommandGdb)(char *)){
-    if(gdbOutput==NULL) gdbOutput=malloc(strlen((""))+1);
-    strcpy(gdbOutput,"");
-    do{
-        sendCommandGdb("");
-    }while(strlen(gdbOutput)==0 && strcmp(gdbOutput,"\n")!=0);
 }
 
 int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
@@ -382,7 +425,7 @@ int MI2removeBreakPoint (int (*sendCommandGdb)(char *), Lines * lines, char * fi
 
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame){
     int hasCobGetFieldStringFunction = FALSE;
-
+    int status;
     char command[512];
     char st[100];
     strcpy(command,"data-evaluate-expression ");
@@ -401,8 +444,12 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
     }
     strcat(command,"\n");
     int tk=sendCommandGdb(command);
-    wait_gdb_answer(sendCommandGdb);
-    ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk);
+    ST_MIInfo * parsed=NULL;
+    do{
+        sendCommandGdb("");
+        parsed=MI2onOuput(sendCommandGdb, tk, &status);
+    }while(status==GDB_RUNNING);
+    //ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk, &status);
     if(parsed!=NULL){
         int find=FALSE;
         ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "value", NULL, &find);
@@ -415,9 +462,13 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
 
 char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *)){
     char * ret = NULL;
+    ST_MIInfo * parsed= NULL;
+    int status;
     int tk = sendCommandGdb("stack-info-frame\n");
-    wait_gdb_answer(sendCommandGdb);
-    ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk);
+    do{
+        sendCommandGdb("");
+        parsed=MI2onOuput(sendCommandGdb, tk, &status);
+    }while(status==GDB_RUNNING);
     if(parsed!=NULL){    
         int find=FALSE;
         ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "frame.func", NULL, &find);
@@ -456,13 +507,17 @@ void tableVariableElements(ST_TableValues * start, char * functionName){
 }
 
 void MI2getStackVariables(int (*sendCommandGdb)(char *), int thread,int  frame){
-        char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
-
+        int status;
         char command[256];
+        
+        ST_MIInfo * parsed=NULL;
+        char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
         sprintf(command,"stack-list-variables --thread %d --frame %d --all-values\n", thread, frame);
         int tk=sendCommandGdb(command);
-        wait_gdb_answer(sendCommandGdb);
-        ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk);
+        do{
+           sendCommandGdb("");
+           parsed=MI2onOuput(sendCommandGdb, tk, &status);
+        }while(status==GDB_RUNNING);
         if(parsed!=NULL){
             int find=FALSE;
             ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "variables", NULL, &find);
@@ -512,18 +567,25 @@ char* cleanRawValue(const char* rawValue) {
 
 int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue){
     int hasCobGetFieldStringFunction = FALSE;
+    int status, tk;
     char aux[256];
     char command[512];
     char * cleanedRawValue = cleanRawValue(rawValue);
     if (var->attribute!=NULL && strcmp(var->attribute->type,"integer")==0){
         sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
         sendCommandGdb(command);
-        wait_gdb_answer(sendCommandGdb);
+        do{
+           sendCommandGdb("");
+           MI2onOuput(sendCommandGdb, tk, &status);
+        }while(status==GDB_RUNNING);
     }else if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
         // TODO
         sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
         sendCommandGdb(command);
-        wait_gdb_answer(sendCommandGdb);
+        do{
+           sendCommandGdb("");
+           MI2onOuput(sendCommandGdb, tk, &status);
+        }while(status==GDB_RUNNING);
     } else{
         strcpy(aux, var->cName);
         if(strncmp(var->cName,"f_",2)==0) strcat(aux, ".data");
@@ -536,7 +598,10 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
             if(qtt>var->size) qtt=var->size;
             sprintf(command,"data-evaluate-expression \"(void)strncpy(%s,\\\"%s\\\",%d)\"\n", aux, finalValue, qtt);
             sendCommandGdb(command);
-            wait_gdb_answer(sendCommandGdb);
+            do{
+                sendCommandGdb("");
+                MI2onOuput(sendCommandGdb, tk, &status);
+            }while(status==GDB_RUNNING);
             free(finalValue);
         }
     }

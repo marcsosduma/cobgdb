@@ -90,8 +90,7 @@ char* subString (const char* input, int offset, int len, char* dest)
 void normalizePath(char * path){
     char sep = '/';
     for(size_t i=0; i < strlen(path);i++) {
-            if (path[i] == '\\')
-            {
+            if (path[i] == '\\') {
                 path[i] = '/';
             }
         }
