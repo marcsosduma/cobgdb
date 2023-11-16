@@ -9,11 +9,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-//#include </usr/include/linux/fcntl.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <stdlib.h>
-#include <time.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #define TRUE 1
 #define FALSE 0
 #define clrscr() printf("\e[1;1H\e[2J")
@@ -84,19 +83,17 @@ int start_gdb(char * name, char * cwd)
    sprintf(env_dir,"-environment-directory \"%s\"\n", cwd);
    sprintf(f_symb,"-file-exec-and-symbols \"%s/%s\"\n", cwd, name);
 
-   char * gdbSet[]={"-gdb-set target-async on\n", //old format
+   char * gdbSet[]={ "-gdb-set target-async on\n", //old format
                      "-gdb-set mi-async on\n",
                      "-gdb-set print repeats 1000\n",
                      "-gdb-set charset UTF-8\n",
-                     "-gdb-set env TERM=xterm\n",
                      env_dir,
                      f_symb,
                      ""
                   };
    int idx=0;
    while(strlen(gdbSet[idx])>=1){
-        strcpy(command, gdbSet[idx++]);
-        sendCommandGdb(command);
+        sendCommandGdb(gdbSet[idx++]);
    }
    waitAnswer=1;
    debug(0, &sendCommandGdb );
@@ -161,18 +158,15 @@ int sendCommandGdb(char * command)
    CHAR chBuf[BUFSIZE];
    BOOL bSuccess = FALSE;   
    HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-   int line_pos=0;
-   int starting=1;
-   int setLine=0;
-   char test[10];
    int qtdAlloc = BUFSIZE;   
-   int count0=0;
    int mustReturn=1;
    #if defined(_WIN32)
    int l1 = 8;
    #else
    int l1 = 7;
    #endif
+   int count0=0;
+   char test[7];
    
    int tk = token;
    if(strlen(command)>0){
@@ -251,6 +245,7 @@ int sendCommandGdb(char * command)
    int count0=0; 
    int mustReturn=1;
    int l1 = 7;
+   fd_set read_fds;
 
    int tk = token;
    if(strlen(command)>0){
@@ -263,6 +258,9 @@ int sendCommandGdb(char * command)
       }else{
          sprintf(chBuf,"%d-%s", token++, command);
       }
+      #ifdef DEBUG
+      printf("%s",chBuf);
+      #endif
       write(stOutPid, chBuf, strlen(chBuf));
       if(mustReturn) return tk;
    }
@@ -278,9 +276,24 @@ int sendCommandGdb(char * command)
    #ifdef DEBUG
    //clrscr();
    #endif
-   while(TRUE){
-      int dwRead = read(stInPid, chBuf, sizeof(chBuf));
-      if(dwRead>=0){
+ for (;;)
+   {
+      FD_ZERO(&read_fds);
+      FD_SET(stInPid, &read_fds);
+
+      struct timeval timeout;
+      timeout.tv_sec = 0;
+      timeout.tv_usec = 0;
+
+      // Use select para verificar se há dados disponíveis
+      int dwRead = select(stInPid + 1, &read_fds, NULL, NULL, &timeout);
+      if (dwRead == -1) {
+         break;
+      }
+      dwRead = read(stInPid, chBuf, sizeof(chBuf));
+      if(dwRead<0){
+         break;
+      }else{
          chBuf[dwRead]='\0';
          qtdAlloc+=strlen(chBuf);
          if(qtdAlloc>BUFFER_OUTPUT_SIZE){
@@ -290,23 +303,6 @@ int sendCommandGdb(char * command)
          #ifdef DEBUG
          printf("Recebendo: %s", gdbOutput);
          #endif
-         count0=0;
-      }else{
-         count0++;
-      }
-      if(dwRead>5)
-         if(strncmp(chBuf,"^exit\n",6)==0)
-             return 0;
-      strcpy(test,"");
-      if(qtdAlloc>=l1){
-        memcpy(test, &gdbOutput[(qtdAlloc-l1)],6);
-        test[6]='\0';
-      }
-      #ifdef DEBUG
-      printf("%s\n",test);
-      #endif
-      if((strcmp(test,"(gdb) ")==0 && dwRead<0) || (dwRead<0 && count0==1)){
-        return -1;
       }
    }
 }
@@ -320,7 +316,7 @@ int start_gdb(char * name, char * cwd){
           snprintf(tty, sizeof(tty), "--tty=%s", ttyName);
     }
     char *cmd[] = {"gdb", 
-                   "--quiet", 
+                   //"--quiet", 
                    tty,
                    "--interpreter=mi2",
                    NULL
@@ -332,6 +328,8 @@ int start_gdb(char * name, char * cwd){
     flf = fcntl(fd1[1], F_GETFL, 0) | O_NONBLOCK;
     fcntl(fd1[1], F_SETFL, flf);
 
+    //to_gdb=fdopen(fd1[1],"w");
+    //from_gdb=fdopen(p2[0],"r");
     int pid = fork();
     if(pid==0){
         dup2(fd1[0], 0);
@@ -363,8 +361,7 @@ int start_gdb(char * name, char * cwd){
 
         int idx=0;
         while(strlen(gdbSet[idx])>=1){
-           strcpy(chBuf, gdbSet[idx++]);           
-           sendCommandGdb(chBuf);
+           sendCommandGdb(gdbSet[idx++]);
         }        
         waitAnswer=1;
         debug(0, &sendCommandGdb );

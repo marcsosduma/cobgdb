@@ -31,10 +31,11 @@ int show_opt_var(){
 
 int print_variable(int level, int * notShow, int line_pos, int start_lin, 
                    int end_lin, int lin, int start_linex_x,
-                   ST_DebuggerVariable * var,int (*sendCommandGdb)(char *)){
+                   ST_DebuggerVariable * var,int (*sendCommandGdb)(char *),
+                   char * functionName){
     int bkg;
     (*notShow)--;
-    if(*notShow<0 && lin<22){
+    if(*notShow<0 && strcmp(var->functionName,functionName)==0 && lin<22){
         gotoxy(1,lin+2);
         if(level>0 && ctlVar!=var->ctlVar){
             MI2evalVariable(sendCommandGdb,var,0,0);
@@ -92,15 +93,17 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
         printBK(" ", color_white, color_frame);  
         lin++;
     }
-    if(var->first_children!=NULL && var->show=='-'){
-        lin=print_variable(++level, notShow, line_pos, start_lin, 
-                   end_lin, lin, start_linex_x,
-                   var->first_children,sendCommandGdb);
-    }
-    if(var->brother!=NULL){
-        lin = print_variable(++level, notShow, line_pos, start_lin, 
-                   end_lin, lin, start_linex_x,
-                   var->brother,sendCommandGdb);
+    if(strcmp(var->functionName,functionName)==0){
+        if(var->first_children!=NULL && var->show=='-'){
+            lin=print_variable(++level, notShow, line_pos, start_lin, 
+                    end_lin, lin, start_linex_x,
+                    var->first_children,sendCommandGdb, functionName);
+        }
+        if(var->brother!=NULL){
+            lin = print_variable(++level, notShow, line_pos, start_lin, 
+                    end_lin, lin, start_linex_x,
+                    var->brother,sendCommandGdb, functionName);
+        }
     }
     return lin;
 }
@@ -154,6 +157,8 @@ int show_variables(int (*sendCommandGdb)(char *)){
     ST_DebuggerVariable * var = firstVar(var);
     int old_lin=lin;
     int notShow;
+    char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
+    if(functionName==NULL) return 0;
     while(input_character!='R' && input_character!='r'){
         notShow=start_window_line;
         if(var!=NULL){
@@ -166,7 +171,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 if(var->parent==NULL){
                     lin=print_variable(0, &notShow, line_pos, start_window_line, 
                         start_window_line+20, lin, start_linex_x,
-                        var,sendCommandGdb);
+                        var,sendCommandGdb, functionName);
                 }
                 //lin=(lin==old_lin)?lin+1:lin;
                 var=var->next;
@@ -263,6 +268,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
         //show_info();
         //if(input_character>0) printf("%d\n", input_character);
     }
+    if(functionName!=NULL) free(functionName);
 }
 
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 

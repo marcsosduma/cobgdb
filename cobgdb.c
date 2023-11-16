@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
+#include <time.h>
 #if defined(__linux__)
 #include <unistd.h>
 #else
@@ -27,10 +28,12 @@ int HEIGHT=25;
 int changeLine=FALSE;
 int color_frame=color_light_blue;
 char decimal_separator = '.';
+clock_t start_time  = -1;
 
 ST_Line * LineDebug=NULL;
 ST_Attribute * Attributes=NULL;
 ST_DebuggerVariable * DebuggerVariable=NULL;
+ST_bk * BPList=NULL;
 
 int start_gdb(char * name, char * cwd);
 
@@ -52,6 +55,20 @@ void free_memory()
     }
 }
 
+void freeBKList()
+{
+    ST_bk * search = BPList;
+    ST_bk *current;
+
+    while (search != NULL) {
+        current = search;
+        search = search->next;
+        free(current->name);
+        free(current);
+    }
+}
+
+
 int cobc_compile(char file[][512], char values[10][256], int arg_count){
     char *param[20]; 
 
@@ -65,6 +82,7 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
         "-A ",
         "--coverage ",
         "-v ",
+        "-free ",
         "-O0 ",
         "-x "
     };
@@ -126,6 +144,8 @@ char fileNameWithoutExtension(char * file, char * onlyName){
         strcpy(onlyName, file);
     }
 }
+
+
 
 Lines * set_window_pos(int * line_pos){
     if(debug_line>=0){
@@ -277,8 +297,20 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             print_color_reset();
             fflush(stdout);
         }
-        if(check_size<3) showFile=win_size_verify(showFile, &check_size);
-        input_character =  key_press();
+        if(waitAnswer && start_time>0){
+            clock_t end_time = clock();
+            double elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+            if(elapsed_time>3){
+                if(check_size<3) showFile=win_size_verify(showFile, &check_size);
+                input_character =  key_press();
+            }else{
+                input_character = -1;
+            }
+        }else{
+            if(check_size<3) showFile=win_size_verify(showFile, &check_size);
+            input_character =  key_press();
+            start_time=-1;
+        }
         switch (input_character)
         {
             case VK_UP:
@@ -347,7 +379,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             case 'b':    
             case 'B':    
                 if(!waitAnswer){
-                    lb = lines;           
+                    lb = lines;     
                     for(int a=0;a<line_pos;a++) lb=lb->line_after;
                     int check=hasCobolLine(lb->file_line);
                     if(check>0){
@@ -357,8 +389,9 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                         }else{
                             MI2removeBreakPoint(sendCommandGdb, lines, program_file.name_file, lb->file_line);
                         }  
+                        showFile=TRUE;
+                        MI2getStack(sendCommandGdb,1);
                     } 
-                    showFile=TRUE;
                 }
                 break;
             case 'd':
@@ -382,12 +415,18 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             case 's':
             case 'S':
                 dblAux= debug_line;
-                if(!waitAnswer) MI2stepInto(sendCommandGdb);
+                if(!waitAnswer){
+                    MI2stepInto(sendCommandGdb);
+                    start_time = clock();
+                }
                 debug_line = dblAux;
                 break;
             case 'n':
             case 'N':
-                if(!waitAnswer) MI2stepOver(sendCommandGdb);
+                if(!waitAnswer){
+                    MI2stepOver(sendCommandGdb);
+                    start_time = clock();
+                }
                 break;
             case 'g':
             case 'G':
@@ -447,6 +486,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                     if(showFile && changeLine){
                         lines = set_window_pos(&line_pos);
                         changeLine=FALSE;
+                        start_time=-1;
                     }
                 }
                 break;
@@ -460,6 +500,20 @@ int loadfile(char * nameCobFile) {
     int input_character;
     strcpy(program_file.name_file, nameCobFile);
     readCodFile(&program_file);
+    if(BPList!=NULL){
+        Lines * line = program_file.lines;
+        line->breakpoint='N';
+        while(line!=NULL){
+            ST_bk * search = BPList;
+            while(search!=NULL){
+                if(search->line==line->file_line && strcasecmp(search->name, file_cobol)==0){
+                    line->breakpoint='S';
+                }
+                search=search->next;
+            }            
+            line=line->line_after;
+        }
+    }
 }
 
 int initTerminal(){
@@ -570,6 +624,7 @@ int main(int argc, char **argv) {
         } 
         #endif
         start_gdb(nameExecFile,cwd);
+        freeBKList();
         freeFile();
         //TODO: 
         //freeVariables();

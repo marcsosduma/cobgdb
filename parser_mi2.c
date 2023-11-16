@@ -11,7 +11,7 @@
 //#define DEBUG 
 #define MAX_MATCH_LENGTH 512
 
-char m[10][512];
+char m[10][MAX_MATCH_LENGTH];
 
 void parseValue(char * output, ST_TableValues * values);
 struct ST_TableValues * parseResult(char * output);
@@ -133,9 +133,8 @@ char * parseCString(char * output){
         return NULL;
     int stringEnd = 1;
     boolean inString = TRUE;
-    char * remaining = strdup(output);
-    int len=strlen(output);
-    subString(output,1, (--len), remaining);
+    char * remaining = output;
+    remaining++;
     boolean escaped = FALSE;
     while(inString){
         if(escaped)
@@ -144,7 +143,7 @@ char * parseCString(char * output){
             escaped=TRUE;
         else if(remaining[0]=='"')
             inString = FALSE;
-        subString(remaining,1, (--len), remaining); 
+        remaining++;
         stringEnd++;
     }
     char * str = malloc(stringEnd+1);
@@ -152,7 +151,6 @@ char * parseCString(char * output){
     str[stringEnd]='\0';
     int lenOut= strlen(output);
     subString(output,stringEnd, lenOut-stringEnd, output);
-    free(remaining);
     char * aux = parseString(str);
     strcpy(str, aux);
     return str;
@@ -399,7 +397,7 @@ ST_MIInfo * parseMI(char * out){
 
     ST_OutOfBandRecord * outOfBandRecord= NULL;
     ST_ResultRecords * resultRecords = NULL;
-    while(1){
+    while(TRUE){
         //qtd=regex(outOfBandRecordRegex, output, match);
         qtd=fOutOfBandRecordRegex(output, match);
         if(qtd==0) break;
@@ -594,7 +592,7 @@ int fIndexRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     return ret;
 }
 
-ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, boolean * find) {
+ST_TableValues * parseMIvalueOf1(ST_TableValues * start, char * p, char * key, boolean * find) {
     if(start==NULL)
         return start;    
     char * path = strdup(p);
@@ -676,5 +674,88 @@ ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, bo
         Trim(path);
     }
     free(path);
+    return search;
+}
+
+ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, boolean * find) {
+    if(start==NULL)
+        return start;    
+    char * path = p;
+    int idx = -1;
+    ST_TableValues * search=NULL;
+    while(!*find){
+        while(isSpace(path[0])) path++;
+        if(key==NULL){
+            if(start==NULL || strlen(path)<1)
+                return start;
+            //int qtd=regex(pathRegex, path, m);
+            int qtd=fPathRegex(path, m);
+            if(qtd>0){
+                path = path + strlen(m[0]);
+                key = strdup(m[1]);
+            }else if (path[0]=='@')
+            {
+                path++;
+                continue;
+            }else {
+                //int qt=regex(indexRegex, path, m);
+                int qt=fIndexRegex(path, m);
+                if(qt>0){
+                    path += strlen(m[0]);
+                    idx=atoi(m[1]);
+                    int qtd=fPathRegex(path, m);
+                    ST_TableValues * sch=start;
+                    while((idx--)>0){
+                        sch=sch->array;
+                        sch=sch->next_array;
+                    }
+                    if(sch->array!=NULL){
+                        search=parseMIvalueOf(sch->array, path, key, find);
+                        if(search!=NULL) break;
+                    }   
+                    key=NULL;
+                }
+            }
+        }else{
+            ST_TableValues * sch=start;
+            while(sch!=NULL){
+                if(sch->key!=NULL && strcmp(sch->key, key)==0){
+                    search=sch;
+                    if(strlen(path)<1)
+                         *find=TRUE;
+                    if(key!=NULL){
+                        free(key);
+                        key=NULL;
+                    }
+                    break;
+                }
+                if(sch->next!=NULL){
+                    *find=FALSE;
+                    search=parseMIvalueOf(sch->next, path, key, find);
+                    if(search!=NULL && search->value!=NULL) break;
+                }  
+                sch=start;              
+                if(sch->array!=NULL){
+                    if(sch->array!=NULL){
+                       *find=FALSE;
+                        search=parseMIvalueOf(sch->array, path, key, find);
+                        if(search!=NULL && search->value!=NULL) break;
+                    }
+                }
+                sch=start;
+                if(sch->next_array!=NULL){
+                    *find=FALSE;
+                    search=parseMIvalueOf(sch->next_array->array, path, key, find);
+                    if(search!=NULL && search->value!=NULL) break;
+                }
+                if(search==NULL){
+                    search=newTableValues();
+                    *find=TRUE;
+                    break;
+                }
+                break;
+            }
+        }
+    }
     return search;
 }

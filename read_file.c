@@ -73,7 +73,7 @@ char * Trim(char * s){
         return s;             /* modifies s in place *and* returns it for swank */  
 }
 
-char* subString (const char* input, int offset, int len, char* dest)
+char* subString(const char* input, int offset, int len, char* dest)
 {
   int input_len = strlen (input);
   if ((offset + len) > input_len){
@@ -187,6 +187,7 @@ int readCodFile(struct program_file *program) {
         Lines *new_line = (Lines *)malloc(sizeof(Lines));
         new_line->line_after = NULL;
         new_line->line_before = NULL;
+        new_line->breakpoint='N';
         new_line->high = NULL;
 
         if (lines == NULL) {

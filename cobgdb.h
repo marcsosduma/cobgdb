@@ -120,6 +120,13 @@ struct st_parse {
     struct st_parse * next;
 };
 
+struct st_bkpoint {
+    char * name;
+    int line;
+    struct st_bkpoint * next;
+};
+
+typedef struct st_bkpoint ST_bk;
 
 // ATTRIBUTTES - END
 // DebuggerVariable - START
@@ -217,6 +224,7 @@ char * Trim(char * s);
 int isAbsolutPath(char * path);
 char* toLower(char* str);
 char* toUpper(char* str);
+boolean isSpace(char c);
 //terminal.c
 void get_terminal_size(int *width, int *height);
 void set_terminal_size(int width, int height);
@@ -266,6 +274,8 @@ int MI2variablesRequest(int (*sendCommandGdb)(char *));
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame);
 int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * lines );
 int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue);
+char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *));
+int MI2getStack(int (*sendCommandGdb)(char *), int thread);
 //variables.c
 int show_variables(int (*sendCommandGdb)(char *));
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 

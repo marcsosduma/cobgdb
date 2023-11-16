@@ -21,6 +21,7 @@ extern int waitAnswer;
 extern int changeLine;
 extern char file_cobol[512];
 extern char first_file[512];
+extern ST_bk * BPList;
 char lastComand[200];
 int subroutine=-1;
 
@@ -32,7 +33,6 @@ enum GDB_STATUS {
     GDB_END_STEPPING_RANGE,
     GDB_FUNCTION_FINISHED,
     GDB_STEP_OUT_END,
-    GDB_QUIT,
     GDB_SIGNAL_STOP,
     GDB_STOPPED
 };
@@ -308,6 +308,37 @@ void wait_gdb_answer(int (*sendCommandGdb)(char *)){
     }while(strlen(gdbOutput)==0 && strcmp(gdbOutput,"\n")!=0);
 }
 
+int MI2getStack(int (*sendCommandGdb)(char *), int thread){
+    int status, tk;
+    char command[200];
+    strcpy(lastComand,"exec-step\n"); 
+    sprintf(command,"%s %d 0 0\n","stack-list-frames --thread",thread);
+    tk=sendCommandGdb(command);
+    ST_MIInfo * parsed=NULL;
+    do{
+        sendCommandGdb("");
+        parsed=MI2onOuput(sendCommandGdb, tk, &status);
+    }while(status==GDB_RUNNING);
+    if(parsed!=NULL){
+        if (parsed->resultRecords!=NULL && strcmp(parsed->resultRecords->resultClass,"done")==0 ) {
+            boolean find=FALSE;
+            ST_Line * hasLine = NULL;
+            ST_TableValues * search1=parseMIvalueOf(parsed->resultRecords->results, "@frame.fullname", NULL, &find);
+            if(search1!=NULL){
+                find=FALSE;
+                ST_TableValues * search2=parseMIvalueOf(parsed->resultRecords->results, "@frame.line", NULL, &find);
+                if(search2!=NULL && search2->value!=NULL){
+                    int lineC = atoi(search2->value);
+                    hasLine =  getLineCobol( search1->value, lineC);
+                    if(hasLine!=NULL)
+                        debug_line = hasLine->lineCobol;
+                }
+            }
+        }
+        freeParsed(parsed);
+    } 
+    return 0;
+}
 
 int MI2stepOver(int (*sendCommandGdb)(char *)){
     strcpy(lastComand,"exec-next\n"); 
@@ -377,50 +408,93 @@ int MI2verifyGdb(int (*sendCommandGdb)(char *)){
 
 int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
     char command[256];
+    int status=0;
     ST_Line * line = getLineC(fileCobol, lineNumber);
     if(line!=NULL){
         sprintf(command,"%s%s:%d\n","break-insert -f ",line->fileC,line->lineC);
         sendCommandGdb(command);
-        waitAnswer = TRUE;
+        do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, -1, &status);
+        }while(status==GDB_RUNNING);
+        waitAnswer = FALSE;
+        ST_bk * search = BPList;
+        ST_bk * before = NULL;
+        while(search!=NULL){
+            if(search->line==lineNumber && strcasecmp(search->name, line->fileCobol)==0) return 0;
+            before=search;
+            search=search->next;
+        }
+        ST_bk * newbk = malloc(sizeof(ST_bk));
+        newbk->name = strdup(fileCobol);
+        newbk->next=NULL;
+        newbk->line=lineNumber;
+        if(BPList==NULL)
+            BPList=newbk;
+        else    
+            before->next=newbk;
     }
 }
-
-int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
-    char command[256];
-    ST_Line * line = getLineC(fileCobol, lineNumber);
-    if(line!=NULL){
-        sprintf(command,"%s%s:%d\n","break-insert -t ",line->fileC,line->lineC);
-        sendCommandGdb(command);
-        wait_gdb_answer(sendCommandGdb);
-        if(debug_line>0)
-            strcpy(command,"exec-finish\n"); 
-        else
-            strcpy(command,"exec-run\n");
-        sendCommandGdb(command);
-        wait_gdb_answer(sendCommandGdb);
-        waitAnswer = TRUE;
-        showFile = TRUE;
-        running=TRUE;
-    }
-}
-
 
 int MI2removeBreakPoint (int (*sendCommandGdb)(char *), Lines * lines, char * fileCobol, int lineNumber ){
     ST_Line * line = getLineC(fileCobol, lineNumber);
+    int status=0;
     if(line!=NULL){
         char command[256];
         strcpy(command,"break-delete\n");
         sendCommandGdb(command);
-        waitAnswer = TRUE;
-        Lines * lb = lines;
-        while(lb!=NULL){
-            if(lb->breakpoint=='S'){
-                MI2addBreakPoint(sendCommandGdb, fileCobol, lb->file_line );
+        do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, -1, &status);
+        }while(status==GDB_RUNNING);
+        ST_bk * search = BPList;
+        ST_bk * before = NULL;
+        ST_bk * remove = NULL;
+        while(search!=NULL){
+            if(search->line==lineNumber && strcasecmp(search->name, line->fileCobol)==0){
+                if(before==NULL){
+                    BPList=search->next;
+                }else{
+                    before->next=search->next;
+                }
+                remove = search;
+            }else{
+                remove= NULL;
+                MI2addBreakPoint(sendCommandGdb, search->name, search->line );
             }
-            lb = lb->line_after;
+            before=search;
+            search=search->next;
+            if(remove!=NULL){
+                free(remove->name);
+                free(remove);
+            }
         }
+        waitAnswer = FALSE;
     }
     return 0;
+}
+
+int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
+    char command[256];
+    int status=0;
+    int isRunning = (debug_line>0);
+    ST_Line * line = getLineC(fileCobol, lineNumber);
+    if(line!=NULL){
+        sprintf(command,"%s%s:%d\n","break-insert -t ",line->fileC,line->lineC);
+        sendCommandGdb(command);
+        do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, -1, &status);
+        }while(status==GDB_RUNNING);
+        if(isRunning)
+            strcpy(command,"exec-finish\n"); 
+        else
+            strcpy(command,"exec-run\n");
+        sendCommandGdb(command);
+        waitAnswer = TRUE;
+        showFile = TRUE;
+        running=TRUE;
+    }
 }
 
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame){
@@ -607,3 +681,4 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
     }
     free(cleanedRawValue);
 }
+
