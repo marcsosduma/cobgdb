@@ -37,7 +37,7 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
     (*notShow)--;
     if(*notShow<0 && strcmp(var->functionName,functionName)==0 && lin<22){
         gotoxy(1,lin+2);
-        if(level>0 && ctlVar!=var->ctlVar){
+        if((level>0 || var->dataSotorage==NULL) && ctlVar!=var->ctlVar){
             MI2evalVariable(sendCommandGdb,var,0,0);
             var->ctlVar=ctlVar;
         }
