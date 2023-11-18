@@ -277,6 +277,9 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
                    int end_lin, int lin, int start_linex_x,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *), int bkg){
    
+    int var_color = color_yellow;
+    int value_color = color_green;
+
     if(lin<VIEW_LINES-3){
         gotoxy(10,lin+2);
         if(ctlVar!=var->ctlVar){
@@ -288,8 +291,9 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
         int linW=60;
         showOne=TRUE;
         sprintf(varcobol,"%.*s%c%s: ",level*2," ",'-',var->cobolName);
-        print_colorBK(color_yellow, bkg);
-        printf("%ls",L" ");  
+        print_colorBK(color_white, bkg);
+        draw_box_border(10,lin+2);
+        print_colorBK(var_color, bkg);
         int nm = strlen(varcobol)-start_linex_x;
         int start_linex_x2=0;
         if(nm>0){
@@ -309,7 +313,7 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
             if(start_linex_x2<lenVar){
                 nm = lenVar-start_linex_x2;
                 if(nm>linW) nm=linW;
-                print_colorBK(color_green, bkg);
+                print_colorBK(value_color, bkg);
                 wcsncpy(wcBuffer, &wcharString[start_linex_x2], nm);
                 wcBuffer[nm]='\0';
                 printf("%ls",wcBuffer);
@@ -317,11 +321,15 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
             }
             free(wcharString);
         }
-        print_colorBK(color_green, bkg);
+        print_colorBK(value_color, bkg);
         if(linW>0){
-             printf("%*ls",linW+1,L" ");
+            printf("%*ls",linW+1,L" ");
+            print_colorBK(color_white, bkg);
+            draw_box_border(72,lin+2);
         }else{
             printf("%ls",L" ");  
+            print_colorBK(color_white, bkg);
+            draw_box_border(72,lin+2);
         }
         lin++;
     }
@@ -370,10 +378,9 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                     int notShow=FALSE;
                     qtd++;
                     if(qtd==1){
-                        gotoxy(10,lin+2);
-                        print_colorBK(color_white, color_blue);
-                        printf("%-61ls",L" Show Line Variables");
-                        printf("%ls",L"-");
+                        //gotoxy(10,boxy);
+                        print_colorBK(color_white, bkg);
+                        draw_box_first(10,lin+2,61,"Show Line Variables");
                         lin++;
                     }
                     lin=hover_variable(0, &notShow, line_pos, start_window_line, 
@@ -381,9 +388,8 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                         var,sendCommandGdb, bkg);
                 }
                 if(qtd>0){
-                    gotoxy(10,lin+2);
-                    print_colorBK(color_light_blue, bkg);
-                    printf("%62ls",L" ");
+                    print_colorBK(color_white, bkg);
+                    draw_box_last(10,lin+2,61);
                 }
                 free(chval);
                 //printf("%*ls",qtdMove,wcBuffer);

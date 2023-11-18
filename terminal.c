@@ -10,6 +10,7 @@
 #include <WinCon.h>
 #include <conio.h>
 #include <stdlib.h>
+#include <wchar.h>
 #define maxViewWidth 200
 #define maxViewHeight 100
 void SetConsoleSize(HANDLE hStdout, int cols, int rows );
@@ -24,6 +25,7 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <wchar.h>
 #endif // Windows/Linux
 
 #define color_black      0
@@ -596,3 +598,112 @@ void print_no_resetBK(char * s, int textcolor, int backgroundcolor) { // print w
     printf("%s", s);
 }
 
+// BOX
+
+void draw_utf8_text(const char* text) {
+    #ifdef _WIN32
+        HANDLE hStdOut;
+        DWORD written = 0;
+        wchar_t wcharString[500];
+
+        hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        MultiByteToWideChar(CP_UTF8, 0, text, -1, wcharString, (strlen(text) + 1));
+        WriteConsoleW(hStdOut, wcharString, (DWORD)wcslen(wcharString), &written, NULL);
+    #else
+        // Se não for Windows, apenas imprima o texto diretamente
+        printf("%s", text);
+    #endif
+}
+
+int draw_box(int posx, int posy, int width, int height, char *text) {
+    char horizontal[] = "\u2500";   // UTF-8 character for horizontal line
+    char vertical[]   = "\u2502";   // UTF-8 character for vertical line
+    // Define the corners of the box using wide characters
+    char topLeftCorner[] = "\u250C";      // UTF-8 character for top-left corner
+    char topRightCorner[] = "\u2510";     // UTF-8 character for top-right corner
+    char bottomLeftCorner[] = "\u2514";   // UTF-8 character for bottom-left corner
+    char bottomRightCorner[] = "\u2518";  // UTF-8 character for bottom-right corner
+    char line_h[500];
+    wchar_t utext[100];
+    #if defined(_WIN32)
+    MultiByteToWideChar(CP_UTF8, 0, text, -1, utext,(strlen(text) + 1) * sizeof(wchar_t) / sizeof(utext[0]));
+    #else
+    mbstowcs(utext, text, strlen(text) + 1);
+    #endif
+    // Line 1
+    gotoxy(posx, posy);
+    // Build the horizontal line by repeating the character
+    snprintf(line_h, sizeof(line_h), "%s%s", topLeftCorner, text);
+    for (int i = 0; i < (width - wcslen(utext)); ++i) {
+        strcat(line_h, horizontal);
+    }
+    strcat(line_h, topRightCorner);
+    // Add newline and display
+    strcat(line_h, "\r");
+    draw_utf8_text(line_h);
+    // Line 2 to height-1
+    sprintf(line_h, "%s%*s%s\n", vertical, width, " ", vertical);
+    for (int y = 1; y < height; y++) {
+        gotoxy(posx, posy + y);
+        draw_utf8_text(line_h);
+    }  
+    // Last line
+    snprintf(line_h, sizeof(line_h), "%s", bottomLeftCorner);
+    for (int i = 0; i < width; ++i) {
+        strcat(line_h, horizontal);
+    }
+    strcat(line_h, bottomRightCorner);
+    // Add newline and display
+    strcat(line_h, "\r");
+    gotoxy(posx, posy + height);
+    draw_utf8_text(line_h);
+}
+
+int draw_box_first(int posx, int posy, int width, char *text) {
+    char horizontal[] = "\u2500";   // UTF-8 character for horizontal line
+    // Define the corners of the box using wide characters
+    char topLeftCorner[] = "\u250C";      // UTF-8 character for top-left corner
+    char topRightCorner[] = "\u2510";     // UTF-8 character for top-right corner
+    char line_h[500];
+    wchar_t utext[100];
+    #if defined(_WIN32)
+    MultiByteToWideChar(CP_UTF8, 0, text, -1, utext,(strlen(text) + 1) * sizeof(wchar_t) / sizeof(utext[0]));
+    #else
+    mbstowcs(utext, text, strlen(text) + 1);
+    #endif
+    // Line 1
+    gotoxy(posx, posy);
+    // Build the horizontal line by repeating the character
+    snprintf(line_h, sizeof(line_h), "%s%s", topLeftCorner, text);
+    for (int i = 0; i < (width - wcslen(utext)); ++i) {
+        strcat(line_h, horizontal);
+    }
+    strcat(line_h, topRightCorner);
+    // Add newline and display
+    strcat(line_h, "\r");
+    draw_utf8_text(line_h);
+}
+
+int draw_box_last(int posx, int posy, int width) {
+    char horizontal[] = "\u2500";   // UTF-8 character for horizontal line
+    // Define the corners of the box using wide characters
+    char bottomLeftCorner[] = "\u2514";   // UTF-8 character for bottom-left corner
+    char bottomRightCorner[] = "\u2518";  // UTF-8 character for bottom-right corner
+    char line_h[500];
+    // Last line
+    snprintf(line_h, sizeof(line_h), "%s", bottomLeftCorner);
+    for (int i = 0; i < width; ++i) {
+        strcat(line_h, horizontal);
+    }
+    strcat(line_h, bottomRightCorner);
+    // Add newline and display
+    strcat(line_h, "\r");
+    gotoxy(posx, posy);
+    draw_utf8_text(line_h);
+}
+
+int draw_box_border(int posx, int posy) {
+    char vertical[]   = "\u2502";   // UTF-8 character for vertical line
+    gotoxy(posx, posy);
+    draw_utf8_text(vertical);
+}
