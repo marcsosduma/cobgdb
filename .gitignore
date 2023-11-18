@@ -8,6 +8,7 @@ tmp
 *.DAT
 *.DAT.*
 cobgdb
+cobgdb.exe
 simple
 simple.c
 simple.c.h
@@ -23,3 +24,12 @@ number.c
 number.c.h
 number.c.l.h
 number.exe
+sample
+sample.exe
+sample.c
+sample.c.h
+sample.c.l.h
+subsample
+subsample.c
+subsample.c.h
+subsample.c.l.h

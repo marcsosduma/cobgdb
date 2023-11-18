@@ -10,11 +10,13 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_ 
+#define VIEW_LINES 24
+#define VIEW_COLS  80
 struct program_file program_file;
 char file_cobol[512];
 char first_file[512];
 int start_window_line = 0;
-int qtd_window_line = 23;
+int qtd_window_line = VIEW_LINES-2;
 int start_line_x = 0;
 int debug_line = -1;
 int running = TRUE;
@@ -23,8 +25,8 @@ char * gdbOutput = NULL;
 int showFile=TRUE;
 int ctlVar=0;
 char * ttyName=NULL;
-int WIDTH=80;
-int HEIGHT=25;
+int WIDTH=VIEW_COLS;
+int HEIGHT=VIEW_LINES;
 int changeLine=FALSE;
 int color_frame=color_light_blue;
 char decimal_separator = '.';
@@ -145,8 +147,6 @@ char fileNameWithoutExtension(char * file, char * onlyName){
     }
 }
 
-
-
 Lines * set_window_pos(int * line_pos){
     if(debug_line>=0){
         // exec_line before window
@@ -157,11 +157,11 @@ Lines * set_window_pos(int * line_pos){
             *line_pos = debug_line - 1 - start_window_line;
         }else{
             int new_pos = debug_line - 1 - start_window_line;
-            if(new_pos<21){
+            if(new_pos<(VIEW_LINES-4)){
                 *line_pos=new_pos;
             }else{
-                start_window_line = debug_line - 21;
-                *line_pos=20;
+                start_window_line = debug_line - VIEW_LINES + 4;
+                *line_pos=(VIEW_LINES-5);
                 //debug_line--;
             }
         }
@@ -179,13 +179,13 @@ int show_opt(){
     sprintf(aux,"%-80s\r", opt);
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
-    gotoxy(1,24);
+    gotoxy(1,VIEW_LINES-1);
     sprintf(aux,"%80s\r"," ");
     printBK(aux, color_frame, color_frame);
 }
 
 int show_info(){
-    gotoxy(1,25);
+    gotoxy(1,VIEW_LINES);
     if(debug_line>0 && !running){
         print_colorBK(color_green, color_black);
         printf("%s\r", "Debugging             ");
@@ -193,10 +193,15 @@ int show_info(){
         print_colorBK(color_red, color_black);
         printf("%s\r", "Running               ");
     }else{
-        print_colorBK(color_black, color_black);
-        printf("%s\r", "                      ");
+        print_colorBK(color_yellow, color_black);
+        if(waitAnswer){
+            printf("%s\r", "Waiting               ");
+        }else{
+            printf("%s\r", "                      ");
+        }
     }
-    gotoxy(1,25);
+    gotoxy(1,VIEW_LINES);
+    if(showFile==FALSE) fflush(stdout);
 }
 
 int show_file(Lines * lines, int line_pos){
@@ -209,7 +214,7 @@ int show_file(Lines * lines, int line_pos){
     show_opt();
     size_t  bkgColor=color_gray;
     char chExec = ' ';
-    for(size_t i=0;i<22;i++){
+    for(size_t i=0;i<(VIEW_LINES-3);i++){
         if(show_line != NULL){
             gotoxy(1,i+2);
             if(show_line->breakpoint=='S'){
@@ -326,10 +331,10 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 break;
             case VK_DOWN: 
                 if(lines->line_after!= NULL){
-                    if(line_pos>20){
+                    if(line_pos>(VIEW_LINES-5)){
                         start_window_line++;                 
                         lines = lines->line_after;
-                    }else if(line_pos<=20){
+                    }else if(line_pos<=(VIEW_LINES-5)){
                         line_pos++;
                     }
                 }
@@ -339,7 +344,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 if(line_pos>0){
                     line_pos=0;
                 }else{
-                    qtd_page = 23;
+                    qtd_page = VIEW_LINES-2;
                     line_pos=0;
                     while((qtd_page--)>0 && lines->line_before!=NULL){
                         start_window_line--;
@@ -350,15 +355,15 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 break;
             case VK_PGDOWN: 
                 qtd_page = 0;
-                if(line_pos<21){
-                    line_pos=21;
+                if(line_pos<(VIEW_LINES-4)){
+                    line_pos=VIEW_LINES-4;
                 }else{
-                    if((program_file.qtd_lines-start_window_line)>22){
-                        while((qtd_page++)<23 && lines->line_after!=NULL){
+                    if((program_file.qtd_lines-start_window_line)>(VIEW_LINES-3)){
+                        while((qtd_page++)<(VIEW_LINES-2) && lines->line_after!=NULL){
                             start_window_line++;
                             lines=lines->line_after;
                         }
-                        line_pos=21;
+                        line_pos=VIEW_LINES-4;
                     }
                 }
                 while((lines->file_line+line_pos)>program_file.qtd_lines) line_pos--;
@@ -519,7 +524,7 @@ int loadfile(char * nameCobFile) {
 int initTerminal(){
     int width=0, height=0;
 
-    set_terminal_size(80, 25);
+    set_terminal_size(VIEW_COLS, VIEW_LINES);
     #if defined(_WIN32)
     Sleep(200);
     #elif defined(__linux__)
@@ -629,7 +634,7 @@ int main(int argc, char **argv) {
         //TODO: 
         //freeVariables();
         if(ttyName!=NULL) free(ttyName);
-        gotoxy(1,24);
+        gotoxy(1,(VIEW_LINES-1));
     }
     print_color_reset();
     cursorON();

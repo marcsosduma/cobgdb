@@ -696,6 +696,27 @@ boolean versionRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX
     return ret;
 }
 
+/* Program exit */
+boolean programExit(struct st_parse line_parsed[100], int qtt_tk){
+    int pos=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    int qtt = 0;
+    while(qtt<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size!=2 || strncmp(m->token,"/*", 2)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+1);      
+        if(m->size!=7 || strncasecmp(m->token,"Program", 7)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+2);        
+        if(m->size!=4 || strncasecmp(m->token,"exit", 4)!=0){ break;}
+        m=tk_val(line_parsed, qtt_tk, pos+3);        
+       if(m->size!=2 || strncmp(m->token,"*/", 2)!=0){ break;}
+        ret = TRUE;
+        break;
+    }
+    return ret;
+}
+
 //char fileIncludeRegex[] = "\\#include\\s+\\\"([0-9a-z_\\-\\.\\s]+)\\\"";
 boolean fileIncludeRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
     int pos=0;
@@ -758,6 +779,7 @@ int parser(char * file_name, int fileN){
         #ifdef debug
         printf("%s", lines->line);
         #endif
+
         qtt_tk=0;
         lineParse(lines->line, line_parsed, &qtt_tk);
         if(!bfileCobolRegex){            
@@ -804,13 +826,14 @@ int parser(char * file_name, int fileN){
                     performLine = -1;
                 PushLine(fileCobol, lineCobol, fileC, lineNumber + 2);
         }
+
         // fix new codegen - new
         //qtd=regex(procedureFixRegex, lines->line, m);
         boolean bprocedureFixRegex = procedureFixRegex(line_parsed, qtt_tk, &tmp[0]);
         if(bprocedureFixRegex>0 && LineAtu!=NULL){
             int lineC = atoi(tmp);
             boolean isOldFormat = (lines->line_before!=NULL)?fixOlderFormat(lines->line_before->line):FALSE;
-            if(isVersion2_2_or_3_1_1 || !isOldFormat){
+            if(fileNameCompare(LineAtu->fileCobol, fileCobol)==0 && (isVersion2_2_or_3_1_1 || !isOldFormat)){
                 LineAtu->lineC = lineC;                    
             }
         }
@@ -897,6 +920,10 @@ int parser(char * file_name, int fileN){
                 LineAtu->endPerformLine = lineNumber+1;
                 performLine=-1;
             }
+        }
+        boolean bprogramExit=programExit(line_parsed, qtt_tk);
+        if(bprogramExit){
+            break;
         }
         if(lines->line_after!=NULL) lines=lines->line_after;
     }

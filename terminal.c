@@ -42,6 +42,10 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #define color_pink      13
 #define color_yellow    14
 #define color_white     15
+#define VIEW_LINES 24
+#define VIEW_COLS  80
+#define STRCURSOR_OFF "\e[?25l"
+#define STRCURSOR_ON  "\e[?25h"
 
 char color[200];
 
@@ -49,8 +53,8 @@ void cursorON();
 void cursorOFF();
 void clearScreen();
 
-int TERM_WIDTH=80;
-int TERM_HEIGHT=25;
+int TERM_WIDTH = VIEW_COLS;
+int TERM_HEIGHT= VIEW_LINES;
 
 #if defined(__linux__)
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -336,8 +340,8 @@ void gotoxy(int x, int y){
 
 #ifdef _WIN32
     HANDLE hBuffer1;
-    COORD bufferSize = {80, 25};
-    CHAR_INFO buffer[80 * 25];
+    COORD bufferSize = {VIEW_COLS, VIEW_LINES};
+    CHAR_INFO buffer[VIEW_COLS * VIEW_LINES];
     SMALL_RECT rect;
 #endif
 
@@ -375,7 +379,7 @@ void cursorOFF(){
     cursorInfo.bVisible = FALSE;
     SetConsoleCursorInfo(consoleHandle, &cursorInfo);
 #else
-    printf("\e[?25l");
+    printf(STRCURSOR_OFF);
 #endif
 }
 
@@ -387,7 +391,7 @@ void cursorON(){
     cursorInfo.bVisible = TRUE;
     SetConsoleCursorInfo(consoleHandle, &cursorInfo);
 #else
-    printf("\e[?25h");
+    printf(STRCURSOR_ON);
 #endif
 }
 

@@ -366,15 +366,15 @@ int MI2stepInto(int (*sendCommandGdb)(char *)){
             MI2onOuput(sendCommandGdb, -1, &status);
         }while(status==GDB_RUNNING);
     }
+    waitAnswer = TRUE;
+    showFile = TRUE;
+    running=TRUE;
     strcpy(command,"exec-step\n"); 
     sendCommandGdb(command);
     do{
         sendCommandGdb("");
         MI2onOuput(sendCommandGdb, -1, &status);
     }while(status==GDB_RUNNING);
-    waitAnswer = TRUE;
-    showFile = TRUE;
-    running=TRUE;
     return 0;
 }
 

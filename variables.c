@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <wchar.h>
 #include "cobgdb.h"
+#define VIEW_LINES 24
+#define VIEW_COLS  80
 
 extern ST_DebuggerVariable * DebuggerVariable;
 extern int ctlVar;
@@ -24,7 +26,7 @@ int show_opt_var(){
     sprintf(aux,"%-80s\r", opt);
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
-    gotoxy(1,24);
+    gotoxy(1,VIEW_LINES-1);
     sprintf(aux,"%80s\r"," ");
     printBK(aux, color_frame, color_frame);
 }
@@ -35,7 +37,7 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
                    char * functionName){
     int bkg;
     (*notShow)--;
-    if(*notShow<0 && strcmp(var->functionName,functionName)==0 && lin<22){
+    if(*notShow<0 && strcmp(var->functionName,functionName)==0 && lin<VIEW_LINES-3){
         gotoxy(1,lin+2);
         if((level>0 || var->dataSotorage==NULL) && ctlVar!=var->ctlVar){
             MI2evalVariable(sendCommandGdb,var,0,0);
@@ -146,7 +148,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
     int lin=0;    
     int line_pos=0;
     int start_window_line = 0;
-    int qtd_window_line = 23;
+    int qtd_window_line = VIEW_LINES-2;
     int start_linex_x = 0;      
     expand = FALSE;
     char aux[100];
@@ -170,13 +172,13 @@ int show_variables(int (*sendCommandGdb)(char *)){
             while(var!=NULL){
                 if(var->parent==NULL){
                     lin=print_variable(0, &notShow, line_pos, start_window_line, 
-                        start_window_line+20, lin, start_linex_x,
+                        start_window_line+VIEW_LINES-5, lin, start_linex_x,
                         var,sendCommandGdb, functionName);
                 }
                 //lin=(lin==old_lin)?lin+1:lin;
                 var=var->next;
             }
-            while(var==NULL && lin<22){
+            while(var==NULL && lin<VIEW_LINES-3){
                 gotoxy(1,lin+2);
                 print_colorBK(color_black, color_frame); printf(" ");
                 bkg=(line_pos==lin)?color_gray:color_black;
@@ -203,7 +205,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 lin=0;
                 break;
             case VK_DOWN: 
-                if(line_pos<=20){
+                if(line_pos<=VIEW_LINES-5){
                     line_pos++;
                 }else{
                     if(showOne) start_window_line++; 
@@ -213,21 +215,21 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 break;
             case VK_PGUP:
                 if(line_pos>0){
-                    line_pos-=22;
+                    line_pos-= (VIEW_LINES-3);
                     line_pos=(line_pos<0)?0:line_pos;
                 }else{
-                    start_window_line-=22;
+                    start_window_line-= (VIEW_LINES-3);
                     start_window_line=(start_window_line<0)?0:start_window_line;
                 }
                 var=firstVar(var);
                 lin=0;
                 break;
             case VK_PGDOWN: 
-                if(line_pos<21){
-                    line_pos=21;
+                if(line_pos<VIEW_LINES-4){
+                    line_pos=VIEW_LINES-4;
                 }else if(showOne){
-                    line_pos=21;
-                    start_window_line=start_window_line+22;
+                    line_pos=VIEW_LINES-4;
+                    start_window_line=start_window_line+VIEW_LINES-3;
                 }
                 var=firstVar(var);
                 lin=0;
@@ -275,7 +277,7 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
                    int end_lin, int lin, int start_linex_x,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *), int bkg){
    
-    if(lin<22){
+    if(lin<VIEW_LINES-3){
         gotoxy(10,lin+2);
         if(ctlVar!=var->ctlVar){
             MI2evalVariable(sendCommandGdb,var,0,0);
@@ -340,7 +342,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     char command[256];
     int line_pos=0;
     int start_window_line = 0;
-    int qtd_window_line = 23;
+    int qtd_window_line = VIEW_LINES-2;
     int start_linex_x = 0;  
     int line_start = 7;    
     expand = FALSE;
@@ -375,7 +377,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                         lin++;
                     }
                     lin=hover_variable(0, &notShow, line_pos, start_window_line, 
-                        22, lin, start_linex_x,
+                        VIEW_LINES-3, lin, start_linex_x,
                         var,sendCommandGdb, bkg);
                 }
                 if(qtd>0){
@@ -403,7 +405,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                 qtd = 0; st=0; lin=line_start;
                 break;
             case VK_DOWN: 
-                if(line_pos<=20){
+                if(line_pos<=VIEW_LINES-5){
                     line_pos++;
                 }else{
                     if(showOne) start_window_line++; 
@@ -413,21 +415,21 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                 break;
             case VK_PGUP:
                 if(line_pos>0){
-                    line_pos-=22;
+                    line_pos-=(VIEW_LINES-3);
                     line_pos=(line_pos<0)?0:line_pos;
                 }else{
-                    start_window_line-=22;
+                    start_window_line-=(VIEW_LINES-3);
                     start_window_line=(start_window_line<0)?0:start_window_line;
                 }
                 h = high;
                 qtd = 0; st=0; lin=line_start;
                 break;
             case VK_PGDOWN: 
-                if(line_pos<21){
-                    line_pos=21;
+                if(line_pos<VIEW_LINES-4){
+                    line_pos=VIEW_LINES-4;
                 }else if(showOne){
-                    line_pos=21;
-                    start_window_line=start_window_line+22;
+                    line_pos=VIEW_LINES-4;
+                    start_window_line=start_window_line+VIEW_LINES-3;
                 }
                 h = high;
                 qtd = 0; st=0; lin=line_start;
