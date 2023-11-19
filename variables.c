@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <wchar.h>
+#include <ctype.h>
+#include <time.h>
 #include "cobgdb.h"
 #define VIEW_LINES 24
 #define VIEW_COLS  80
@@ -15,6 +17,7 @@
 extern ST_DebuggerVariable * DebuggerVariable;
 extern int ctlVar;
 extern int color_frame;
+extern ST_Watch * Watching;
 int showOne = FALSE;
 int expand = FALSE;
 wchar_t wcBuffer[512];
@@ -467,4 +470,167 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     free(wcBuffer);
 }
 
+
+
+char * EspecialTrim(char *s) {
+    int end, len;
+    char *buf;
+    int j = 0;
+    if(s==NULL) return NULL;
+    len = strlen(s);
+    if(len<1) return NULL;
+    buf = (char *)malloc(len + 1);  // +3 to include the null terminator and two quotes
+    if(s[0]=='"' || s[0]=='\'') buf[j++]=s[0];
+    for (end = len - 1; end >= 0 && (isspace(s[end]) || s[end] == '"'); end--);
+    if(end>=0){ 
+        int to_move=end-j+1;
+        memcpy(&buf[j],&s[j],to_move);
+        j=j+to_move;
+    }
+    if(s[len-1]=='"' || s[len-1]=='\'') 
+        buf[j++]=s[len-1];
+    buf[j]='\0';
+    strcpy(s, buf);
+    free(buf);
+    return s;
+}
+
+ST_Watch * new_watching(struct st_highlt * exe_line, ST_DebuggerVariable * var, int posx, int posy){
+    ST_Watch * wnew=malloc(sizeof(ST_Watch));
+    wnew->var= var;
+    wnew->line= exe_line;
+    wnew->posy= posy;
+    wnew->posx = posx;
+    wnew->start_time= -1;
+    wnew->status=0;
+    wnew->next=NULL;
+}
+
+void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser){
+    char command[256];
+    int line_pos=0;
+    int start_window_line = 0;
+    int qtd_window_line = VIEW_LINES-2;
+    int start_linex_x = 0;  
+    int line_start = 7;    
+    expand = FALSE;
+    char aux[100];
+    wchar_t wcharString[512];
+    struct st_highlt * h = exe_line;
+    int bkg= color_dark_red;
+
+    ST_Watch * wt = Watching;
+    ST_Watch * wt_before = NULL;
+    boolean insert=TRUE;
+    int posy_b= 1000; // VIEW_LINES-5;
+    int posy_a = VIEW_LINES-5;
+    while(wt!=NULL){
+        if(posy_a>=wt->posy) posy_a=wt->posy-3;
+        if(wt->line==exe_line){
+            int status=1;
+            insert = FALSE;
+        }else{
+            if(wt->start_time<0 && !waitAnser){
+                wt->start_time= time(NULL);
+                wt->status=2;
+            }else if(wt->status==2 && wt->start_time>0){
+                time_t end_time = time(NULL);
+                double elapsed_time = difftime(end_time, wt->start_time);
+                if(elapsed_time>0){
+                    if(wt_before!=NULL){
+                        wt_before->next=wt->next;
+                    }else{
+                        Watching=wt->next;
+                    }
+                    if(posy_b>wt->posy) posy_b=wt->posy;
+                    ST_Watch * to_free = wt;
+                    wt=wt->next;
+                    free(to_free);
+                    continue;
+                }
+            }
+        }
+        wt_before=wt;
+        wt = wt->next;
+    }
+    if(insert){
+        int st=0;
+        char chval[500];
+        char * functionName = NULL;
+        while(h!=NULL){
+            if(h->type==TP_ALPHA){
+                wcsncpy(wcBuffer, &h->token[st], h->size);
+                wcBuffer[h->size]='\0';   
+                int len = wcstombs(NULL, wcBuffer, 0);
+                wcstombs(chval, wcBuffer, len + 1);
+                if(functionName==NULL && !waitAnser) 
+                    functionName = MI2getCurrentFunctionName(sendCommandGdb);
+                ST_DebuggerVariable * var =  findVariableByCobol(functionName, toUpper(chval));
+                if(var!=NULL){
+                    if(posy_a<3) posy_a = posy_b;
+                    if(posy_a<3 || posy_a>(VIEW_LINES-5)) posy_a = VIEW_LINES-5;
+                    wt = Watching;
+                    wt_before = NULL;
+                    while(wt!=NULL){
+                        if(strcmp(wt->var->cobolName,var->cobolName)==0) break;
+                        wt_before=wt;
+                        wt=wt->next;
+                    }
+                    if(wt!=NULL){
+                        wt->line= exe_line;
+                        wt->start_time= -1;
+                        wt->status=0;
+                    }else{
+                        ST_Watch * wnew = new_watching(exe_line, var, -1, posy_a);
+                        if(wt_before==NULL){
+                            Watching=wnew;
+                        }else{
+                            wt_before->next=wnew;
+                        }
+                        wt_before=wnew;
+                    }
+                    posy_a-=3;
+                }
+            }
+            h=h->next;
+        }
+    }
+    wt = Watching;
+    while(wt!=NULL){
+        if(wt->status==0 || wt->status==2)
+            if(!waitAnser){
+                MI2evalVariable(sendCommandGdb,wt->var,0,0);
+                wt->var->value=EspecialTrim(wt->var->value);
+            }
+        int len = strlen(wt->var->cobolName)+2;
+        if(wt->var->value!=NULL){
+            #if defined(_WIN32)
+            MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, wcharString,(strlen(wt->var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
+            #else
+            mbstowcs(wcharString, wt->var->value, strlen(wt->var->value) + 1);
+            #endif
+            int lenVar = wcslen(wcharString);
+            if(lenVar>len) len=lenVar;
+            if(len>60) len=60;
+            wt->posx= VIEW_COLS - len - 4;
+            wt->size= len+2;
+        }else{
+            wt->size= len;
+            wt->posx= VIEW_COLS - len - 4;
+            wcscpy(wcharString,L"");
+        }
+        print_colorBK(color_light_gray, bkg);
+        int posy=wt->posy;
+        draw_box_first(wt->posx,posy++,wt->size,wt->var->cobolName);
+        draw_box_border(wt->posx, posy);
+        int to_move=wcslen(wcharString);
+        if(to_move>wt->size) to_move=wt->size;
+        wcsncpy(wcBuffer, wcharString, to_move);
+        wcBuffer[to_move]='\0';
+        printf("%-*ls",wt->size,wcBuffer);
+        draw_box_border(wt->posx+wt->size+1, posy++);
+        draw_box_last(wt->posx, posy, wt->size);
+        wt=wt->next;
+    }
+}
 

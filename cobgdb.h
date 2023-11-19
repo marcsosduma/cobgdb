@@ -38,6 +38,7 @@
 #define color_yellow    14
 #define color_white     15
 #include <wchar.h>
+#include <time.h>
 
 struct st_highlt {
     int color;
@@ -150,11 +151,22 @@ struct ST_DebuggerVariable {
         struct ST_DebuggerVariable * last;
     };
 
-#ifdef WIN32
-    char *realpath( const char *name, char *resolved );
-#endif
 
 typedef struct ST_DebuggerVariable ST_DebuggerVariable;
+
+
+struct ST_Watch{
+    ST_DebuggerVariable * var;
+    struct st_highlt * line;
+    int status;
+    int posx;
+    int posy;
+    int size;
+    time_t start_time;    
+    struct ST_Watch * next; 
+};
+typedef struct ST_Watch ST_Watch;
+
 
 // structure MI
 
@@ -206,6 +218,9 @@ enum types{
     TP_OTHER
 };
 
+#ifdef WIN32
+    char *realpath( const char *name, char *resolved );
+#endif
 int show_info();
 // Tests
 int testMI2();
@@ -285,7 +300,8 @@ int show_variables(int (*sendCommandGdb)(char *));
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 
                    int end_lin, int lin, int start_linex_x,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *), int bkg);
-int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));                   
+int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));  
+void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser);                 
 //debugger.c
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);

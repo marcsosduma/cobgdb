@@ -36,6 +36,7 @@ ST_Line * LineDebug=NULL;
 ST_Attribute * Attributes=NULL;
 ST_DebuggerVariable * DebuggerVariable=NULL;
 ST_bk * BPList=NULL;
+ST_Watch * Watching=NULL;
 
 int start_gdb(char * name, char * cwd);
 
@@ -55,6 +56,20 @@ void free_memory()
         }
         free(current_line);
     }
+    program_file.lines = NULL;
+}
+
+void freeWatchingList()
+{
+    ST_Watch * search = Watching;
+    ST_Watch *current;
+
+    while (search != NULL) {
+        current = search;
+        search = search->next;
+        free(current);
+    }
+    Watching = NULL;
 }
 
 void freeBKList()
@@ -68,8 +83,8 @@ void freeBKList()
         free(current->name);
         free(current);
     }
+    BPList = NULL;
 }
-
 
 int cobc_compile(char file[][512], char values[10][256], int arg_count){
     char *param[20]; 
@@ -204,7 +219,7 @@ int show_info(){
     if(showFile==FALSE) fflush(stdout);
 }
 
-int show_file(Lines * lines, int line_pos){
+int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
     Lines * show_line=lines;
     char vbreak = ' ';
     char pline[252];
@@ -224,6 +239,8 @@ int show_file(Lines * lines, int line_pos){
             }
             if(debug_line==show_line->file_line && !running){
                 print(">", color_green);
+                if(show_line->high!=NULL) 
+                    *exe_line=show_line->high;
             }else{
                 chExec = (debug_line==show_line->file_line)?'!': ' ';
                 print_color(color_red);
@@ -276,6 +293,8 @@ int show_file(Lines * lines, int line_pos){
     return line_pos;
 }
 
+
+
 int debug(int line_pos, int (*sendCommandGdb)(char *)){
     int width=0, height=0;
     int qtd_page = 0;
@@ -283,24 +302,30 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     char command[256];
     int dblAux = -1;
     int check_size=0;
-    
+    struct st_highlt * exe_line;
+
     if(qtd_window_line>program_file.qtd_lines) qtd_window_line=program_file.qtd_lines;
     Lines * lines = program_file.lines;
     Lines * lb = NULL;
     int line_file=0;
     int bstop = 0;
-    //setvbuf(stdout, NULL, _IOFBF, 8192); 
+    //setvbuf(stdout, NULL, _IONBF, 0);
     cursorOFF();
     clearScreen();
     while(program_file.lines!=NULL && !bstop){
         if(showFile){
-            //setvbuf(stdout, NULL, _IONBF, 8192);
             show_opt();
-            line_file = lines->file_line;
-            line_pos=show_file(lines, line_pos);
-            showFile=FALSE;
-            print_color_reset();
+            exe_line=NULL;
+            line_file = lines->file_line; 
+            line_pos=show_file(lines, line_pos, &exe_line);
+            int aux1=debug_line;
+            int aux2=running;
+            var_watching(exe_line, sendCommandGdb, waitAnswer);
+            debug_line=aux1;
+            running=aux2;
             fflush(stdout);
+            print_color_reset();
+            showFile=FALSE;
         }
         if(waitAnswer && start_time>0){
             clock_t end_time = clock();
@@ -505,6 +530,7 @@ int loadfile(char * nameCobFile) {
     int input_character;
     strcpy(program_file.name_file, nameCobFile);
     readCodFile(&program_file);
+    freeWatchingList();
     if(BPList!=NULL){
         Lines * line = program_file.lines;
         line->breakpoint='N';
@@ -631,6 +657,7 @@ int main(int argc, char **argv) {
         start_gdb(nameExecFile,cwd);
         freeBKList();
         freeFile();
+        freeWatchingList();
         //TODO: 
         //freeVariables();
         if(ttyName!=NULL) free(ttyName);
