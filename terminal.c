@@ -642,7 +642,7 @@ int draw_box(int posx, int posy, int width, int height, char *text) {
     strcat(line_h, "\r");
     draw_utf8_text(line_h);
     // Line 2 to height-1
-    sprintf(line_h, "%s%*s%s\n", vertical, width, " ", vertical);
+    sprintf(line_h, "%s%*s%s\r", vertical, width, " ", vertical);
     for (int y = 1; y < height; y++) {
         gotoxy(posx, posy + y);
         draw_utf8_text(line_h);

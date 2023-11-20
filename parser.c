@@ -749,6 +749,7 @@ int parser(char * file_name, int fileN){
     boolean isVersion2_2_or_3_1_1=FALSE;
     char *path = NULL;    
     char tmp[300];
+    boolean hasProgramExit= FALSE;
 
     normalizePath(file_name);
 
@@ -830,7 +831,7 @@ int parser(char * file_name, int fileN){
         // fix new codegen - new
         //qtd=regex(procedureFixRegex, lines->line, m);
         boolean bprocedureFixRegex = procedureFixRegex(line_parsed, qtt_tk, &tmp[0]);
-        if(bprocedureFixRegex>0 && LineAtu!=NULL){
+        if(bprocedureFixRegex>0 && LineAtu!=NULL && !hasProgramExit){
             int lineC = atoi(tmp);
             boolean isOldFormat = (lines->line_before!=NULL)?fixOlderFormat(lines->line_before->line):FALSE;
             if(fileNameCompare(LineAtu->fileCobol, fileCobol)==0 && (isVersion2_2_or_3_1_1 || !isOldFormat)){
@@ -923,7 +924,7 @@ int parser(char * file_name, int fileN){
         }
         boolean bprogramExit=programExit(line_parsed, qtt_tk);
         if(bprogramExit){
-            break;
+            hasProgramExit=TRUE;
         }
         if(lines->line_after!=NULL) lines=lines->line_after;
     }

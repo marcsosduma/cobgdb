@@ -309,7 +309,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     Lines * lb = NULL;
     int line_file=0;
     int bstop = 0;
-    //setvbuf(stdout, NULL, _IONBF, 0);
+    //(void)setvbuf(stdout, NULL, _IONBF, 16384);
     cursorOFF();
     clearScreen();
     while(program_file.lines!=NULL && !bstop){

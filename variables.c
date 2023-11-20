@@ -517,7 +517,8 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
     char aux[100];
     wchar_t wcharString[512];
     struct st_highlt * h = exe_line;
-    int bkg= color_dark_red;
+    int bkg= color_light_gray; //color_dark_red;
+    int fkg= color_dark_blue;
 
     ST_Watch * wt = Watching;
     ST_Watch * wt_before = NULL;
@@ -612,14 +613,14 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
             int lenVar = wcslen(wcharString);
             if(lenVar>len) len=lenVar;
             if(len>60) len=60;
-            wt->posx= VIEW_COLS - len - 4;
+            wt->posx= VIEW_COLS - len - 6;
             wt->size= len+2;
         }else{
             wt->size= len;
-            wt->posx= VIEW_COLS - len - 4;
+            wt->posx= VIEW_COLS - len - 6;
             wcscpy(wcharString,L"");
         }
-        print_colorBK(color_light_gray, bkg);
+        print_colorBK(fkg, bkg);
         int posy=wt->posy;
         draw_box_first(wt->posx,posy++,wt->size,wt->var->cobolName);
         draw_box_border(wt->posx, posy);
