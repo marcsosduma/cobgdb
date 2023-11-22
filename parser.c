@@ -461,21 +461,6 @@ boolean procedureFixRegex(struct st_parse line_parsed[100], int qtt_tk, char * n
     return ret;
 }
 
-//char fixOlderFormat[] = "cob\\_trace\\_stmt";
-char *istrstr(const char *haystack, const char *needle) {
-    while (*haystack) {
-        const char *h = haystack;
-        const char *n = needle;
-        while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
-            h++;
-            n++;
-        }
-        if (!*n)
-            return (char *)haystack;
-        haystack++;
-    }
-    return NULL;
-}
 boolean fixOlderFormat(char * value){
     if(value==NULL || istrstr(value,"cob_trace_stmt")!=NULL) return TRUE;
     return FALSE;

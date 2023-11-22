@@ -13,6 +13,7 @@
 #define VK_RIGHT 39
 #define VK_LEFT 37
 #define VK_ENTER 13
+#define VK_ESCAPE 27
 #endif // Windows/Linux
 #ifndef boolean 
 #define boolean int
@@ -240,6 +241,8 @@ int isAbsolutPath(char * path);
 char* toLower(char* str);
 char* toUpper(char* str);
 boolean isSpace(char c);
+char *istrstr(const char *haystack, const char *needle);
+void fileNameWithoutExtension(char * file, char * onlyName);
 //terminal.c
 void get_terminal_size(int *width, int *height);
 void set_terminal_size(int width, int height);
@@ -295,20 +298,22 @@ int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * lines );
 int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue);
 char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *));
 int MI2getStack(int (*sendCommandGdb)(char *), int thread);
+int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]);
 //variables.c
 int show_variables(int (*sendCommandGdb)(char *));
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 
                    int end_lin, int lin, int start_linex_x,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *), int bkg);
 int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));  
-void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser);                 
+void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser);  
+void show_sources(int (*sendCommandGdb)(char *)); 
 //debugger.c
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);
 // output.c
 char * openOuput(char *target);
 //highlight.c
-int executeParse();
+int highlightParse();
 void freeHighlight(struct st_highlt * hight);
 int printHighlight(struct st_highlt * hight, int bkg, int start, int tot);
 //sting_parser.c

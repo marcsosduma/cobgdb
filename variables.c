@@ -18,6 +18,7 @@ extern ST_DebuggerVariable * DebuggerVariable;
 extern int ctlVar;
 extern int color_frame;
 extern ST_Watch * Watching;
+extern char file_cobol[512];
 int showOne = FALSE;
 int expand = FALSE;
 wchar_t wcBuffer[512];
@@ -168,7 +169,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
     int notShow;
     char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
     if(functionName==NULL) return 0;
-    while(input_character!='R' && input_character!='r'){
+    while(input_character!='r'){
         notShow=start_window_line;
         if(var!=NULL){
             gotoxy(1,1);
@@ -264,8 +265,10 @@ int show_variables(int (*sendCommandGdb)(char *)){
                     lin=0;
                 }
                 break;
+            case VK_ESCAPE:
             case 'r':
             case 'R':
+                input_character='r';
                 break;
             case 'b':
             case 'B':
@@ -372,7 +375,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     int qtd = 0;
     int st=0;
     int lin=line_start;
-    while(input_character!='R' && input_character!='r'){
+    while(input_character!='R' && input_character!='r' ){
         while(h!=NULL){
             if(h->type==TP_ALPHA){
                 wcsncpy(wcBuffer, &h->token[st], h->size);
@@ -635,3 +638,121 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
     }
 }
 
+#define MAX_FILES 100
+
+void show_sources(int (*sendCommandGdb)(char *)){
+    char input_character=-1;
+    int bkgr = color_dark_red;
+    int bkg;
+    int frg = color_white;
+    int csel = color_light_gray;
+    int line_pos=0;
+    char files[MAX_FILES][512];
+    int qtd_files=0;
+    int start_file=0;
+    int file_sel = -1;
+    boolean show = TRUE;
+
+    qtd_files = MI2sourceFiles(sendCommandGdb,files);
+    while(input_character!=-100){
+        gotoxy(1,1);
+        int lin = 7;
+        int col = 9;
+        int size = 60;
+        if(show){
+            gotoxy(col,lin);
+            print_colorBK(frg, bkgr);
+            draw_box_first(col,lin++,size,"Source Files");
+            int f = start_file;
+            int pos=0;
+            file_sel=-1;
+            while(pos<10){
+                print_colorBK(frg, bkgr);
+                draw_box_border(col, lin);
+                bkg=(line_pos==pos)?csel:bkgr;
+                print_colorBK(frg, bkg);
+                if(f<qtd_files){
+                    int len = strlen(files[f]);
+                    if(len>60){
+                        int start=len-56;
+                        printf("...%-60s",&files[f][start]);
+                    }else{
+                        printf("%-60s",files[f]);
+                    }
+                    if(line_pos==pos) file_sel=f;
+                }else{
+                    printf("%-60s"," ");
+                }
+                print_colorBK(frg, bkgr);
+                draw_box_border(col+ size+1, lin);
+                f++; lin++; pos++;
+            }
+            print_colorBK(frg, bkgr);
+            draw_box_last(col, lin, size);
+        }
+        print_color_reset();
+        fflush(stdout);
+        gotoxy(1,1);
+        input_character =  key_press();
+        switch (input_character)
+        {
+            case VK_UP:
+                if(line_pos>0){
+                    line_pos--;
+                }else{
+                    start_file=(start_file>0)?start_file-1:0; 
+                }
+                show = TRUE;
+                break;
+            case VK_DOWN: 
+                if(line_pos<9){
+                    line_pos++;
+                }else{
+                    start_file=(start_file<qtd_files)?start_file+1:qtd_files; 
+                }
+                show = TRUE;
+                break;
+            case VK_PGUP:
+                if(line_pos>0){
+                    line_pos= 0;
+                }else{
+                    line_pos-= 9;
+                    line_pos=(line_pos<0)?0:line_pos;
+                    start_file-=10;
+                    start_file = (start_file>0)?start_file:0;
+                }
+                show = TRUE;
+                break;
+            case VK_PGDOWN: 
+                if(line_pos<9){
+                    line_pos=9;
+                }else{
+                    line_pos+=9;
+                    if(line_pos>9) line_pos=9;
+                    start_file+=10;
+                    start_file = (start_file>qtd_files)?qtd_files:start_file;
+                }
+                show = TRUE;
+                break;
+            case VK_ENTER:       
+                if(file_sel<0) break;
+                freeFile();
+                strcpy(file_cobol, files[file_sel]);
+                loadfile(files[file_sel]);
+                highlightParse();
+                input_character=-100;
+                break;
+            case 'R':
+            case 'r':
+            case 'Q':
+            case 'q':
+            case VK_ESCAPE:
+                printf("stop\n");
+                input_character=-100;
+                break;
+            default: 
+                break;
+        }
+        //gotoxy(1,23); if(input_character>0) printf("%d\n", input_character);
+    }
+}

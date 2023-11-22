@@ -180,7 +180,7 @@ void isReserved(struct st_highlt * h){
     }
 }
 
-int executeParse(){
+int highlightParse(){
     Lines * lines = program_file.lines;
     char * line;
     char *saveptr1;

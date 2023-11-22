@@ -21,6 +21,38 @@
 #include <ctype.h>
 #include "cobgdb.h"
 
+
+void fileNameWithoutExtension(char * file, char * onlyName){
+    int qtd=strlen(file);
+    int a=0;
+    if(strchr(file,'.')!=NULL){
+        while(file[qtd]!='.') qtd--;
+        onlyName[qtd--]='\0';
+        while(qtd>=0){
+            onlyName[qtd]=file[qtd];
+            qtd--;
+        }   
+    }else{
+        strcpy(onlyName, file);
+    }
+}
+
+char *istrstr(const char *haystack, const char *needle) {
+    while (*haystack) {
+        const char *h = haystack;
+        const char *n = needle;
+        while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+            h++;
+            n++;
+        }
+        if (!*n)
+            return (char *)haystack;
+        haystack++;
+    }
+    return NULL;
+}
+
+
 char* toLower(char* str) {
   int j = 0;
   char ch;
@@ -89,11 +121,19 @@ char* subString(const char* input, int offset, int len, char* dest)
 
 void normalizePath(char * path){
     char sep = '/';
+    char bef = ' ';
+    char * temp = strdup(path);
+    int x=0;
     for(size_t i=0; i < strlen(path);i++) {
-            if (path[i] == '\\') {
-                path[i] = '/';
+            if (temp[i] == '\\') {
+                if(bef!='\\') path[x++] = '/';
+            }else{
+                path[x++]=temp[i];
             }
+            bef=temp[i];
         }
+    path[x]='\0';
+    free(temp);
 }
 
 char* getFileNameFromPath(char* path) {

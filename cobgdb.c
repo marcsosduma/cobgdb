@@ -37,7 +37,7 @@ ST_Attribute * Attributes=NULL;
 ST_DebuggerVariable * DebuggerVariable=NULL;
 ST_bk * BPList=NULL;
 ST_Watch * Watching=NULL;
-
+Lines * lines = NULL;
 int start_gdb(char * name, char * cwd);
 
 void free_memory()
@@ -147,21 +147,6 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
     return 0;
 }
 
-char fileNameWithoutExtension(char * file, char * onlyName){
-    int qtd=strlen(file);
-    int a=0;
-    if(strchr(file,'.')!=NULL){
-        while(file[qtd]!='.') qtd--;
-        onlyName[qtd--]='\0';
-        while(qtd>=0){
-            onlyName[qtd]=file[qtd];
-            qtd--;
-        }   
-    }else{
-        strcpy(onlyName, file);
-    }
-}
-
 Lines * set_window_pos(int * line_pos){
     if(debug_line>=0){
         // exec_line before window
@@ -195,8 +180,8 @@ int show_opt(){
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
     gotoxy(1,VIEW_LINES-1);
-    sprintf(aux,"%80s\r"," ");
-    printBK(aux, color_frame, color_frame);
+    sprintf(aux,"%-80s\r",file_cobol);
+    printBK(aux, color_light_gray, color_frame);
 }
 
 int show_info(){
@@ -305,7 +290,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     struct st_highlt * exe_line;
 
     if(qtd_window_line>program_file.qtd_lines) qtd_window_line=program_file.qtd_lines;
-    Lines * lines = program_file.lines;
+    lines = program_file.lines;
     Lines * lb = NULL;
     int line_file=0;
     int bstop = 0;
@@ -506,6 +491,14 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                     showFile=TRUE;
                 }
                 break;
+            case 'f':
+            case 'F':
+                if(!waitAnswer){
+                   show_sources(sendCommandGdb);
+                   showFile=TRUE;
+                   MI2getStack(sendCommandGdb,1);
+                }
+                break;
             case 'l':
             case 'L':
                 printf(" ");
@@ -528,9 +521,15 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
 
 int loadfile(char * nameCobFile) {
     int input_character;
+
+    start_window_line = 0;
+    start_line_x = 0;
+    debug_line = -1;
+
     strcpy(program_file.name_file, nameCobFile);
     readCodFile(&program_file);
     freeWatchingList();
+    lines = program_file.lines;
     if(BPList!=NULL){
         Lines * line = program_file.lines;
         line->breakpoint='N';
@@ -581,7 +580,7 @@ int main(int argc, char **argv) {
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
     #endif    
-
+    strcpy(file_cobol,"");
     if (locale_info != NULL) {
         decimal_separator = locale_info->decimal_point[0];
     }
@@ -643,7 +642,7 @@ int main(int argc, char **argv) {
         getPathName(cwd, file_cobol);
         strcpy(first_file, file_cobol);
         loadfile(file_cobol);
-        if(withHigh) executeParse(); 
+        if(withHigh) highlightParse(); 
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
         //while(key_press()<=0);
         #if defined(__linux__)

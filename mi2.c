@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#if defined(__linux__)
+#include <unistd.h>
+#endif
 #include "cobgdb.h"
 #define MAX_MATCH_LENGTH 512
 //#define DEBUG 0
@@ -113,7 +116,7 @@ void loadCobSourceFile(char * atualFile, char * newFile){
         freeFile();
         strcpy(file_cobol, newFile);
         loadfile(file_cobol);
-        executeParse();
+        highlightParse();
     }
 }
 
@@ -317,22 +320,33 @@ int MI2getStack(int (*sendCommandGdb)(char *), int thread){
     ST_MIInfo * parsed=NULL;
     do{
         sendCommandGdb("");
+        //printf("%s\n", gdbOutput);
         parsed=MI2onOuput(sendCommandGdb, tk, &status);
     }while(status==GDB_RUNNING);
+    debug_line = -1;
     if(parsed!=NULL){
         if (parsed->resultRecords!=NULL && strcmp(parsed->resultRecords->resultClass,"done")==0 ) {
             boolean find=FALSE;
             ST_Line * hasLine = NULL;
             ST_TableValues * search1=parseMIvalueOf(parsed->resultRecords->results, "@frame.fullname", NULL, &find);
-            if(search1!=NULL){
-                find=FALSE;
-                ST_TableValues * search2=parseMIvalueOf(parsed->resultRecords->results, "@frame.line", NULL, &find);
-                if(search2!=NULL && search2->value!=NULL){
-                    int lineC = atoi(search2->value);
-                    hasLine =  getLineCobol( search1->value, lineC);
-                    if(hasLine!=NULL)
-                        debug_line = hasLine->lineCobol;
+            if(search1!=NULL && search1->value!=NULL){
+                normalizePath(search1->value);
+                char * fone=strdup(search1->value);
+                char * ftwo=strdup(file_cobol);
+                fileNameWithoutExtension(search1->value, fone);
+                fileNameWithoutExtension(file_cobol, ftwo);
+                if(strcmp(fone, ftwo)==0){
+                    find=FALSE;
+                    ST_TableValues * search2=parseMIvalueOf(parsed->resultRecords->results, "@frame.line", NULL, &find);
+                    if(search2!=NULL && search2->value!=NULL){
+                        int lineC = atoi(search2->value);
+                        hasLine =  getLineCobol( search1->value, lineC);
+                        if(hasLine!=NULL)
+                            debug_line = hasLine->lineCobol;
+                    }
                 }
+                free(fone);
+                free(ftwo);
             }
         }
         freeParsed(parsed);
@@ -682,3 +696,59 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
     free(cleanedRawValue);
 }
 
+#define MAX_FILES 100
+
+int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
+    int status;
+    char* token;
+    int fileCount = 0;
+    char fileload[512];
+    sendCommandGdb("interpreter-exec console \"info sources\"\n");
+    do{
+        #if defined(_WIN32)
+        Sleep(500);
+        #else
+        usleep(1500);
+        #endif
+        sendCommandGdb("");
+    }while(strstr(gdbOutput,"^done")==NULL);
+    //printf("%s\n", gdbOutput);
+    char* saveptr1; // Initialize our save pointers to save the context of tokens
+    char* saveptr2; 
+    char * tk = strtok_r(gdbOutput, "~", &saveptr1);
+    while (tk != NULL && fileCount < MAX_FILES) {
+        token = strtok_r(tk, ",", &saveptr2);
+        while (token != NULL && fileCount < MAX_FILES) {
+            int len = strlen(token);
+            if(len>4){
+                char ext[10];
+                memcpy ( ext, &token[len-4], 4 );
+                ext[4]='\0';
+                if(istrstr(token,".cbl")!=NULL || istrstr(token,".cob")!=NULL){
+                    int start=0;
+                    while(token[start]==' ' || token[start]=='"') start++;
+                    int end=0;
+                    strcpy(fileload,"");
+                    while(istrstr(fileload,".cbl")==NULL && istrstr(fileload,".cob")==NULL){
+                    fileload[end++]=token[start++];
+                    fileload[end]='\0';
+                    }
+                    normalizePath(fileload);
+                    boolean insert=TRUE;
+                    for(int idx=0; idx<fileCount; idx++ ){
+                        if(strcmp(files[idx],fileload)==0) { insert=FALSE; break; }
+                    }
+                    if(insert){
+                        strcpy(files[fileCount],fileload);
+                        fileCount++;
+                    }
+                }
+            }
+            token = strtok_r(NULL, ",", &saveptr2);
+        }
+        tk = strtok_r(NULL, "~", &saveptr1);
+    }
+    free(gdbOutput);
+    gdbOutput=NULL;
+    return fileCount;
+}

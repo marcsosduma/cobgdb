@@ -158,7 +158,7 @@ int sendCommandGdb(char * command)
    CHAR chBuf[BUFSIZE];
    BOOL bSuccess = FALSE;   
    HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-   int qtdAlloc = BUFSIZE;   
+   int qtdAlloc = 0;   
    int mustReturn=1;
    #if defined(_WIN32)
    int l1 = 8;
@@ -201,9 +201,9 @@ int sendCommandGdb(char * command)
       qtdAlloc = (gdbOutput!=NULL)?strlen(gdbOutput):0;
       if(dwRead>0){
          chBuf[dwRead]='\0';
-         qtdAlloc+=strlen(chBuf);
+         qtdAlloc+=dwRead+1;
          if(qtdAlloc>BUFFER_OUTPUT_SIZE){
-           gdbOutput = realloc(gdbOutput, qtdAlloc+3);
+           gdbOutput = realloc(gdbOutput, qtdAlloc);
          }
          strcat(gdbOutput, chBuf);
          count0=0;
@@ -240,9 +240,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *));
 int sendCommandGdb(char * command)
 {
    char chBuf[BUFSIZE];
-   char test[10];
    int qtdAlloc = BUFSIZE;  
-   int count0=0; 
    int mustReturn=1;
    int l1 = 7;
    fd_set read_fds;
@@ -295,7 +293,7 @@ int sendCommandGdb(char * command)
          break;
       }else{
          chBuf[dwRead]='\0';
-         qtdAlloc+=strlen(chBuf);
+         qtdAlloc+=dwRead+1;
          if(qtdAlloc>BUFFER_OUTPUT_SIZE){
            gdbOutput = realloc(gdbOutput, qtdAlloc+3);
          }
