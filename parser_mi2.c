@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include "cobgdb.h"
 //#define DEBUG 
-#define MAX_MATCH_LENGTH 512
 
 char m[10][MAX_MATCH_LENGTH];
 

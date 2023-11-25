@@ -11,19 +11,12 @@
 #include <unistd.h>
 #endif
 #include "cobgdb.h"
-#define MAX_MATCH_LENGTH 512
 //#define DEBUG 0
 
+extern struct st_cobgdb cob;
 extern ST_Line * LineDebug;
 extern char * gdbOutput;
 extern char m[10][512];
-extern int debug_line;
-extern int running;
-extern int showFile;
-extern int waitAnswer;
-extern int changeLine;
-extern char file_cobol[512];
-extern char first_file[512];
 extern ST_bk * BPList;
 char lastComand[200];
 int subroutine=-1;
@@ -114,8 +107,8 @@ int couldBeOutput(char * line) {
 void loadCobSourceFile(char * atualFile, char * newFile){
     if(strcasecmp(atualFile, newFile)!=0){
         freeFile();
-        strcpy(file_cobol, newFile);
-        loadfile(file_cobol);
+        strcpy(cob.file_cobol, newFile);
+        loadfile(cob.file_cobol);
         highlightParse();
     }
 }
@@ -133,7 +126,7 @@ ST_Line * hasLineCobol(ST_MIInfo * parsed){
         hasLine =  getLineCobol( search1->value, lineC);
         if(hasLine!=NULL){
             subroutine = hasLine->endPerformLine;
-            loadCobSourceFile(file_cobol, hasLine->fileCobol);
+            loadCobSourceFile(cob.file_cobol, hasLine->fileCobol);
         } 
 
     }
@@ -195,10 +188,10 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                 if (parsed->resultRecords!=NULL){
                     if(strcmp(parsed->resultRecords->resultClass,"error")==0 || strcmp(parsed->resultRecords->resultClass,"done")==0 ) {
                         *status=GDB_STEP_END;
-                        waitAnswer=FALSE;
-                        running=FALSE;
-                        showFile=TRUE;
-                        debug_line=-1;
+                        cob.waitAnswer=FALSE;
+                        cob.running=FALSE;
+                        cob.showFile=TRUE;
+                        cob.debug_line=-1;
                         if(parsed->token>0 && tk>0 && parsed->token==tk){
                             parsedRet=parsed;
                         }
@@ -207,7 +200,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                 if(parsed!=NULL && parsed->outOfBandRecord!=NULL){
                     if(parsed->outOfBandRecord->type!=NULL && strcmp(parsed->outOfBandRecord->type,"exec")==0){
                         if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"running")==0){
-                            running=TRUE;
+                            cob.running=TRUE;
                             *status=GDB_RUNNING;
                         }else if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"stopped")==0){
                             ST_TableValues * reason = parsed->outOfBandRecord->output;
@@ -220,11 +213,11 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         lineChange=TRUE;
                                     }else{
                                         *status = GDB_STEP_END;
-                                        debug_line = hasLine->lineCobol;
-                                        changeLine = TRUE;
-                                        waitAnswer=FALSE;
-                                        running=FALSE;
-                                        showFile=TRUE;
+                                        cob.debug_line = hasLine->lineCobol;
+                                        cob.changeLine = TRUE;
+                                        cob.waitAnswer=FALSE;
+                                        cob.running=FALSE;
+                                        cob.showFile=TRUE;
                                     }
                                 }else if(strcmp(reason->value,"end-stepping-range")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
@@ -233,11 +226,11 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         sendCommandGdb(lastComand);
                                     }else{
                                         *status = GDB_STEP_END;
-                                        waitAnswer=FALSE;
-                                        debug_line = hasLine->lineCobol;
-                                        changeLine = TRUE;
-                                        running=FALSE;
-                                        showFile=TRUE;
+                                        cob.waitAnswer=FALSE;
+                                        cob.debug_line = hasLine->lineCobol;
+                                        cob.changeLine = TRUE;
+                                        cob.running=FALSE;
+                                        cob.showFile=TRUE;
                                     }
                                 }else if(strcmp(reason->value,"location-reached")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
@@ -246,11 +239,11 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         sendCommandGdb(lastComand);
                                     }else{
                                         *status = GDB_STEP_END;
-                                        debug_line = hasLine->lineCobol;
-                                        changeLine = TRUE;
-                                        running = FALSE;                                        
-                                        showFile=TRUE;
-                                        waitAnswer=FALSE;
+                                        cob.debug_line = hasLine->lineCobol;
+                                        cob.changeLine = TRUE;
+                                        cob.running = FALSE;                                        
+                                        cob.showFile=TRUE;
+                                        cob.waitAnswer=FALSE;
                                     }
                                 }else if(strcmp(reason->value,"function-finished")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
@@ -259,32 +252,32 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         sendCommandGdb(lastComand);
                                     }else{
                                         *status = GDB_STEP_OUT_END;
-                                        debug_line = hasLine->lineCobol;
-                                        changeLine = TRUE;
-                                        running = FALSE;                                        
-                                        showFile=TRUE;
-                                        waitAnswer=FALSE;
+                                        cob.debug_line = hasLine->lineCobol;
+                                        cob.changeLine = TRUE;
+                                        cob.running = FALSE;                                        
+                                        cob.showFile=TRUE;
+                                        cob.waitAnswer=FALSE;
                                     }
                                 }else if(strcmp(reason->value,"signal-received")==0){
                                         *status = GDB_SIGNAL_STOP;
-                                        showFile=TRUE;
-                                        waitAnswer=FALSE;
-                                        running=FALSE;
-                                        loadCobSourceFile(file_cobol, first_file);
+                                        cob.showFile=TRUE;
+                                        cob.waitAnswer=FALSE;
+                                        cob.running=FALSE;
+                                        loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }else if(strcmp(reason->value,"exited-normally")==0){
                                         *status = GDB_STEP_OUT_END;
-                                        showFile=TRUE;
-                                        waitAnswer=FALSE;
-                                        running=FALSE;
-                                        debug_line=-1;
-                                        loadCobSourceFile(file_cobol, first_file);
+                                        cob.showFile=TRUE;
+                                        cob.waitAnswer=FALSE;
+                                        cob.running=FALSE;
+                                        cob.debug_line=-1;
+                                        loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }else if(strcmp(reason->value,"exited")==0){
                                         *status = GDB_STOPPED;
-                                        showFile=TRUE;
-                                        waitAnswer=FALSE;
-                                        running=FALSE;
-                                        debug_line=-1;
-                                        loadCobSourceFile(file_cobol, first_file);
+                                        cob.showFile=TRUE;
+                                        cob.waitAnswer=FALSE;
+                                        cob.running=FALSE;
+                                        cob.debug_line=-1;
+                                        loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }
                             }
                         }
@@ -323,7 +316,7 @@ int MI2getStack(int (*sendCommandGdb)(char *), int thread){
         //printf("%s\n", gdbOutput);
         parsed=MI2onOuput(sendCommandGdb, tk, &status);
     }while(status==GDB_RUNNING);
-    debug_line = -1;
+    cob.debug_line = -1;
     if(parsed!=NULL){
         if (parsed->resultRecords!=NULL && strcmp(parsed->resultRecords->resultClass,"done")==0 ) {
             boolean find=FALSE;
@@ -332,9 +325,9 @@ int MI2getStack(int (*sendCommandGdb)(char *), int thread){
             if(search1!=NULL && search1->value!=NULL){
                 normalizePath(search1->value);
                 char * fone=strdup(search1->value);
-                char * ftwo=strdup(file_cobol);
+                char * ftwo=strdup(cob.file_cobol);
                 fileNameWithoutExtension(search1->value, fone);
-                fileNameWithoutExtension(file_cobol, ftwo);
+                fileNameWithoutExtension(cob.file_cobol, ftwo);
                 if(strcmp(fone, ftwo)==0){
                     find=FALSE;
                     ST_TableValues * search2=parseMIvalueOf(parsed->resultRecords->results, "@frame.line", NULL, &find);
@@ -342,7 +335,7 @@ int MI2getStack(int (*sendCommandGdb)(char *), int thread){
                         int lineC = atoi(search2->value);
                         hasLine =  getLineCobol( search1->value, lineC);
                         if(hasLine!=NULL)
-                            debug_line = hasLine->lineCobol;
+                            cob.debug_line = hasLine->lineCobol;
                     }
                 }
                 free(fone);
@@ -363,9 +356,9 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
     }else{
         sendCommandGdb(lastComand);
     }
-    waitAnswer = TRUE;
-    showFile = TRUE;
-    running = TRUE;
+    cob.waitAnswer = TRUE;
+    cob.showFile = TRUE;
+    cob.running = TRUE;
 }
 
 int MI2stepInto(int (*sendCommandGdb)(char *)){
@@ -380,9 +373,9 @@ int MI2stepInto(int (*sendCommandGdb)(char *)){
             MI2onOuput(sendCommandGdb, -1, &status);
         }while(status==GDB_RUNNING);
     }
-    waitAnswer = TRUE;
-    showFile = TRUE;
-    running=TRUE;
+    cob.waitAnswer = TRUE;
+    cob.showFile = TRUE;
+    cob.running=TRUE;
     strcpy(command,"exec-step\n"); 
     sendCommandGdb(command);
     do{
@@ -397,9 +390,9 @@ int MI2stepOut(int (*sendCommandGdb)(char *)){
     char command[200];
     strcpy(command,"exec-finish\n"); 
     sendCommandGdb(command);
-    waitAnswer = TRUE;
-    showFile = TRUE;
-    running=TRUE;
+    cob.waitAnswer = TRUE;
+    cob.showFile = TRUE;
+    cob.running=TRUE;
     return 0;
 }
 
@@ -407,9 +400,9 @@ int MI2start(int (*sendCommandGdb)(char *)){
     strcpy(lastComand,"exec-next\n"); 
     char command[]="exec-run\n";
     sendCommandGdb(command);
-    waitAnswer = TRUE;
-    running=TRUE;
-    showFile = TRUE;
+    cob.waitAnswer = TRUE;
+    cob.running=TRUE;
+    cob.showFile = TRUE;
     return 0;
 }
 
@@ -431,7 +424,7 @@ int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNu
             sendCommandGdb("");
             MI2onOuput(sendCommandGdb, -1, &status);
         }while(status==GDB_RUNNING);
-        waitAnswer = FALSE;
+        cob.waitAnswer = FALSE;
         ST_bk * search = BPList;
         ST_bk * before = NULL;
         while(search!=NULL){
@@ -483,7 +476,7 @@ int MI2removeBreakPoint (int (*sendCommandGdb)(char *), Lines * lines, char * fi
                 free(remove);
             }
         }
-        waitAnswer = FALSE;
+        cob.waitAnswer = FALSE;
     }
     return 0;
 }
@@ -491,7 +484,7 @@ int MI2removeBreakPoint (int (*sendCommandGdb)(char *), Lines * lines, char * fi
 int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
     char command[256];
     int status=0;
-    int isRunning = (debug_line>0);
+    int isRunning = (cob.debug_line>0);
     ST_Line * line = getLineC(fileCobol, lineNumber);
     if(line!=NULL){
         sprintf(command,"%s%s:%d\n","break-insert -t ",line->fileC,line->lineC);
@@ -505,9 +498,9 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
         else
             strcpy(command,"exec-run\n");
         sendCommandGdb(command);
-        waitAnswer = TRUE;
-        showFile = TRUE;
-        running=TRUE;
+        cob.waitAnswer = TRUE;
+        cob.showFile = TRUE;
+        cob.running=TRUE;
     }
 }
 
@@ -703,6 +696,9 @@ int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
     char* token;
     int fileCount = 0;
     char fileload[512];
+
+    free(gdbOutput);
+    gdbOutput=NULL;
     sendCommandGdb("interpreter-exec console \"info sources\"\n");
     do{
         #if defined(_WIN32)

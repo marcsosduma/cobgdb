@@ -27,6 +27,7 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #include <stdlib.h>
 #include <wchar.h>
 #endif // Windows/Linux
+#include "cobgdb.h"
 
 #define color_black      0
 #define color_dark_blue  1
@@ -44,8 +45,6 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #define color_pink      13
 #define color_yellow    14
 #define color_white     15
-#define VIEW_LINES 24
-#define VIEW_COLS  80
 #define STRCURSOR_OFF "\e[?25l"
 #define STRCURSOR_ON  "\e[?25h"
 

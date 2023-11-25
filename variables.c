@@ -11,14 +11,12 @@
 #include <ctype.h>
 #include <time.h>
 #include "cobgdb.h"
-#define VIEW_LINES 24
-#define VIEW_COLS  80
 
+extern struct st_cobgdb cob;
 extern ST_DebuggerVariable * DebuggerVariable;
-extern int ctlVar;
+
 extern int color_frame;
 extern ST_Watch * Watching;
-extern char file_cobol[512];
 int showOne = FALSE;
 int expand = FALSE;
 wchar_t wcBuffer[512];
@@ -43,9 +41,9 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
     (*notShow)--;
     if(*notShow<0 && strcmp(var->functionName,functionName)==0 && lin<VIEW_LINES-3){
         gotoxy(1,lin+2);
-        if((level>0 || var->dataSotorage==NULL) && ctlVar!=var->ctlVar){
+        if((level>0 || var->dataSotorage==NULL) && cob.ctlVar!=var->ctlVar){
             MI2evalVariable(sendCommandGdb,var,0,0);
-            var->ctlVar=ctlVar;
+            var->ctlVar=cob.ctlVar;
         }
         char varcobol[100];
         int linW=78;
@@ -148,7 +146,7 @@ int change_var(int (*sendCommandGdb)(char *),int lin){
     readchar(aux,50);    
     MI2changeVariable(sendCommandGdb, currentVar, aux);
     MI2variablesRequest(sendCommandGdb);
-    ctlVar=(ctlVar>10000)?1:ctlVar+1;
+    cob.ctlVar=(cob.ctlVar>10000)?1:cob.ctlVar+1;
 }
 
 int show_variables(int (*sendCommandGdb)(char *)){
@@ -292,11 +290,11 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
 
     if(lin<VIEW_LINES-3){
         gotoxy(10,lin+2);
-        if(ctlVar!=var->ctlVar){
+        if(cob.ctlVar!=var->ctlVar){
             MI2evalVariable(sendCommandGdb,var,0,0);
-            var->ctlVar=ctlVar;
+            var->ctlVar=cob.ctlVar;
         }
-        var->ctlVar=ctlVar;
+        var->ctlVar=cob.ctlVar;
         char varcobol[100];
         int linW=60;
         showOne=TRUE;
@@ -509,7 +507,7 @@ ST_Watch * new_watching(struct st_highlt * exe_line, ST_DebuggerVariable * var, 
     wnew->next=NULL;
 }
 
-void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser){
+void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line ){
     char command[256];
     int line_pos=0;
     int start_window_line = 0;
@@ -585,6 +583,8 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
                         wt->start_time= -1;
                         wt->status=0;
                     }else{
+                        while(posy_a>=(debug_line) && posy_a<debug_line+2 && posy_a>1)
+                             posy_a--;
                         ST_Watch * wnew = new_watching(exe_line, var, -1, posy_a);
                         if(wt_before==NULL){
                             Watching=wnew;
@@ -737,7 +737,7 @@ void show_sources(int (*sendCommandGdb)(char *)){
             case VK_ENTER:       
                 if(file_sel<0) break;
                 freeFile();
-                strcpy(file_cobol, files[file_sel]);
+                strcpy(cob.file_cobol, files[file_sel]);
                 loadfile(files[file_sel]);
                 highlightParse();
                 input_character=-100;
@@ -747,7 +747,148 @@ void show_sources(int (*sendCommandGdb)(char *)){
             case 'Q':
             case 'q':
             case VK_ESCAPE:
-                printf("stop\n");
+                input_character=-100;
+                break;
+            default: 
+                break;
+        }
+        //gotoxy(1,23); if(input_character>0) printf("%d\n", input_character);
+    }
+}
+
+void show_help(int (*sendCommandGdb)(char *)){
+    char input_character=-1;
+    int bkgr = color_dark_red;
+    int bkg;
+    int frg = color_white;
+    int csel = color_light_gray;
+    int line_pos=0;
+    int qtt_lines=0;
+    int start_file=0;
+    int file_sel = -1;
+    boolean show = TRUE;
+
+    char *text[] = {
+        "                     COBGDB - Commands",
+        " ",
+        "B - Sets a breakpoint at a specific point in the code.",
+        "R - Runs the program until a breakpoint is encountered.",
+        "C - Runs the program until it reaches the selected line.",
+        "N - Runs the program until the next line but does not enter",
+        "    a subroutine executed by CALL or PERFORM.",
+        "S - Runs the program until the next line.",
+        "G - Continues the program execution until it encounters a ",
+        "    stopping point: breakpoint, end of the program, or the ",
+        "    return from a subroutine (PERFORM/CALL).",
+        "V - Displays the set of variables for the running program.",
+        "H - Shows the values of variables for the selected line.",
+        "F - Allows selecting the source file for debugging.",
+        "Q - Quits the program.",
+        " ",
+        "COBGDB takes one or more programs with COB/CBL extension as parameters",
+        "and runs the GnuCOBOL compiler with the following format:",
+        "cobc -g -fsource-location -ftraceall -Q --coverage ",
+        "     -A --coverage -v -free -O0 -x prog.cob prog2.cob ...",
+        " ",
+        "Example:",
+        "cobgdb prog.cob subprog1.cob subprog2.cob",
+        " ",
+        "(TODO:)You can run GDB/GDBSERVER remotely with the command:",
+        "cobgdb -target remote:port program.cob"
+    };
+
+    int ctext[] = {
+        color_green,
+        color_white, color_white, color_white, color_white, color_white, color_white,
+        color_white, color_white, color_white, color_white, color_white, color_white,
+        color_white, color_white, color_white, color_white, color_white, 
+        color_yellow,color_yellow,
+        color_white, color_white, 
+        color_yellow,
+        color_white, color_white, 
+        color_yellow,
+    };
+
+    qtt_lines=sizeof(text) / sizeof(text[0]);
+    while(input_character!=-100){
+        gotoxy(1,1);
+        int lin = 7;
+        int col = 5;
+        int size = 70;
+        if(show){
+            gotoxy(col,lin);
+            print_colorBK(frg, bkgr);
+            draw_box_first(col,lin++,size,"COBGDB HELP");
+            int f = start_file;
+            int pos=0;
+            file_sel=-1;
+            while(pos<10){
+                print_colorBK(frg, bkgr);
+                draw_box_border(col, lin);
+                bkg=(line_pos==pos)?csel:bkgr;
+                print_colorBK(ctext[f], bkg);
+                if(f<qtt_lines){
+                    printf("%-70s",text[f]);
+                    if(line_pos==pos) file_sel=f;
+                }else{
+                    printf("%-70s"," ");
+                }
+                print_colorBK(frg, bkgr);
+                draw_box_border(col+ size+1, lin);
+                f++; lin++; pos++;
+            }
+            print_colorBK(frg, bkgr);
+            draw_box_last(col, lin, size);
+        }
+        print_color_reset();
+        fflush(stdout);
+        gotoxy(1,1);
+        input_character =  key_press();
+        switch (input_character)
+        {
+            case VK_UP:
+                if(line_pos>0){
+                    line_pos--;
+                }else{
+                    start_file=(start_file>0)?start_file-1:0; 
+                }
+                show = TRUE;
+                break;
+            case VK_DOWN: 
+                if(line_pos<9){
+                    line_pos++;
+                }else{
+                    start_file=(start_file<qtt_lines)?start_file+1:qtt_lines; 
+                }
+                show = TRUE;
+                break;
+            case VK_PGUP:
+                if(line_pos>0){
+                    line_pos= 0;
+                }else{
+                    line_pos-= 9;
+                    line_pos=(line_pos<0)?0:line_pos;
+                    start_file-=10;
+                    start_file = (start_file>0)?start_file:0;
+                }
+                show = TRUE;
+                break;
+            case VK_PGDOWN: 
+                if(line_pos<9){
+                    line_pos=9;
+                }else{
+                    line_pos+=9;
+                    if(line_pos>9) line_pos=9;
+                    start_file+=10;
+                    start_file = (start_file>qtt_lines)?qtt_lines:start_file;
+                }
+                show = TRUE;
+                break;
+            case 'R':
+            case 'r':
+            case 'Q':
+            case 'q':
+            case VK_ESCAPE:
                 input_character=-100;
                 break;
             default: 

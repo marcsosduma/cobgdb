@@ -40,6 +40,9 @@
 #define color_white     15
 #include <wchar.h>
 #include <time.h>
+#define VIEW_LINES 24
+#define VIEW_COLS  80
+#define MAX_MATCH_LENGTH 512
 
 struct st_highlt {
     int color;
@@ -79,8 +82,17 @@ typedef struct ST_Line ST_Line;
 
 struct st_cobgdb {
 	char name_file[256];
+    char file_cobol[512];
+    char first_file[512];
+    char * ttyName;
+    int debug_line;
+    int running;
+    int showFile;
+    int waitAnswer;
+    int changeLine;
 	Lines * lines;
-	int qtd_lines;	
+	int qtd_lines;
+    int ctlVar;    	
 };
 
 // ATTRIBUTTES -- START
@@ -305,8 +317,9 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
                    int end_lin, int lin, int start_linex_x,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *), int bkg);
 int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));  
-void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser);  
+void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line);  
 void show_sources(int (*sendCommandGdb)(char *)); 
+void show_help(int (*sendCommandGdb)(char *));
 //debugger.c
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);

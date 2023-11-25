@@ -9,10 +9,8 @@
 #include <stdlib.h>
 #include <locale.h>
 #include "cobgdb.h"
-#define MAX_MATCH_LENGTH 512
 
 extern char m[10][512];
-extern char decimal_separator;
 
 #define ZERO_SIGN_CHAR_CODE 112
 
@@ -136,7 +134,6 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
         if (strlen(decimals) > 0) {
             strcat(numericValue, ".");
             strcat(numericValue, decimals);
-            // sprintf(numericValue,"%c%s",decimal_separator,decimals);
         }
         sprintf(valueStr, "%.*f", scale, atof(numericValue));
         free(wholeNumber);

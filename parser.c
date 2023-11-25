@@ -14,7 +14,7 @@
 #ifndef EOVERFLOW
 #define EOVERFLOW 132
 #endif
-#define MAX_MATCH_LENGTH 512
+
 //#define debug 0
 
 char* toUpper(char* str);

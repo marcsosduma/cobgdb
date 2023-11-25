@@ -17,13 +17,13 @@
 #define FALSE 0
 #define clrscr() printf("\e[1;1H\e[2J")
 #endif // Windows/Linux
+#include "cobgdb.h"
 #define BUFSIZE 512
 #define BUFFER_OUTPUT_SIZE 512
 //#define DEBUG 1
 
+extern struct st_cobgdb cob;
 extern char * gdbOutput;
-extern int waitAnswer;
-extern char * ttyName;
 int token=1;
 
 #if defined(_WIN32)
@@ -95,7 +95,7 @@ int start_gdb(char * name, char * cwd)
    while(strlen(gdbSet[idx])>=1){
         sendCommandGdb(gdbSet[idx++]);
    }
-   waitAnswer=1;
+   cob.waitAnswer=1;
    debug(0, &sendCommandGdb );
    printf("\n->End of parent execution.\n");
    return 0;
@@ -175,7 +175,7 @@ int sendCommandGdb(char * command)
          strstr(command,"-file-exec-and-symbols")!=NULL){
          strcpy(chBuf,command);
          mustReturn=0;
-         waitAnswer = 1;
+         cob.waitAnswer = 1;
       }else{
          sprintf(chBuf,"%d-%s", token++, command);
       }
@@ -252,7 +252,7 @@ int sendCommandGdb(char * command)
          strstr(command,"-file-exec-and-symbols")!=NULL){
          mustReturn=0;
          strcpy(chBuf,command);
-         waitAnswer = 1;
+         cob.waitAnswer = 1;
       }else{
          sprintf(chBuf,"%d-%s", token++, command);
       }
@@ -310,8 +310,8 @@ int start_gdb(char * name, char * cwd){
     int fd1[2];
     int p2[2];
     char tty[100] = "";
-    if(ttyName!=NULL){
-          snprintf(tty, sizeof(tty), "--tty=%s", ttyName);
+    if(cob.ttyName!=NULL){
+          snprintf(tty, sizeof(tty), "--tty=%s", cob.ttyName);
     }
     char *cmd[] = {"gdb", 
                    //"--quiet", 
@@ -361,7 +361,7 @@ int start_gdb(char * name, char * cwd){
         while(strlen(gdbSet[idx])>=1){
            sendCommandGdb(gdbSet[idx++]);
         }        
-        waitAnswer=1;
+        cob.waitAnswer=1;
         debug(0, &sendCommandGdb );
         printf("\n->End of parent execution.\n");
         waitpid(pid, NULL, 1);
