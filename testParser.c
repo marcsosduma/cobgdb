@@ -11,7 +11,6 @@
 #include "cobgdb.h"
 
 extern ST_Line * LineDebug;
-extern struct program_file program_file;
 
 int testParser()
 {

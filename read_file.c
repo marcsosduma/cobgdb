@@ -210,7 +210,7 @@ int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp
     return -1;
 }
 
-int readCodFile(struct program_file *program) {
+int readCodFile(struct st_cobgdb *program) {
     FILE *fp = fopen(program->name_file, "r");
     if (fp == NULL) {
         perror("Unable to open file!");

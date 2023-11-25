@@ -12,7 +12,7 @@
 #define __WITH_TESTS_ 
 #define VIEW_LINES 24
 #define VIEW_COLS  80
-struct program_file program_file;
+struct st_cobgdb cob;
 char file_cobol[512];
 char first_file[512];
 int start_window_line = 0;
@@ -42,7 +42,7 @@ int start_gdb(char * name, char * cwd);
 
 void free_memory()
 {
-    Lines * lines = program_file.lines;
+    Lines * lines = cob.lines;
     Lines *current_line;
 
     while (lines != NULL) {
@@ -56,7 +56,7 @@ void free_memory()
         }
         free(current_line);
     }
-    program_file.lines = NULL;
+    cob.lines = NULL;
 }
 
 void freeWatchingList()
@@ -153,7 +153,7 @@ Lines * set_window_pos(int * line_pos){
         if(debug_line<start_window_line || (debug_line-start_window_line-*line_pos)>10){
             start_window_line = debug_line - (qtd_window_line*30)/100;
             if(start_window_line<0) start_window_line=0;
-            if(qtd_window_line>program_file.qtd_lines) qtd_window_line=program_file.qtd_lines;
+            if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
             *line_pos = debug_line - 1 - start_window_line;
         }else{
             int new_pos = debug_line - 1 - start_window_line;
@@ -166,7 +166,7 @@ Lines * set_window_pos(int * line_pos){
             }
         }
     }
-    Lines * line = program_file.lines;
+    Lines * line = cob.lines;
     while(line->file_line<=start_window_line){
         if(line->line_after!=NULL) line=line->line_after;
     }
@@ -289,15 +289,15 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     int check_size=0;
     struct st_highlt * exe_line;
 
-    if(qtd_window_line>program_file.qtd_lines) qtd_window_line=program_file.qtd_lines;
-    lines = program_file.lines;
+    if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
+    lines = cob.lines;
     Lines * lb = NULL;
     int line_file=0;
     int bstop = 0;
     //(void)setvbuf(stdout, NULL, _IONBF, 16384);
     cursorOFF();
     clearScreen();
-    while(program_file.lines!=NULL && !bstop){
+    while(cob.lines!=NULL && !bstop){
         if(showFile){
             show_opt();
             exe_line=NULL;
@@ -368,7 +368,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 if(line_pos<(VIEW_LINES-4)){
                     line_pos=VIEW_LINES-4;
                 }else{
-                    if((program_file.qtd_lines-start_window_line)>(VIEW_LINES-3)){
+                    if((cob.qtd_lines-start_window_line)>(VIEW_LINES-3)){
                         while((qtd_page++)<(VIEW_LINES-2) && lines->line_after!=NULL){
                             start_window_line++;
                             lines=lines->line_after;
@@ -376,7 +376,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                         line_pos=VIEW_LINES-4;
                     }
                 }
-                while((lines->file_line+line_pos)>program_file.qtd_lines) line_pos--;
+                while((lines->file_line+line_pos)>cob.qtd_lines) line_pos--;
                 showFile=TRUE;
                 break;
             case VK_LEFT:
@@ -400,9 +400,9 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                     if(check>0){
                         lb->breakpoint=(lb->breakpoint=='S')?'N':'S';
                         if(lb->breakpoint=='S'){
-                            MI2addBreakPoint(sendCommandGdb, program_file.name_file, lb->file_line);
+                            MI2addBreakPoint(sendCommandGdb, cob.name_file, lb->file_line);
                         }else{
-                            MI2removeBreakPoint(sendCommandGdb, lines, program_file.name_file, lb->file_line);
+                            MI2removeBreakPoint(sendCommandGdb, lines, cob.name_file, lb->file_line);
                         }  
                         showFile=TRUE;
                         MI2getStack(sendCommandGdb,1);
@@ -414,7 +414,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                     lb = lines;           
                     for(int a=0;a<line_pos;a++) lb=lb->line_after;
                     lb->breakpoint='N';
-                    MI2removeBreakPoint(sendCommandGdb, lines, program_file.name_file, lb->file_line);
+                    MI2removeBreakPoint(sendCommandGdb, lines, cob.name_file, lb->file_line);
                 }
                 break;
             case 'q':
@@ -454,7 +454,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                     for(int a=0;a<line_pos;a++) lb=lb->line_after;
                     int check=hasCobolLine(lb->file_line);
                     if(check>0){
-                        MI2goToCursor(sendCommandGdb, program_file.name_file, lb->file_line);
+                        MI2goToCursor(sendCommandGdb, cob.name_file, lb->file_line);
                     } 
                     showFile=TRUE;
                 }
@@ -526,12 +526,12 @@ int loadfile(char * nameCobFile) {
     start_line_x = 0;
     debug_line = -1;
 
-    strcpy(program_file.name_file, nameCobFile);
-    readCodFile(&program_file);
+    strcpy(cob.name_file, nameCobFile);
+    readCodFile(&cob);
     freeWatchingList();
-    lines = program_file.lines;
+    lines = cob.lines;
     if(BPList!=NULL){
-        Lines * line = program_file.lines;
+        Lines * line = cob.lines;
         line->breakpoint='N';
         while(line!=NULL){
             ST_bk * search = BPList;
@@ -614,7 +614,7 @@ int main(int argc, char **argv) {
             }else{
                 fileNameWithoutExtension(argv[i], &baseName[0]);
                 if(nfile==0){
-                    strcpy(program_file.name_file,argv[i]);
+                    strcpy(cob.name_file,argv[i]);
                     strcpy(nameExecFile, baseName);
                     #if defined(_WIN32)
                     strcat(nameExecFile,".exe");
@@ -632,12 +632,12 @@ int main(int argc, char **argv) {
         }
 		strcpy(fileCobGroup[nfile], "");
 		strcpy(fileCGroup[nfile], "");
-        //cobc_compile(program_file.name_file, values, arg_count);
+        //cobc_compile(cob.name_file, values, arg_count);
         cobc_compile(fileCobGroup, values, arg_count);
         printf("Parser starting...\n");
 		SourceMap(fileCGroup);
         printf("Parser end...\n");
-        strcpy(file_cobol,program_file.name_file);
+        strcpy(file_cobol,cob.name_file);
         char cwd[512];
         getPathName(cwd, file_cobol);
         strcpy(first_file, file_cobol);
@@ -646,7 +646,7 @@ int main(int argc, char **argv) {
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
         //while(key_press()<=0);
         #if defined(__linux__)
-        ttyName=openOuput(program_file.name_file);
+        ttyName=openOuput(cob.name_file);
         if(ttyName==NULL){
             printf("\n\n%s\n","Error!!! Install 'xterm' for output or use the 'sleep' command.\n");
             freeFile();

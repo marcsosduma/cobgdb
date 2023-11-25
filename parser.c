@@ -23,7 +23,7 @@ int fileNameCompare(char * fileOne, char * fileTwo);
 extern ST_Line * LineDebug;
 extern ST_Attribute * Attributes;
 extern ST_DebuggerVariable * DebuggerVariable;
-extern struct program_file program_file;
+extern struct st_cobgdb cob;
 //
 ST_Line * LineAtu=NULL;
 ST_Attribute * AtualAttrib;
@@ -780,7 +780,7 @@ int parser(char * file_name, int fileN){
                     strcpy(fileCobol, tmp);
                 }            
                 if(fileN==0){
-                    strcpy(program_file.name_file, fileCobol);
+                    strcpy(cob.name_file, fileCobol);
                 }
             }
         }

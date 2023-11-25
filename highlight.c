@@ -16,7 +16,7 @@ const wchar_t COBOL_RESERVED_WORDS[] = L" ABSENT ACCEPT ACCESS ACTION ACTIVATING
 
 const wchar_t COBOL_SPECIAL_WORDS[] =  L" STOP RUN IF THEN ELSE END-IF PERFORM CALL END-PERFORM END-CALL AUTHOR GO CONTINUE EVALUATE END-EVALUATE WHEN THRU ";
 
-extern struct program_file program_file;
+extern struct st_cobgdb cob;
 extern int color_frame;
 boolean isProcedure = FALSE;
 int isProc=0;
@@ -181,7 +181,7 @@ void isReserved(struct st_highlt * h){
 }
 
 int highlightParse(){
-    Lines * lines = program_file.lines;
+    Lines * lines = cob.lines;
     char * line;
     char *saveptr1;
     struct st_highlt * tk_before = NULL;

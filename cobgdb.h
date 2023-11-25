@@ -77,7 +77,7 @@ struct ST_Line {
 
 typedef struct ST_Line ST_Line;
 
-struct program_file {
+struct st_cobgdb {
 	char name_file[256];
 	Lines * lines;
 	int qtd_lines;	
@@ -230,7 +230,7 @@ int testParser();
 int loadfile(char * nameCobFile);
 int freeFile();
 // read_file.c
-int readCodFile(struct program_file * program);
+int readCodFile(struct st_cobgdb * program);
 void GetFileParts(char *path, char *path_, char *base_, char *ext_);
 char * getFileNameFromPath(char *path);
 void   getPathName(char * path, char * org);
