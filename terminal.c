@@ -706,3 +706,19 @@ int draw_box_border(int posx, int posy) {
     gotoxy(posx, posy);
     draw_utf8_text(vertical);
 }
+
+// Function to check the availability of a command
+int isCommandInstalled(const char *command) {
+#ifdef _WIN32
+    // Windows implementation
+    char fullPath[MAX_PATH];
+    DWORD result = SearchPath(NULL, command, ".exe", MAX_PATH, fullPath, NULL);
+
+    return result != 0;
+#else
+    // Linux implementation
+    char whichCommand[100];
+    snprintf(whichCommand, sizeof(whichCommand) - 1, "which %s > /dev/null 2> /dev/null", command);
+    return system(whichCommand) == 0;
+#endif
+}

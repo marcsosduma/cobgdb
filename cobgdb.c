@@ -222,7 +222,7 @@ int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
                 printBK(" ",color_yellow, color_frame);
             }
             if(cob.debug_line==show_line->file_line && !cob.running){
-                print(">", color_green);
+                print(">", color_green); //print_color(color_green); draw_utf8_text("\u25BA");
                 if(show_line->high!=NULL) 
                     *exe_line=show_line->high;
             }else{
@@ -230,7 +230,6 @@ int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
                 print_color(color_red);
                 printf("%c",chExec);
             }     
-            //print_colorBK(color_gray,color_light_gray);
             print_color(color_gray);
             printf("%-*d ", NUM_DIG, show_line->file_line);
             if(show_line->high==NULL){
@@ -425,7 +424,9 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 break;
             case 'r':
             case 'R':
-                MI2start(sendCommandGdb);
+                if(!cob.waitAnswer){
+                    MI2start(sendCommandGdb);
+                }
                 break;
             case 's':
             case 'S':
@@ -579,6 +580,18 @@ int main(int argc, char **argv) {
     char fileCGroup[10][512];
     char fileCobGroup[10][512];
 
+    if(!isCommandInstalled("cobc")){
+        printf("The GnuCOBOL cobc command is not available!\n");
+        while(key_press()<=0);
+        return 0;
+    }
+ 
+    if(!isCommandInstalled("gdb")){
+        printf("GDB is not installed.\n");
+        while(key_press()<=0);
+        return 0;
+    }
+
     setlocale(LC_CTYPE, "");
     setlocale(LC_ALL,"");
     #if defined(_WIN32)
@@ -637,7 +650,6 @@ int main(int argc, char **argv) {
         }
 		strcpy(fileCobGroup[nfile], "");
 		strcpy(fileCGroup[nfile], "");
-        //cobc_compile(cob.name_file, values, arg_count);
         cobc_compile(fileCobGroup, values, arg_count);
         printf("Parser starting...\n");
 		SourceMap(fileCGroup);

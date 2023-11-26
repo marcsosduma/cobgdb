@@ -95,26 +95,44 @@ char *findTtyName(const char *target) {
     return xterm_device;
 }
 
-void createXtermProcess(char *xterm_args[]) {
+void createTerminalProcess(char *xterm_args[]) {
     int child_pid = fork();
     if (child_pid == -1) {
         perror("fork");
         exit(EXIT_FAILURE);
     }
     if (child_pid == 0) { // Child process
-        if (execvp("xterm", xterm_args) == -1) {
+        if (execvp(xterm_args[0], xterm_args) == -1) {
             perror("execvp");
             exit(EXIT_FAILURE);
         }
     }
 }
 
+// Open an XFCE terminal if necessary.
+void createXFCETerminal(char *sleepVal, const char *target) {
+    char title[100]; // Maximum title length.
+    snprintf(title, sizeof(title) - 1, "--title=GnuCOBOL Debug - %s", target);
+    char param[100];
+    snprintf(param, sizeof(param) - 1, "bash -c \"echo 'GnuCOBOL DEBUG'; sleep %s;\"", sleepVal);
+
+    char *xfce4_terminal_args[] = {
+        "xfce4-terminal",
+        "--title", title,
+        "--font=DejaVu Sans Mono 14",
+        "--command", param,
+        NULL
+    };
+    createTerminalProcess(xfce4_terminal_args);
+}
+
+
 // Open an xterm terminal if necessary.
 void createTerminal(char * sleepVal, const char *target) {
     char title[100]; // Maximum Title Length.
     snprintf(title, sizeof(title)-1, "GnuCOBOL Debug - %s", target);
     char param[100]; 
-    snprintf(param, sizeof(param)-1, "/usr/bin/tty; echo 'GnuCOBOL DEBUG'; sleep %s;", sleepVal);
+    snprintf(param, sizeof(param)-1, "echo 'GnuCOBOL DEBUG'; sleep %s;", sleepVal);
     char *xterm_args[] = {
         "xterm",
         "-title",title,
@@ -123,8 +141,54 @@ void createTerminal(char * sleepVal, const char *target) {
         "-e", param,
         NULL
     };
-    createXtermProcess(xterm_args);
+    createTerminalProcess(xterm_args);
 }
+
+// Open a KDE terminal (Konsole) if necessary.
+void createKDETerminal(char *sleepVal, const char *target) {
+    char title[100]; // Maximum title length.
+    snprintf(title, sizeof(title) - 1, "GnuCOBOL Debug - %s", target);
+    char param[100];
+    snprintf(param, sizeof(param) - 1, "bash -c 'echo \"GnuCOBOL DEBUG\"; sleep %s;'", sleepVal);
+
+    char *konsole_args[] = {
+        "konsole",
+        "--title", title,
+        "--separate", // Open in a new tab
+        "--nofork",    // Do not fork a new process (useful for waiting)
+        //"--hold",      // Keep the terminal open after the command finishes
+        "-e", param,   // Execute the command
+        NULL
+    };
+    createTerminalProcess(konsole_args);    
+}
+
+// Open a GNOME terminal if necessary.
+void createGNOMETerminal(char *sleepVal, const char *target) {
+    char title[100];
+    snprintf(title, sizeof(title) - 1, "GnuCOBOL Debug - %s", target);
+    char param[100];
+    snprintf(param, sizeof(param) - 1, "echo 'GnuCOBOL DEBUG'; sleep %s;", sleepVal);
+    char *gnome_terminal_args[] = {
+        "gnome-terminal",
+        "--title", title,
+        "--",                // Indicates the end of gnome-terminal arguments and the start of the command to be executed
+        "bash", "-c", param, // Command to be executed
+        NULL
+    };
+    createTerminalProcess(gnome_terminal_args);
+}
+
+// Function to check the availability of a terminal
+int isTerminalInstalled(const char *terminalCommand) {
+    // The "which" command returns the path of the executable if it's installed
+    char command[100];
+    snprintf(command, sizeof(command) - 1, "which %s >/dev/null 2>/dev/null", terminalCommand);
+
+    // system returns 0 if the command is successful
+    return system(command) == 0;
+}
+
 
 char * openOuput(char *target){
     char alert1[80];
@@ -145,7 +209,16 @@ char * openOuput(char *target){
         xterm_device = findTtyName(target);
     }
     if (xterm_device == NULL) {
-        createTerminal(sleepVal, target);
+        // Find terminal
+        if (isTerminalInstalled("xterm")) {
+            createTerminal(sleepVal, target);
+        }else if (isTerminalInstalled("gnome-terminal")) {
+            createGNOMETerminal(sleepVal, target);
+        }else if (isTerminalInstalled("xfce4-terminal")) {
+            createXFCETerminal(sleepVal, target);
+        }else if (isTerminalInstalled("konsole")) {
+            createKDETerminal(sleepVal, target);
+        } 
         int try_find = 0;
         while (try_find < 4) {
             sleepMillis(500);

@@ -276,6 +276,8 @@ int draw_box(int posx, int posy, int width, int height, char *text);
 int draw_box_first(int posx, int posy, int width, char *text);
 int draw_box_last(int posx, int posy, int width);
 int draw_box_border(int posx, int posy);
+void draw_utf8_text(const char* text);
+int isCommandInstalled(const char *command);
 // parser.c
 void SourceMap(char fileGroup[][512]);
 int parser(char * file_name, int fileN);

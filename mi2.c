@@ -697,14 +697,16 @@ int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
     int fileCount = 0;
     char fileload[512];
 
-    free(gdbOutput);
-    gdbOutput=NULL;
+    if(gdbOutput!=NULL){
+        free(gdbOutput);
+        gdbOutput=NULL;
+    }
     sendCommandGdb("interpreter-exec console \"info sources\"\n");
     do{
         #if defined(_WIN32)
         Sleep(500);
         #else
-        usleep(1500);
+        usleep(10500);
         #endif
         sendCommandGdb("");
     }while(strstr(gdbOutput,"^done")==NULL);

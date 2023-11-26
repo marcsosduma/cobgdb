@@ -617,7 +617,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
             if(lenVar>len) len=lenVar;
             if(len>60) len=60;
             wt->posx= VIEW_COLS - len - 6;
-            wt->size= len+2;
+            wt->size= len;
         }else{
             wt->size= len;
             wt->posx= VIEW_COLS - len - 6;
@@ -631,7 +631,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         if(to_move>wt->size) to_move=wt->size;
         wcsncpy(wcBuffer, wcharString, to_move);
         wcBuffer[to_move]='\0';
-        printf("%-*ls",wt->size,wcBuffer);
+        printf("%*ls",wt->size,wcBuffer);
         draw_box_border(wt->posx+wt->size+1, posy++);
         draw_box_last(wt->posx, posy, wt->size);
         wt=wt->next;
