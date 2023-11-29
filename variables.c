@@ -793,8 +793,12 @@ void show_help(int (*sendCommandGdb)(char *)){
         "Example:",
         "cobgdb prog.cob subprog1.cob subprog2.cob",
         " ",
-        "(TODO:)You can run GDB/GDBSERVER remotely with the command:",
-        "cobgdb -target remote:port program.cob"
+        "You can run GDB/GDBSERVER remotely using the 'A' key. COBGDD will",
+        "prompt you to provide the server and port in the format",
+        "server:port",
+        " ",
+        "Example:",
+        "localhost:5555"
     };
 
     int ctext[] = {
@@ -805,7 +809,7 @@ void show_help(int (*sendCommandGdb)(char *)){
         color_yellow,color_yellow,
         color_white, color_white, 
         color_yellow,
-        color_white, color_white, 
+        color_white, color_white, color_white, color_white, color_white, color_white, 
         color_yellow,
     };
 

@@ -92,10 +92,10 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
         "-g ",
         "-fsource-location ",
         "-ftraceall ",
-        "-Q ",
-        "--coverage ",
-        "-A ",
-        "--coverage ",
+        //"-Q ",
+        //"--coverage ",
+        //"-A ",
+        //"--coverage ",
         "-v ",
         "-free ",
         "-O0 ",
@@ -277,7 +277,32 @@ int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
     return line_pos;
 }
 
+int initTerminal(){
+    int width=0, height=0;
 
+    set_terminal_size(VIEW_COLS, VIEW_LINES);
+    #if defined(_WIN32)
+    Sleep(200);
+    #elif defined(__linux__)
+    sleep(1);
+    #endif
+    get_terminal_size(&width, &height);
+    printf("width= %d", width);
+    printf(", height= %d\n", height);
+}
+
+double getCurrentTime() {
+#ifdef _WIN32
+    LARGE_INTEGER frequency, start;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&start);
+    return (double)start.QuadPart / frequency.QuadPart;
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+#endif
+}
 
 int debug(int line_pos, int (*sendCommandGdb)(char *)){
     int width=0, height=0;
@@ -287,7 +312,10 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     int dblAux = -1;
     int check_size=0;
     struct st_highlt * exe_line;
+    clock_t check_start = getCurrentTime();
 
+    initTerminal();
+    //while(key_press()<=0);
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
     lines = cob.lines;
     Lines * lb = NULL;
@@ -312,16 +340,18 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             cob.showFile=FALSE;
         }
         if(cob.waitAnswer && start_time>0){
-            clock_t end_time = clock();
-            double elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
-            if(elapsed_time>3){
-                if(check_size<3) cob.showFile=win_size_verify(cob.showFile, &check_size);
-                input_character =  key_press();
-            }else{
-                input_character = -1;
-            }
+            clock_t end_time = getCurrentTime();
+            double elapsed_time = end_time - start_time;
+            input_character = (elapsed_time>3)?key_press():-1;
         }else{
-            if(check_size<3) cob.showFile=win_size_verify(cob.showFile, &check_size);
+            if(check_size<3){
+                clock_t end_time = getCurrentTime();
+                double elapsed_time = end_time - check_start;
+                if(elapsed_time>2){
+                    cob.showFile=win_size_verify(cob.showFile, &check_size);
+                    check_start = getCurrentTime();
+                }
+            }
             input_character =  key_press();
             start_time=-1;
         }
@@ -506,6 +536,17 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                     cob.showFile=TRUE;
                 }
                 break;
+            case 'a':
+            case 'A':
+                if(!cob.waitAnswer){
+                    gotoxy(1,VIEW_LINES);
+                    printf("%s\r", "Connecting            ");
+                    fflush(stdout);
+                    MI2attach(sendCommandGdb);
+                    cob.showFile=TRUE;
+                    MI2getStack(sendCommandGdb,1);
+                }
+                break;
             default: 
                 if(cob.waitAnswer){
                     MI2verifyGdb(sendCommandGdb);
@@ -552,20 +593,6 @@ int loadfile(char * nameCobFile) {
     }
 }
 
-int initTerminal(){
-    int width=0, height=0;
-
-    set_terminal_size(VIEW_COLS, VIEW_LINES);
-    #if defined(_WIN32)
-    Sleep(200);
-    #elif defined(__linux__)
-    sleep(1);
-    #endif
-    get_terminal_size(&width, &height);
-    printf("width= %d", width);
-    printf(", height= %d\n", height);
-}
-
 int freeFile(){
     free_memory();
 }
@@ -580,6 +607,16 @@ int main(int argc, char **argv) {
     char fileCGroup[10][512];
     char fileCobGroup[10][512];
 
+    setlocale(LC_CTYPE, "");
+    setlocale(LC_ALL,"");
+    #if defined(_WIN32)
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    #endif    
+    strcpy(cob.file_cobol,"");
+    //if (locale_info != NULL) {
+    //    cob.decimal_separator = locale_info->decimal_point[0];
+    //}
     if(!isCommandInstalled("cobc")){
         printf("The GnuCOBOL cobc command is not available!\n");
         while(key_press()<=0);
@@ -591,18 +628,6 @@ int main(int argc, char **argv) {
         while(key_press()<=0);
         return 0;
     }
-
-    setlocale(LC_CTYPE, "");
-    setlocale(LC_ALL,"");
-    #if defined(_WIN32)
-    SetConsoleCP(CP_UTF8);
-    SetConsoleOutputCP(CP_UTF8);
-    #endif    
-    strcpy(cob.file_cobol,"");
-    //if (locale_info != NULL) {
-    //    cob.decimal_separator = locale_info->decimal_point[0];
-    //}
-    initTerminal();
     if(argc<2){
         printf("Please provide the GnuCOBOL file.\n");
         return 0;

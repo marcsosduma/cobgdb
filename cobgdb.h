@@ -313,6 +313,7 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
 char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *));
 int MI2getStack(int (*sendCommandGdb)(char *), int thread);
 int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]);
+int MI2attach(int (*sendCommandGdb)(char *));
 //variables.c
 int show_variables(int (*sendCommandGdb)(char *));
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 

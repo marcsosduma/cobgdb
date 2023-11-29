@@ -18,8 +18,8 @@
 #define clrscr() printf("\e[1;1H\e[2J")
 #endif // Windows/Linux
 #include "cobgdb.h"
-#define BUFSIZE 512
-#define BUFFER_OUTPUT_SIZE 512
+#define BUFSIZE 1024
+#define BUFFER_OUTPUT_SIZE 1024
 //#define DEBUG 1
 
 extern struct st_cobgdb cob;

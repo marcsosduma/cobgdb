@@ -260,29 +260,6 @@ void get_terminal_size(int *width, int *height) {
 #endif // Windows/Linux
 }
 
-void set_terminal_size(int width, int height){
-    TERM_WIDTH = width;
-    TERM_HEIGHT = height;
-#if defined(_WIN32)
-    HANDLE hConsole = GetStdHandle( STD_OUTPUT_HANDLE );
-    SetForegroundWindow(hConsole);
-    SetConsoleSize(hConsole, width, height);
-    SMALL_RECT sr = {0,0,TERM_WIDTH,TERM_HEIGHT};
-    SetConsoleWindowInfo(hConsole, TRUE, &sr);
-    SetForegroundWindow(GetConsoleWindow());
-
-#elif defined(__linux__)
-   //signal(SIGWINCH, winsz_handler);
-   struct winsize w;
-   char buffer[80]="";
-   sprintf(buffer, "\033[8;%d;%dt\n", height, width);
-   ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-   printf("%s",buffer);
-   fflush(stdout);
-   tcdrain(STDOUT_FILENO);
-#endif // Windows/Linux
-}
-
 #if defined(_WIN32)
 int win_size_verify(int showFile, int *check_size){
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -329,6 +306,33 @@ int win_size_verify(int showFile, int *check_size){
 }
 #endif
 
+
+void set_terminal_size(int width, int height){
+    TERM_WIDTH = width;
+    TERM_HEIGHT = height;
+#if defined(_WIN32)
+    int chesize=0;
+    HANDLE hConsole = GetStdHandle( STD_OUTPUT_HANDLE );
+    SetForegroundWindow(hConsole);
+    SetConsoleSize(hConsole, width, height);
+    SMALL_RECT sr = {0,0,TERM_WIDTH,TERM_HEIGHT};
+    SetConsoleWindowInfo(hConsole, TRUE, &sr);
+    SetForegroundWindow(GetConsoleWindow());
+
+#elif defined(__linux__)
+   //signal(SIGWINCH, winsz_handler);
+   struct winsize w;
+   char buffer[80]="";
+   sprintf(buffer, "\033[8;%d;%dt\n", height, width);
+   ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+   printf("%s",buffer);
+   fflush(stdout);
+   tcdrain(STDOUT_FILENO);
+#endif // Windows/Linux
+}
+
+
+
 void gotoxy(int x, int y){
     #if defined(_WIN32)
     COORD pos = {x-1, y-1};
@@ -350,9 +354,7 @@ void gotoxy(int x, int y){
 void clearScreen() {
 #ifdef _WIN32
     HANDLE hStdOut;
-
     hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
     // Fetch existing console mode so we correctly add a flag and not turn off others
     DWORD mode = 0;
     GetConsoleMode(hStdOut, &mode);
@@ -411,7 +413,6 @@ static void checksize(int height, int width)
   }
 }
 
-
 int getRows(HANDLE hStdout){
   CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
   GetConsoleScreenBufferInfo( hStdout, &csbiInfo );
@@ -424,7 +425,6 @@ int getCols(HANDLE hStdout){
   return csbiInfo.dwSize.X;
 }
 
-
 void SetConsoleSize(HANDLE hStdout, int cols, int rows )
 {
   int oldr = getRows(hStdout);
@@ -435,32 +435,46 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows )
   COORD newSize = { cols, rows };
   SMALL_RECT rect = { 0, 0, cols-1, rows-1 };
   CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
-  
+ 
   if ( oldr <= rows )
   {
     if ( oldc <= cols )
     {                           // increasing both dimensions
  BUFWIN:
-      SetConsoleScreenBufferSize( hStdout, newSize );
-      SetConsoleWindowInfo( hStdout, TRUE, &rect );
+      if (!SetConsoleScreenBufferSize(hStdout, newSize)) {
+            return;
+      }
+      if (!SetConsoleWindowInfo(hStdout, TRUE, &rect)) {
+            return;
+      }
     }else{                           // cols--, rows+
       SMALL_RECT tmp = { 0, 0, cols-1, oldr-1 };
-      SetConsoleWindowInfo( hStdout, TRUE, &tmp );
+      if (!SetConsoleWindowInfo(hStdout, TRUE, &tmp)) {
+        return;
+      }
       goto BUFWIN;
     }
   }else {
     if ( oldc <= cols ) {                           // cols+, rows--
       SMALL_RECT tmp = { 0, 0, oldc-1, rows-1 };
-      SetConsoleWindowInfo( hStdout, TRUE, &tmp );
+      if (!SetConsoleWindowInfo(hStdout, TRUE, &tmp)) {
+        return;
+      }
       goto BUFWIN;
     }
     else
     {                           // cols--, rows--
-      SetConsoleWindowInfo( hStdout, TRUE, &rect );
-      SetConsoleScreenBufferSize( hStdout, newSize );
+      if (!SetConsoleWindowInfo(hStdout, TRUE, &rect)) {
+        return;
+      }
+      if (!SetConsoleScreenBufferSize(hStdout, newSize)) {
+        return;
+      }
     }
   }
-  GetConsoleScreenBufferInfo( hStdout, &csbiInfo );
+  if (!GetConsoleScreenBufferInfo(hStdout, &csbiInfo)) {
+        return;
+  }
 }
 
 void cls_screen(HANDLE hConsole)
@@ -471,32 +485,25 @@ void cls_screen(HANDLE hConsole)
     CHAR_INFO fill;
 
     // Get the number of character cells in the current buffer.
-    if (!GetConsoleScreenBufferInfo(hConsole, &csbi))
-    {
+    if (!GetConsoleScreenBufferInfo(hConsole, &csbi)){
         return;
     }
-
     // Scroll the rectangle of the entire buffer.
     scrollRect.Left = 0;
     scrollRect.Top = 0;
     scrollRect.Right = csbi.dwSize.X;
     scrollRect.Bottom = csbi.dwSize.Y;
-
     // Scroll it upwards off the top of the buffer with a magnitude of the entire height.
     scrollTarget.X = 0;
     scrollTarget.Y = (SHORT)(0 - csbi.dwSize.Y);
-
     // Fill with empty spaces with the buffer's default text attribute.
     fill.Char.UnicodeChar = TEXT(' ');
     fill.Attributes = csbi.wAttributes;
-
     // Do the scroll
     ScrollConsoleScreenBuffer(hConsole, &scrollRect, NULL, scrollTarget, &fill);
-
     // Move the cursor to the top left corner too.
     csbi.dwCursorPosition.X = 0;
     csbi.dwCursorPosition.Y = 0;
-
     SetConsoleCursorPosition(hConsole, csbi.dwCursorPosition);
 }
 #endif

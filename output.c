@@ -112,7 +112,7 @@ void createTerminalProcess(char *xterm_args[]) {
 // Open an XFCE terminal if necessary.
 void createXFCETerminal(char *sleepVal, const char *target) {
     char title[100]; // Maximum title length.
-    snprintf(title, sizeof(title) - 1, "--title=GnuCOBOL Debug - %s", target);
+    snprintf(title, sizeof(title) - 1, "GnuCOBOL Debug - %s", target);
     char param[100];
     snprintf(param, sizeof(param) - 1, "bash -c \"echo 'GnuCOBOL DEBUG'; sleep %s;\"", sleepVal);
 

@@ -30,7 +30,8 @@ enum GDB_STATUS {
     GDB_FUNCTION_FINISHED,
     GDB_STEP_OUT_END,
     GDB_SIGNAL_STOP,
-    GDB_STOPPED
+    GDB_STOPPED,
+    GDB_CONNECTED
 };
 
 void MI2log(char * log){
@@ -195,6 +196,8 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                         if(parsed->token>0 && tk>0 && parsed->token==tk){
                             parsedRet=parsed;
                         }
+                    }else if(strcmp(parsed->resultRecords->resultClass,"connected")==0){
+                        *status=GDB_CONNECTED;
                     }
                 }
                 if(parsed!=NULL && parsed->outOfBandRecord!=NULL){
@@ -494,7 +497,7 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
             MI2onOuput(sendCommandGdb, -1, &status);
         }while(status==GDB_RUNNING);
         if(isRunning)
-            strcpy(command,"exec-finish\n"); 
+            strcpy(command,"exec-continue\n"); 
         else
             strcpy(command,"exec-run\n");
         sendCommandGdb(command);
@@ -749,4 +752,50 @@ int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
     free(gdbOutput);
     gdbOutput=NULL;
     return fileCount;
+}
+
+
+int MI2attach(int (*sendCommandGdb)(char *)){
+    int status, tk;
+    int lin=10;
+    char aux[500];
+    int bkg= color_dark_red;
+    gotoxy(10,lin+2);
+    print_colorBK(color_white, bkg);
+    draw_box_first(10,lin+2,61,"Attach GDBServer");
+    draw_box_border(10,lin+3);
+    draw_box_border(72,lin+3);
+    print_colorBK(color_yellow, bkg);
+    gotoxy(11,lin+3);
+    sprintf(aux,"%s:","Enter (server:port)");
+    printf("%-61s",aux);
+    lin++;
+    print_colorBK(color_white, bkg);
+    draw_box_last(10,lin+3,61);
+    print_colorBK(color_green, bkg);
+    fflush(stdout);
+    gotoxy(12+strlen(aux),lin+2);
+    readchar(aux,50);  
+    strcpy(lastComand,"exec-continue\n"); 
+    char command[500];
+    sprintf(command, "target-select remote %s\n", aux);
+    sendCommandGdb(command);
+    do{
+        sendCommandGdb("");
+        MI2onOuput(sendCommandGdb, tk, &status);
+    }while(status!=GDB_CONNECTED && status==0); 
+    if(gdbOutput!=NULL){
+        free(gdbOutput);
+        gdbOutput=NULL;
+    }
+    if(status==GDB_CONNECTED){
+        strcpy(lastComand,"exec-next\n"); 
+        strcpy(command,"exec-continue\n");
+        sendCommandGdb(command);
+        do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, tk, &status);
+        }while(status==GDB_RUNNING); 
+    }
+    return 0;
 }
