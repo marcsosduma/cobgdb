@@ -284,6 +284,8 @@ int win_size_verify(int showFile, int *check_size){
     return showFile;
 }
 #else
+boolean show_message=TRUE;
+
 int win_size_verify(int showFile, int *check_size){
     struct winsize w;
     int ret=showFile;
@@ -291,13 +293,16 @@ int win_size_verify(int showFile, int *check_size){
     if(w.ws_row != TERM_HEIGHT || w.ws_col != TERM_WIDTH) {
         w.ws_row = TERM_HEIGHT;
         w.ws_col = TERM_WIDTH;
-        printf("\033[H\033[J");
+        ioctl(STDOUT_FILENO, TIOCSWINSZ, &w);
         printf("\033[8;%d;%dt", TERM_HEIGHT, TERM_WIDTH);
-        print_colorBK(color_dark_red, color_black);
-        printf("%s\r", "Attempting to resize the screen, please wait...");
+        if(show_message){
+            print_colorBK(color_dark_red, color_black);
+            printf("%s\r", "Resizing the screen.");
+            show_message=FALSE;
+        }
         fflush(stdout);
         *check_size=*check_size+1;
-        usleep(1500000);
+        usleep(1500);
         ret=1;
     }else{
         *check_size = 0;
@@ -320,17 +325,19 @@ void set_terminal_size(int width, int height){
     SetForegroundWindow(GetConsoleWindow());
 
 #elif defined(__linux__)
-   //signal(SIGWINCH, winsz_handler);
-   struct winsize w;
-   char buffer[80]="";
-   sprintf(buffer, "\033[8;%d;%dt\n", height, width);
-   ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-   printf("%s",buffer);
-   fflush(stdout);
-   tcdrain(STDOUT_FILENO);
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    // Atualizando o tamanho do terminal usando chamadas de sistema
+    if (w.ws_col != width || w.ws_row != height) {
+        w.ws_col = width;
+        w.ws_row = height;
+        ioctl(STDOUT_FILENO, TIOCSWINSZ, &w);
+        // Emitindo uma sequência de escape ANSI para notificar o terminal sobre a mudança
+        printf("\033[8;%d;%dt", height, width);
+        fflush(stdout);
+    }
 #endif // Windows/Linux
 }
-
 
 
 void gotoxy(int x, int y){
@@ -712,20 +719,4 @@ int draw_box_border(int posx, int posy) {
     char vertical[]   = "\u2502";   // UTF-8 character for vertical line
     gotoxy(posx, posy);
     draw_utf8_text(vertical);
-}
-
-// Function to check the availability of a command
-int isCommandInstalled(const char *command) {
-#ifdef _WIN32
-    // Windows implementation
-    char fullPath[MAX_PATH];
-    DWORD result = SearchPath(NULL, command, ".exe", MAX_PATH, fullPath, NULL);
-
-    return result != 0;
-#else
-    // Linux implementation
-    char whichCommand[100];
-    snprintf(whichCommand, sizeof(whichCommand) - 1, "which %s > /dev/null 2> /dev/null", command);
-    return system(whichCommand) == 0;
-#endif
 }

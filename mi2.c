@@ -193,6 +193,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                         cob.running=FALSE;
                         cob.showFile=TRUE;
                         cob.debug_line=-1;
+                        cob.isStepOver=-1;
                         if(parsed->token>0 && tk>0 && parsed->token==tk){
                             parsedRet=parsed;
                         }
@@ -221,15 +222,20 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.waitAnswer=FALSE;
                                         cob.running=FALSE;
                                         cob.showFile=TRUE;
+                                        cob.isStepOver=-1;
                                     }
                                 }else if(strcmp(reason->value,"end-stepping-range")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
                                     if(hasLine==NULL){
                                         *status = GDB_END_STEPPING_RANGE;
+                                        if(strcmp(lastComand,"exec-step\n")==0){
+                                            cob.isStepOver = 1000;
+                                        }
                                         sendCommandGdb(lastComand);
                                     }else{
                                         *status = GDB_STEP_END;
                                         cob.waitAnswer=FALSE;
+                                        cob.isStepOver=-1;
                                         cob.debug_line = hasLine->lineCobol;
                                         cob.changeLine = TRUE;
                                         cob.running=FALSE;
@@ -247,6 +253,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.running = FALSE;                                        
                                         cob.showFile=TRUE;
                                         cob.waitAnswer=FALSE;
+                                        cob.isStepOver=-1;
                                     }
                                 }else if(strcmp(reason->value,"function-finished")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
@@ -260,12 +267,14 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.running = FALSE;                                        
                                         cob.showFile=TRUE;
                                         cob.waitAnswer=FALSE;
+                                        cob.isStepOver=-1;
                                     }
                                 }else if(strcmp(reason->value,"signal-received")==0){
                                         *status = GDB_SIGNAL_STOP;
                                         cob.showFile=TRUE;
                                         cob.waitAnswer=FALSE;
                                         cob.running=FALSE;
+                                        cob.isStepOver=-1;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }else if(strcmp(reason->value,"exited-normally")==0){
                                         *status = GDB_STEP_OUT_END;
@@ -273,6 +282,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.waitAnswer=FALSE;
                                         cob.running=FALSE;
                                         cob.debug_line=-1;
+                                        cob.isStepOver=-1;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }else if(strcmp(reason->value,"exited")==0){
                                         *status = GDB_STOPPED;
@@ -280,6 +290,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.waitAnswer=FALSE;
                                         cob.running=FALSE;
                                         cob.debug_line=-1;
+                                        cob.isStepOver=-1;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }
                             }

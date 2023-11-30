@@ -18,7 +18,8 @@ struct st_cobgdb cob ={
     .waitAnswer = FALSE,
     .changeLine = FALSE,
     .ttyName = NULL,
-    .showFile=TRUE
+    .showFile = TRUE,
+    .isStepOver = -1
 };
 
 int start_window_line = 0;
@@ -27,7 +28,6 @@ int start_line_x = 0;
 int NUM_DIG=4;
 
 char * gdbOutput = NULL;
-clock_t start_time  = -1;
 int color_frame=color_light_blue;
 
 ST_Line * LineDebug=NULL;
@@ -82,6 +82,35 @@ void freeBKList()
         free(current);
     }
     BPList = NULL;
+}
+
+double getCurrentTime() {
+#ifdef _WIN32
+    LARGE_INTEGER frequency, start;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&start);
+    return (double)start.QuadPart / frequency.QuadPart;
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+#endif
+}
+
+// Function to check the availability of a command
+int isCommandInstalled(const char *command) {
+#ifdef _WIN32
+    // Windows implementation
+    char fullPath[MAX_PATH];
+    DWORD result = SearchPath(NULL, command, ".exe", MAX_PATH, fullPath, NULL);
+
+    return result != 0;
+#else
+    // Linux implementation
+    char whichCommand[100];
+    snprintf(whichCommand, sizeof(whichCommand) - 1, "which %s > /dev/null 2> /dev/null", command);
+    return system(whichCommand) == 0;
+#endif
 }
 
 int cobc_compile(char file[][512], char values[10][256], int arg_count){
@@ -195,7 +224,11 @@ int show_info(){
         if(cob.waitAnswer){
             printf("%s\r", "Waiting               ");
         }else{
-            printf("%s\r", "                      ");
+            #if defined(_WIN32)
+            printf("%79s\r", " ");
+            #else
+            printf("%80s\r", " ");
+            #endif
         }
     }
     gotoxy(1,VIEW_LINES);
@@ -291,19 +324,6 @@ int initTerminal(){
     printf(", height= %d\n", height);
 }
 
-double getCurrentTime() {
-#ifdef _WIN32
-    LARGE_INTEGER frequency, start;
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&start);
-    return (double)start.QuadPart / frequency.QuadPart;
-#else
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
-#endif
-}
-
 int debug(int line_pos, int (*sendCommandGdb)(char *)){
     int width=0, height=0;
     int qtd_page = 0;
@@ -312,7 +332,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     int dblAux = -1;
     int check_size=0;
     struct st_highlt * exe_line;
-    clock_t check_start = getCurrentTime();
+    double check_start = getCurrentTime();
 
     initTerminal();
     //while(key_press()<=0);
@@ -339,21 +359,20 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             print_color_reset();
             cob.showFile=FALSE;
         }
-        if(cob.waitAnswer && start_time>0){
-            clock_t end_time = getCurrentTime();
-            double elapsed_time = end_time - start_time;
-            input_character = (elapsed_time>3)?key_press():-1;
+        double end_time = getCurrentTime();
+        input_character = -1;
+        if(cob.waitAnswer && cob.isStepOver<0){
+            input_character = key_press();
         }else{
             if(check_size<3){
-                clock_t end_time = getCurrentTime();
+                double end_time = getCurrentTime();
                 double elapsed_time = end_time - check_start;
-                if(elapsed_time>2){
+                if(elapsed_time>1){
                     cob.showFile=win_size_verify(cob.showFile, &check_size);
                     check_start = getCurrentTime();
                 }
             }
-            input_character =  key_press();
-            start_time=-1;
+            if(cob.isStepOver<0) input_character = key_press();
         }
         switch (input_character)
         {
@@ -463,7 +482,6 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 dblAux= cob.debug_line;
                 if(!cob.waitAnswer){
                     MI2stepInto(sendCommandGdb);
-                    start_time = clock();
                 }
                 cob.debug_line = dblAux;
                 break;
@@ -471,7 +489,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             case 'N':
                 if(!cob.waitAnswer){
                     MI2stepOver(sendCommandGdb);
-                    start_time = clock();
+                    //cob.start_time = getCurrentTime();
                 }
                 break;
             case 'g':
@@ -553,7 +571,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                     if(cob.showFile && cob.changeLine){
                         lines = set_window_pos(&line_pos);
                         cob.changeLine=FALSE;
-                        start_time=-1;
+                        cob.isStepOver=-1;
                     }
                 }
                 break;

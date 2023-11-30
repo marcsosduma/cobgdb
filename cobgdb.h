@@ -92,7 +92,8 @@ struct st_cobgdb {
     int changeLine;
 	Lines * lines;
 	int qtd_lines;
-    int ctlVar;    	
+    int ctlVar;    
+    double isStepOver;	
 };
 
 // ATTRIBUTTES -- START
@@ -241,6 +242,8 @@ int testParser();
 // cobgdb.c
 int loadfile(char * nameCobFile);
 int freeFile();
+int isCommandInstalled(const char *command);
+double getCurrentTime();
 // read_file.c
 int readCodFile(struct st_cobgdb * program);
 void GetFileParts(char *path, char *path_, char *base_, char *ext_);
@@ -277,7 +280,6 @@ int draw_box_first(int posx, int posy, int width, char *text);
 int draw_box_last(int posx, int posy, int width);
 int draw_box_border(int posx, int posy);
 void draw_utf8_text(const char* text);
-int isCommandInstalled(const char *command);
 // parser.c
 void SourceMap(char fileGroup[][512]);
 int parser(char * file_name, int fileN);
