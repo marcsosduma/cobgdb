@@ -323,7 +323,6 @@ void set_terminal_size(int width, int height){
     SMALL_RECT sr = {0,0,TERM_WIDTH,TERM_HEIGHT};
     SetConsoleWindowInfo(hConsole, TRUE, &sr);
     SetForegroundWindow(GetConsoleWindow());
-
 #elif defined(__linux__)
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);

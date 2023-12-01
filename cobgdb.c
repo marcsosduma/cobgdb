@@ -359,7 +359,6 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             print_color_reset();
             cob.showFile=FALSE;
         }
-        double end_time = getCurrentTime();
         input_character = -1;
         if(cob.waitAnswer && cob.isStepOver<0){
             input_character = key_press();
