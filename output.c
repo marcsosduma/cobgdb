@@ -6,6 +6,7 @@
 #include "cobgdb.h"
 
 #define BUFFER 512
+extern char * gdbOutput;
 
 // run system command and read output
 char *execCommand(const char *cmd) {
@@ -154,9 +155,9 @@ void createKDETerminal(char *sleepVal, const char *target) {
     char *konsole_args[] = {
         "konsole",
         "--title", title,
-        "--separate", // Open in a new tab
+        "--separate",  // Open in a new tab
         "--nofork",    // Do not fork a new process (useful for waiting)
-        //"--hold",      // Keep the terminal open after the command finishes
+        //"--hold",    // Keep the terminal open after the command finishes
         "-e", param,   // Execute the command
         NULL
     };
@@ -181,30 +182,57 @@ void createGNOMETerminal(char *sleepVal, const char *target) {
 
 // Function to check the availability of a terminal
 int isTerminalInstalled(const char *terminalCommand) {
-    // The "which" command returns the path of the executable if it's installed
     char command[100];
     snprintf(command, sizeof(command) - 1, "which %s >/dev/null 2>/dev/null", terminalCommand);
-
-    // system returns 0 if the command is successful
     return system(command) == 0;
 }
 
-
-char * openOuput(char *target){
+void message_output(char * sleepVal){
     char alert1[80];
     char aux[100];
+    int lin=8;
+    int bkg= color_dark_red;
+    print_colorBK(color_yellow, bkg);
+    draw_box_first(10,lin+2,59,"COBGDB OUTPUT");
+    draw_box_border(10,lin+3);
+    draw_box_border(70,lin+3);
+    gotoxy(11,lin+3);
+    printBK("COBGDB will open a terminal to  perform  the  application's\r",color_green, bkg);
+    print_colorBK(color_yellow, bkg);
+    draw_box_border(10,lin+4);
+    draw_box_border(70,lin+4);
+    gotoxy(11,lin+4);
+    printBK("output. If you want  to  use  another  terminal,  open  the\r",color_green, bkg);
+    print_colorBK(color_yellow, bkg);
+    draw_box_border(10,lin+5);
+    draw_box_border(70,lin+5);
+    gotoxy(11,lin+5);
+    printBK("terminal  and type the following command:                  \r",color_green, bkg);
+    sprintf(alert1,"sleep %s;", sleepVal);
+    sprintf(aux,"%-59s\r",alert1);
+    print_colorBK(color_yellow, bkg);
+    draw_box_border(10,lin+6);
+    draw_box_border(70,lin+6);
+    gotoxy(11,lin+6);
+    printBK(aux,color_white, bkg);
+    print_colorBK(color_yellow, bkg);
+    draw_box_border(10,lin+7);
+    draw_box_border(70,lin+7);
+    gotoxy(11,lin+7);
+    printBK("After that, press a key in this window.                    \r",color_green, bkg);
+    print_colorBK(color_yellow, bkg);
+    draw_box_last(10,lin+8,59);
+    print_color_reset();
+    fflush(stdout);
+}
+
+void openOuput(int (*sendCommandGdb)(char *), char *target){
+    char aux[200];
+    int status, tk;
     char * sleepVal=hashCode(target);
     char *xterm_device = findTtyName(target);
     if(xterm_device == NULL){
-        clearScreen();
-        gotoxy(12,10);print_no_reset("COBGDB will open XTERM to perform the application's output.\n",color_green);
-        gotoxy(12,11);printf("If you want to use another terminal, open the terminal  and\n");
-        gotoxy(12,12);printf("type the following command:                                \n");
-        sprintf(alert1,"sleep %s;\n", sleepVal);
-        sprintf(aux,"%-59s",alert1);
-        gotoxy(12,13);print(aux,color_red);
-        gotoxy(12,14);print("After that, press a key.                                   \n", color_green);
-        print_color_reset();
+        message_output(sleepVal);
         gotoxy(12,15);while(key_press()==0);
         xterm_device = findTtyName(target);
     }
@@ -224,12 +252,21 @@ char * openOuput(char *target){
             sleepMillis(500);
             xterm_device = findTtyName(target);
             try_find++;
-            if (xterm_device != NULL) break;
+            if (xterm_device != NULL){
+                break;
+            }
         }
-    }else{
-       setenv("TERM","xterm",1);
+    }
+    if(xterm_device!=NULL){
+        sprintf(aux,"-gdb-set inferior-tty %s\n", xterm_device);
+        sendCommandGdb(aux);
+        do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, tk, &status);
+        }while(status!=2); 
+        setenv("TERM","xterm",1);
+        free(xterm_device);
     }
     free(sleepVal);
-    return xterm_device;
 }
 #endif

@@ -45,7 +45,7 @@ void ErrorExit(char *);
 int start_gdb(char * name, char * cwd)
 {
 
-   char fixCommand[] = "gdb --quiet --interpreter=mi2 ";
+   char fixCommand[] = "gdb -nx --quiet --interpreter=mi2 ";
    sprintf(command, "%s", fixCommand);
    SECURITY_ATTRIBUTES saAttr;
    int looking[]={0}; 
@@ -87,6 +87,11 @@ int start_gdb(char * name, char * cwd)
                      "-gdb-set mi-async on\n",
                      "-gdb-set print repeats 1000\n",
                      "-gdb-set charset UTF-8\n",
+                     "-gdb-set mi-notify-stdio on\n",
+                     //"-gdb-set print sevenbit-strings off\n",
+                     "-gdb-set print static-members off\n",
+                     "-gdb-set print pretty on\n",
+                     "-gdb-set new-console on\n",
                      env_dir,
                      f_symb,
                      ""
@@ -249,6 +254,7 @@ int sendCommandGdb(char * command)
    if(strlen(command)>0){
       if(strstr(command,"-gdb-exit\n")!=NULL || strstr(command,"-gdb-set")!=NULL ||
          strstr(command,"-environment-directory")!=NULL || 
+        // strstr(command,"set inferior-tty")!=NULL ||         
          strstr(command,"-file-exec-and-symbols")!=NULL){
          mustReturn=0;
          strcpy(chBuf,command);
@@ -309,13 +315,9 @@ int start_gdb(char * name, char * cwd){
 
     int fd1[2];
     int p2[2];
-    char tty[100] = "";
-    if(cob.ttyName!=NULL){
-          snprintf(tty, sizeof(tty), "--tty=%s", cob.ttyName);
-    }
     char *cmd[] = {"gdb", 
-                   //"--quiet", 
-                   tty,
+                   "-nx",
+                   "--quiet", 
                    "--interpreter=mi2",
                    NULL
                    };
@@ -340,7 +342,7 @@ int start_gdb(char * name, char * cwd){
         close(p2[1]);
 
         char chBuf[256];
-        char env_dir[512];
+        char env_dir[512]; 
         char f_symb[512];
         sprintf(env_dir,"-environment-directory \"%s\"\n", cwd);
         sprintf(f_symb,"-file-exec-and-symbols \"%s/%s\"\n", cwd, name);
@@ -350,6 +352,11 @@ int start_gdb(char * name, char * cwd){
                          "-gdb-set print repeats 1000\n",
                          "-gdb-set charset UTF-8\n",
                          "-gdb-set env TERM=xterm\n",
+                         "-gdb-set mi-notify-stdio on\n",
+                         //"-gdb-set print sevenbit-strings off\n",
+                         "-gdb-set print static-members off\n",
+                         "-gdb-set print pretty on\n",
+                         //"-gdb-set mi-auto-solib-add off\n",
                          env_dir,
                          f_symb,
                          ""

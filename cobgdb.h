@@ -84,7 +84,6 @@ struct st_cobgdb {
 	char name_file[256];
     char file_cobol[512];
     char first_file[512];
-    char * ttyName;
     int debug_line;
     int running;
     int showFile;
@@ -329,7 +328,7 @@ void show_help(int (*sendCommandGdb)(char *));
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);
 // output.c
-char * openOuput(char *target);
+void openOuput(int (*sendCommandGdb)(char *), char *target);
 //highlight.c
 int highlightParse();
 void freeHighlight(struct st_highlt * hight);

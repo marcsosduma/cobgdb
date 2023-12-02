@@ -311,6 +311,13 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
    return parsedRet;
 }
 
+void verify_output(int (*sendCommandGdb)(char *)){
+    #if defined(__linux__)
+    openOuput(sendCommandGdb, cob.name_file);
+    #endif
+}
+
+
 void wait_gdb_answer(int (*sendCommandGdb)(char *)){
     if(gdbOutput!=NULL) strcpy(gdbOutput,"");
     do{
@@ -411,9 +418,11 @@ int MI2stepOut(int (*sendCommandGdb)(char *)){
 }
 
 int MI2start(int (*sendCommandGdb)(char *)){
-    strcpy(lastComand,"exec-next\n"); 
+    verify_output(sendCommandGdb); 
+    strcpy(lastComand,"exec-next\n");
     char command[]="exec-run\n";
     sendCommandGdb(command);
+    //wait_gdb_answer(sendCommandGdb);
     cob.waitAnswer = TRUE;
     cob.running=TRUE;
     cob.showFile = TRUE;
@@ -507,10 +516,12 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
             sendCommandGdb("");
             MI2onOuput(sendCommandGdb, -1, &status);
         }while(status==GDB_RUNNING);
-        if(isRunning)
+        if(isRunning){
             strcpy(command,"exec-continue\n"); 
-        else
+        }else{
+            verify_output(sendCommandGdb);
             strcpy(command,"exec-run\n");
+        }
         sendCommandGdb(command);
         cob.waitAnswer = TRUE;
         cob.showFile = TRUE;
@@ -769,16 +780,16 @@ int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
 int MI2attach(int (*sendCommandGdb)(char *)){
     int status, tk;
     int lin=10;
-    char aux[500];
+    char aux[100];
     int bkg= color_dark_red;
     gotoxy(10,lin+2);
     print_colorBK(color_white, bkg);
-    draw_box_first(10,lin+2,61,"Attach GDBServer");
+    draw_box_first(10,lin+2,61,"Attach - server:port or pid");
     draw_box_border(10,lin+3);
     draw_box_border(72,lin+3);
     print_colorBK(color_yellow, bkg);
     gotoxy(11,lin+3);
-    sprintf(aux,"%s:","Enter (server:port)");
+    sprintf(aux,"%s:","Enter");
     printf("%-61s",aux);
     lin++;
     print_colorBK(color_white, bkg);
@@ -786,10 +797,10 @@ int MI2attach(int (*sendCommandGdb)(char *)){
     print_colorBK(color_green, bkg);
     fflush(stdout);
     gotoxy(12+strlen(aux),lin+2);
-    readchar(aux,50);  
+    readchar(aux,55);  
     strcpy(lastComand,"exec-continue\n"); 
-    char command[500];
-    sprintf(command, "target-select remote %s\n", aux);
+    char command[250];
+    snprintf(command, 250, "target-select remote %s\n", aux);
     sendCommandGdb(command);
     do{
         sendCommandGdb("");

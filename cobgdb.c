@@ -17,7 +17,6 @@ struct st_cobgdb cob ={
     .running = TRUE,
     .waitAnswer = FALSE,
     .changeLine = FALSE,
-    .ttyName = NULL,
     .showFile = TRUE,
     .isStepOver = -1
 };
@@ -703,22 +702,13 @@ int main(int argc, char **argv) {
         loadfile(cob.file_cobol);
         if(withHigh) highlightParse(); 
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
-        //while(key_press()<=0);
-        #if defined(__linux__)
-        cob.ttyName=openOuput(cob.name_file);
-        if(cob.ttyName==NULL){
-            printf("\n\n%s\n","Error!!! Install 'xterm' for output or use the 'sleep' command.\n");
-            freeFile();
-            return 0;
-        } 
-        #endif
+        //while(key_press()<=0);        
         start_gdb(nameExecFile,cwd);
         freeBKList();
         freeFile();
         freeWatchingList();
         //TODO: 
         //freeVariables();
-        if(cob.ttyName!=NULL) free(cob.ttyName);
         gotoxy(1,(VIEW_LINES-1));
     }
     print_color_reset();
