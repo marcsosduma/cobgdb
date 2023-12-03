@@ -110,7 +110,7 @@ char* subString(const char* input, int offset, int len, char* dest)
   int input_len = strlen (input);
   if ((offset + len) > input_len){
      if(input!=NULL) strcpy(dest, input);
-     return NULL;
+     return dest;
   }  
   char * org = strdup(input);
   memcpy (dest, org + offset, len);

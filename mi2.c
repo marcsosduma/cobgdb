@@ -122,14 +122,15 @@ ST_Line * hasLineCobol(ST_MIInfo * parsed){
         if(search1==NULL) return NULL;
         find=FALSE;
         ST_TableValues * search2=parseMIvalueOf(parsed->outOfBandRecord->output->next, "frame.line", NULL, &find);
-        if(search2==NULL || search2->value==NULL) return NULL;
+        if(search2==NULL || search2->value==NULL){
+            return NULL;
+        }
         int lineC = atoi(search2->value);
         hasLine =  getLineCobol( search1->value, lineC);
         if(hasLine!=NULL){
             subroutine = hasLine->endPerformLine;
             loadCobSourceFile(cob.file_cobol, hasLine->fileCobol);
         } 
-
     }
     return hasLine;
 }

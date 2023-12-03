@@ -206,7 +206,7 @@ int show_opt(){
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
     gotoxy(1,VIEW_LINES-1);
-    snprintf(aux,82,"%-80.80s\r",cob.file_cobol);
+    snprintf(aux,81,"%-80.80s\r",cob.file_cobol);
     printBK(aux, color_light_gray, color_frame);
 }
 

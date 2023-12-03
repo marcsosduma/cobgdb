@@ -16,7 +16,7 @@
 void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #define VK_BACKSPACE 8
 #elif defined(__linux__)
-#include <sys/ioctl.h> // ioctl, TIOCGWINSZ
+#include <sys/ioctl.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
@@ -153,25 +153,6 @@ int readKeyLinux() {
 	}
 }
 #endif
-
-//#if defined(_WIN32)
-//static int is_readable_console(HANDLE h)
-//{
-//    int ret = 0;
-//    DWORD n = 0;
-//    INPUT_RECORD ir;
-//
-//    if (PeekConsoleInputA(h, &ir, 1, &n) && n > 0) {
-//        if (ir.EventType == KEY_EVENT) {
-//            ret = 1;
-//        }
-//        else {
-//           ReadConsoleInputA(h, &ir, 1, &n);
-//        }
-//    }
-//    return ret;
-//}
-//#endif
 
 int key_press(){
 #if defined(_WIN32)
@@ -326,12 +307,10 @@ void set_terminal_size(int width, int height){
 #elif defined(__linux__)
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    // Atualizando o tamanho do terminal usando chamadas de sistema
     if (w.ws_col != width || w.ws_row != height) {
         w.ws_col = width;
         w.ws_row = height;
         ioctl(STDOUT_FILENO, TIOCSWINSZ, &w);
-        // Emitindo uma sequência de escape ANSI para notificar o terminal sobre a mudança
         printf("\033[8;%d;%dt", height, width);
         fflush(stdout);
     }
@@ -611,7 +590,6 @@ void print_no_resetBK(char * s, int textcolor, int backgroundcolor) { // print w
 }
 
 // BOX
-
 void draw_utf8_text(const char* text) {
     #ifdef _WIN32
         HANDLE hStdOut;
@@ -622,53 +600,9 @@ void draw_utf8_text(const char* text) {
         MultiByteToWideChar(CP_UTF8, 0, text, -1, wcharString, (strlen(text) + 1));
         WriteConsoleW(hStdOut, wcharString, (DWORD)wcslen(wcharString), &written, NULL);
     #else
-        // Se não for Windows, apenas imprima o texto diretamente
+        // If it's not Windows, just print the text directly
         printf("%s", text);
     #endif
-}
-
-int draw_box(int posx, int posy, int width, int height, char *text) {
-    char horizontal[] = "\u2500";   // UTF-8 character for horizontal line
-    char vertical[]   = "\u2502";   // UTF-8 character for vertical line
-    // Define the corners of the box using wide characters
-    char topLeftCorner[] = "\u250C";      // UTF-8 character for top-left corner
-    char topRightCorner[] = "\u2510";     // UTF-8 character for top-right corner
-    char bottomLeftCorner[] = "\u2514";   // UTF-8 character for bottom-left corner
-    char bottomRightCorner[] = "\u2518";  // UTF-8 character for bottom-right corner
-    char line_h[500];
-    wchar_t utext[100];
-    #if defined(_WIN32)
-    MultiByteToWideChar(CP_UTF8, 0, text, -1, utext,(strlen(text) + 1) * sizeof(wchar_t) / sizeof(utext[0]));
-    #else
-    mbstowcs(utext, text, strlen(text) + 1);
-    #endif
-    // Line 1
-    gotoxy(posx, posy);
-    // Build the horizontal line by repeating the character
-    snprintf(line_h, sizeof(line_h), "%s%s", topLeftCorner, text);
-    for (int i = 0; i < (width - wcslen(utext)); ++i) {
-        strcat(line_h, horizontal);
-    }
-    strcat(line_h, topRightCorner);
-    // Add newline and display
-    strcat(line_h, "\r");
-    draw_utf8_text(line_h);
-    // Line 2 to height-1
-    sprintf(line_h, "%s%*s%s\r", vertical, width, " ", vertical);
-    for (int y = 1; y < height; y++) {
-        gotoxy(posx, posy + y);
-        draw_utf8_text(line_h);
-    }  
-    // Last line
-    snprintf(line_h, sizeof(line_h), "%s", bottomLeftCorner);
-    for (int i = 0; i < width; ++i) {
-        strcat(line_h, horizontal);
-    }
-    strcat(line_h, bottomRightCorner);
-    // Add newline and display
-    strcat(line_h, "\r");
-    gotoxy(posx, posy + height);
-    draw_utf8_text(line_h);
 }
 
 int draw_box_first(int posx, int posy, int width, char *text) {
@@ -697,7 +631,7 @@ int draw_box_first(int posx, int posy, int width, char *text) {
 }
 
 int draw_box_last(int posx, int posy, int width) {
-    char horizontal[] = "\u2500";   // UTF-8 character for horizontal line
+    char horizontal[] = "\u2500";         // UTF-8 character for horizontal line
     // Define the corners of the box using wide characters
     char bottomLeftCorner[] = "\u2514";   // UTF-8 character for bottom-left corner
     char bottomRightCorner[] = "\u2518";  // UTF-8 character for bottom-right corner

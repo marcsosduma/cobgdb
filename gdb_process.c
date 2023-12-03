@@ -88,7 +88,7 @@ int start_gdb(char * name, char * cwd)
                      "-gdb-set print repeats 1000\n",
                      "-gdb-set charset UTF-8\n",
                      "-gdb-set mi-notify-stdio on\n",
-                     //"-gdb-set print sevenbit-strings off\n",
+                     "-gdb-set print sevenbit-strings off\n",
                      "-gdb-set print static-members off\n",
                      "-gdb-set print pretty on\n",
                      "-gdb-set new-console on\n",
@@ -190,12 +190,14 @@ int sendCommandGdb(char * command)
    }
    if(gdbOutput!=NULL){
       strcat(gdbOutput,"\n");
+      if(strcmp(gdbOutput,"\n")==0) strcpy(gdbOutput,"");
       qtdAlloc=strlen(gdbOutput);
    }else{
       qtdAlloc=0;
       gdbOutput=malloc(BUFFER_OUTPUT_SIZE);
       strcpy(gdbOutput,"");
    }
+   strcmp(chBuf,"");
    for (;;)
    {
       bSuccess = ReadFile( g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
@@ -203,7 +205,7 @@ int sendCommandGdb(char * command)
       bSuccess = WriteFile(hParentStdOut, chBuf, dwRead, &dwWritten, NULL);
       #endif
       //if (! bSuccess ) break;
-      qtdAlloc = (gdbOutput!=NULL)?strlen(gdbOutput):0;
+      qtdAlloc = (gdbOutput!=NULL)?strlen(gdbOutput)+1:0;
       if(dwRead>0){
          chBuf[dwRead]='\0';
          qtdAlloc+=dwRead+1;
@@ -218,12 +220,7 @@ int sendCommandGdb(char * command)
       if(dwRead>5)
          if(strncmp(chBuf,"^exit\n",6)==0)
              return 0;
-      strcpy(test,"");
-      if(qtdAlloc>=7){
-        memcpy(test, &gdbOutput[(qtdAlloc-l1)],6);
-        test[6]='\0';
-      }
-      if((strcmp(test,"(gdb) ")==0 && dwRead==0) || count0==2){
+      if((strstr(chBuf,"(gdb) ")!=NULL  && dwRead==0) || (strlen(chBuf)==0 && count0>2)){
         return -1;
       }
    }

@@ -274,7 +274,6 @@ void print_color(int textcolor);
 void print_colorBK(const int textcolor, const int backgroundcolor);
 int readchar(char * str, int size);
 int win_size_verify(int showFile, int *check_size);
-int draw_box(int posx, int posy, int width, int height, char *text);
 int draw_box_first(int posx, int posy, int width, char *text);
 int draw_box_last(int posx, int posy, int width);
 int draw_box_border(int posx, int posy);
