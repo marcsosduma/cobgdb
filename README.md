@@ -11,7 +11,9 @@ To run the example program:
 1. On Windows, first install MinGW (Minimalist GNU for Windows).
 2. Execute the make ('mingw32-make' for Windows) command to compile the code.
 3. Run the example program using the following command:
-   `cobgdb customer.cob -lpdcurses`
+```bash
+cobgdb customer.cob -lpdcurses
+```
    
 In the example above, '-lpdcurses' is an instance of an argument that can be indirectly passed to 'cobc' by 'cobgdb,' even if it is not used by 'cobgdb' itself.
 
@@ -39,7 +41,8 @@ COBGDB running:
 
 COBGDB takes one or more programs with COB/CBL extension as parameters and runs the GnuCOBOL compiler with the following format:
 ```bash
-cobc -g -fsource-location -ftraceall -Q --coverage -A --coverage -v -free -O0 -x prog.cob prog2.cob ...
+
+cobc -g -fsource-location -ftraceall -v -free -O0 -x prog.cob prog2.cob ...
 ```
 
 **Example:**
