@@ -73,6 +73,7 @@ struct ST_Line {
     int lineCobol;
     int lineC;
     int endPerformLine;
+    int lineProgramExit;
     struct ST_Line * next;
     struct ST_Line * before;
     struct ST_Line * last;

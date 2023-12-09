@@ -801,17 +801,29 @@ int MI2attach(int (*sendCommandGdb)(char *)){
     readchar(aux,55);  
     strcpy(lastComand,"exec-continue\n"); 
     char command[250];
-    snprintf(command, 250, "target-select remote %s\n", aux);
-    sendCommandGdb(command);
-    do{
-        sendCommandGdb("");
-        MI2onOuput(sendCommandGdb, tk, &status);
-    }while(status!=GDB_CONNECTED && status==0); 
+    boolean tocontinue=FALSE;
+    if(strstr(aux,":")!=NULL){
+        snprintf(command, 250, "target-select remote %s\n", aux);
+        sendCommandGdb(command);
+        do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, tk, &status);
+        }while(status!=GDB_CONNECTED && status==0); 
+        tocontinue=(status==GDB_CONNECTED)?TRUE:FALSE;
+    }else{
+        snprintf(command, 250, "target-attach %s\n", aux);
+        sendCommandGdb(command);
+        do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, tk, &status);
+        }while(strcmp(gdbOutput,"")!=0); 
+        tocontinue=TRUE;
+    }
     if(gdbOutput!=NULL){
         free(gdbOutput);
         gdbOutput=NULL;
     }
-    if(status==GDB_CONNECTED){
+    if(tocontinue){
         strcpy(lastComand,"exec-next\n"); 
         strcpy(command,"exec-continue\n");
         sendCommandGdb(command);

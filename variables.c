@@ -795,10 +795,12 @@ void show_help(int (*sendCommandGdb)(char *)){
         " ",
         "You can run GDB/GDBSERVER remotely using the 'A' key. COBGDD will",
         "prompt you to provide the server and port in the format",
-        "server:port",
+        "server:port  or the PID of the application.",
         " ",
         "Example:",
-        "localhost:5555"
+        "localhost:5555",
+        "or",
+        "9112"
     };
 
     int ctext[] = {
@@ -810,7 +812,7 @@ void show_help(int (*sendCommandGdb)(char *)){
         color_white, color_white, 
         color_yellow,
         color_white, color_white, color_white, color_white, color_white, color_white, 
-        color_yellow,
+        color_yellow, color_white, color_yellow 
     };
 
     qtt_lines=sizeof(text) / sizeof(text[0]);

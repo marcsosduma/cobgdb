@@ -155,8 +155,7 @@ void CreateChildProcess()
    }
 }
 
-// Read output from the child process's pipe for STDOUT
-// and write to the parent process's pipe for STDOUT.
+// Read output from the child process's pipe
 int sendCommandGdb(char * command)
 {
    DWORD dwRead, dwWritten;
@@ -197,7 +196,7 @@ int sendCommandGdb(char * command)
       gdbOutput=malloc(BUFFER_OUTPUT_SIZE);
       strcpy(gdbOutput,"");
    }
-   strcmp(chBuf,"");
+   strcpy(chBuf,"");
    for (;;)
    {
       bSuccess = ReadFile( g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
@@ -215,12 +214,13 @@ int sendCommandGdb(char * command)
          strcat(gdbOutput, chBuf);
          count0=0;
       }else{
+         Sleep(1);
          count0++;
       }
       if(dwRead>5)
          if(strncmp(chBuf,"^exit\n",6)==0)
              return 0;
-      if((strstr(chBuf,"(gdb) ")!=NULL  && dwRead==0) || (strlen(chBuf)==0 && count0>2)){
+      if((strstr(chBuf,"(gdb) ")!=NULL  && dwRead==0) || (count0>5)){
         return -1;
       }
    }

@@ -275,7 +275,7 @@ ST_DebuggerVariable * GetVariableByC(char * key){
 }
 // DebuggerVariable - END
 
-int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC){
+int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, int lineProgramExit){
     ST_Line* new_line = (ST_Line*) malloc(sizeof(ST_Line));
     new_line->next=NULL;
     new_line->before=NULL;
@@ -286,6 +286,7 @@ int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC){
     strcpy(new_line->fileC, filePathC);
     new_line->lineC = lineC;
     new_line->endPerformLine = -1;
+    new_line->lineProgramExit=lineProgramExit;
     if(LineDebug==NULL){
          LineDebug=new_line;
          LineDebug->next = NULL;
@@ -734,7 +735,7 @@ int parser(char * file_name, int fileN){
     boolean isVersion2_2_or_3_1_1=FALSE;
     char *path = NULL;    
     char tmp[300];
-    boolean hasProgramExit= FALSE;
+    int lineProgramExit = 1;
 
     normalizePath(file_name);
 
@@ -810,13 +811,13 @@ int parser(char * file_name, int fileN){
                     performLine = -2;
                 else
                     performLine = -1;
-                PushLine(fileCobol, lineCobol, fileC, lineNumber + 2);
+                PushLine(fileCobol, lineCobol, fileC, lineNumber + 2, lineProgramExit);
         }
 
         // fix new codegen - new
         //qtd=regex(procedureFixRegex, lines->line, m);
         boolean bprocedureFixRegex = procedureFixRegex(line_parsed, qtt_tk, &tmp[0]);
-        if(bprocedureFixRegex>0 && LineAtu!=NULL && !hasProgramExit){
+        if(bprocedureFixRegex>0 && LineAtu!=NULL && LineAtu->lineProgramExit>=lineProgramExit){
             int lineC = atoi(tmp);
             boolean isOldFormat = (lines->line_before!=NULL)?fixOlderFormat(lines->line_before->line):FALSE;
             if(fileNameCompare(LineAtu->fileCobol, fileCobol)==0 && (isVersion2_2_or_3_1_1 || !isOldFormat)){
@@ -909,7 +910,7 @@ int parser(char * file_name, int fileN){
         }
         boolean bprogramExit=programExit(line_parsed, qtt_tk);
         if(bprogramExit){
-            hasProgramExit=TRUE;
+            lineProgramExit=lineNumber;
         }
         if(lines->line_after!=NULL) lines=lines->line_after;
     }
