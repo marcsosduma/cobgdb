@@ -229,6 +229,7 @@ enum types{
     TP_STRING2,
     TP_ALPHA,
     TP_RESERVED,
+    TP_VAR_RESERVED,
     TP_OTHER
 };
 

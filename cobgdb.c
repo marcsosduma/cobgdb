@@ -261,7 +261,10 @@ int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
             print_color(color_gray);
             printf("%-*d ", NUM_DIG, show_line->file_line);
             if(show_line->high==NULL){
-                if(show_line->line !=NULL) show_line->line[strcspn(show_line->line,"\n")]='\0';
+                if(show_line->line !=NULL){
+                    show_line->line[strcspn(show_line->line,"\n")]='\0';
+                    show_line->line[strcspn(show_line->line,"\t")]=' ';
+                }   
                 size_t  len=strlen(show_line->line);
                 wchar_t *wcharString = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
                 #if defined(_WIN32)

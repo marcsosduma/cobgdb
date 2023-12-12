@@ -560,7 +560,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         char chval[500];
         char * functionName = NULL;
         while(h!=NULL){
-            if(h->type==TP_ALPHA){
+            if(h->type==TP_ALPHA || h->type==TP_VAR_RESERVED){
                 wcsncpy(wcBuffer, &h->token[st], h->size);
                 wcBuffer[h->size]='\0';   
                 int len = wcstombs(NULL, wcBuffer, 0);
