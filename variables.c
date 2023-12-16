@@ -516,7 +516,6 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
     int line_start = 7;    
     expand = FALSE;
     char aux[100];
-    wchar_t wcharString[512];
     struct st_highlt * h = exe_line;
     int bkg= color_light_gray; //color_dark_red;
     int fkg= color_dark_blue;
@@ -600,6 +599,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         }
     }
     wt = Watching;
+    wchar_t * wcharString = NULL;
     while(wt!=NULL){
         if(wt->status==0 || wt->status==2)
             if(!waitAnser){
@@ -609,8 +609,12 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         int len = strlen(wt->var->cobolName)+2;
         if(wt->var->value!=NULL){
             #if defined(_WIN32)
+            int wideCharSize = MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, NULL, 0);
+            wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
             MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, wcharString,(strlen(wt->var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
             #else
+            size_t wideCharSize = mbstowcs(NULL, wt->var->value, 0);
+            wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
             mbstowcs(wcharString, wt->var->value, strlen(wt->var->value) + 1);
             #endif
             int lenVar = wcslen(wcharString);
@@ -621,7 +625,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         }else{
             wt->size= len;
             wt->posx= VIEW_COLS - len - 6;
-            wcscpy(wcharString,L"");
+            wcharString = wcsdup(L"");
         }
         print_colorBK(fkg, bkg);
         int posy=wt->posy;
@@ -630,6 +634,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         int to_move=wcslen(wcharString);
         if(to_move>wt->size) to_move=wt->size;
         wcsncpy(wcBuffer, wcharString, to_move);
+        if(wcharString!=NULL) free(wcharString);
         wcBuffer[to_move]='\0';
         printf("%*ls",wt->size,wcBuffer);
         draw_box_border(wt->posx+wt->size+1, posy++);
