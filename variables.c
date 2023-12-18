@@ -509,11 +509,7 @@ ST_Watch * new_watching(struct st_highlt * exe_line, ST_DebuggerVariable * var, 
 
 void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line ){
     char command[256];
-    int line_pos=0;
     int start_window_line = 0;
-    int qtd_window_line = VIEW_LINES-2;
-    int start_linex_x = 0;  
-    int line_start = 7;    
     expand = FALSE;
     char aux[100];
     struct st_highlt * h = exe_line;
@@ -599,7 +595,8 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         }
     }
     wt = Watching;
-    wchar_t * wcharString = NULL;
+    wchar_t * wcharString = (wchar_t*)malloc((500 + 1) * sizeof(wchar_t));
+    int wideCharSize = 500;
     while(wt!=NULL){
         if(wt->status==0 || wt->status==2)
             if(!waitAnser){
@@ -609,12 +606,20 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         int len = strlen(wt->var->cobolName)+2;
         if(wt->var->value!=NULL){
             #if defined(_WIN32)
-            int wideCharSize = MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, NULL, 0);
-            wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
+            int new_size = MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, NULL, 0);
+            if(new_size>wideCharSize){
+                wideCharSize = new_size;
+                free(wcharString);
+                wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
+            }
             MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, wcharString,(strlen(wt->var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
             #else
-            size_t wideCharSize = mbstowcs(NULL, wt->var->value, 0);
-            wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
+            size_t new_size = mbstowcs(NULL, wt->var->value, 0);
+            if(new_size>wideCharSize){
+                wideCharSize = new_size;
+                free(wcharString);
+                wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
+            }
             mbstowcs(wcharString, wt->var->value, strlen(wt->var->value) + 1);
             #endif
             int lenVar = wcslen(wcharString);
@@ -625,7 +630,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         }else{
             wt->size= len;
             wt->posx= VIEW_COLS - len - 6;
-            wcharString = wcsdup(L"");
+            wcscpy(wcharString, L"");
         }
         print_colorBK(fkg, bkg);
         int posy=wt->posy;
@@ -634,13 +639,13 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         int to_move=wcslen(wcharString);
         if(to_move>wt->size) to_move=wt->size;
         wcsncpy(wcBuffer, wcharString, to_move);
-        if(wcharString!=NULL) free(wcharString);
         wcBuffer[to_move]='\0';
         printf("%*ls",wt->size,wcBuffer);
         draw_box_border(wt->posx+wt->size+1, posy++);
         draw_box_last(wt->posx, posy, wt->size);
         wt=wt->next;
     }
+    if(wcharString!=NULL) free(wcharString);
 }
 
 #define MAX_FILES 100

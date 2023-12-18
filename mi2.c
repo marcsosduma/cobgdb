@@ -294,6 +294,13 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.isStepOver=-1;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }
+                            }else{
+                                *status = GDB_STEP_END;
+                                cob.waitAnswer=FALSE;
+                                cob.isStepOver=-1;
+                                cob.changeLine = TRUE;
+                                cob.running=FALSE;
+                                cob.showFile=TRUE;
                             }
                         }
                     }
