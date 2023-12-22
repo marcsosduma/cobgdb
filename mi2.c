@@ -118,10 +118,10 @@ ST_Line * hasLineCobol(ST_MIInfo * parsed){
     boolean find=FALSE;
     ST_Line * hasLine = NULL;
     if(parsed->outOfBandRecord->output->next!=NULL){
-        ST_TableValues * search1=parseMIvalueOf(parsed->outOfBandRecord->output->next, "frame.fullname", NULL, &find);
+        ST_TableValues * search1=parseMIvalueOf(parsed->outOfBandRecord->output, "frame.fullname", NULL, &find);
         if(search1==NULL) return NULL;
         find=FALSE;
-        ST_TableValues * search2=parseMIvalueOf(parsed->outOfBandRecord->output->next, "frame.line", NULL, &find);
+        ST_TableValues * search2=parseMIvalueOf(parsed->outOfBandRecord->output, "frame.line", NULL, &find);
         if(search2==NULL || search2->value==NULL){
             return NULL;
         }
@@ -296,6 +296,9 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                 }
                             }else{
                                 *status = GDB_STEP_END;
+                                ST_Line * hasLine=hasLineCobol(parsed);
+                                if(hasLine!=NULL)
+                                    cob.debug_line = hasLine->lineCobol;
                                 cob.waitAnswer=FALSE;
                                 cob.isStepOver=-1;
                                 cob.changeLine = TRUE;

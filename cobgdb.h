@@ -175,7 +175,10 @@ struct ST_Watch{
     int status;
     int posx;
     int posy;
+    int posx1;
+    int posy1;
     int size;
+    int new;
     time_t start_time;    
     struct ST_Watch * next; 
 };

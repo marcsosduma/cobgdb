@@ -496,15 +496,96 @@ char * EspecialTrim(char *s) {
     return s;
 }
 
-ST_Watch * new_watching(struct st_highlt * exe_line, ST_DebuggerVariable * var, int posx, int posy){
+boolean isCollide(ST_Watch * wnew, int debug_line, int * size){
+    boolean result=FALSE;
+    ST_Watch * wt = Watching;
+    if(wnew->posy<=(debug_line+2) && wnew->posy1>=(debug_line+2)){
+        *size = wnew->size;
+        return TRUE;
+    }
+    while(wt!=NULL){
+        if(wnew!=wt){
+            if(((wnew->posx>=wt->posx-1 && wnew->posx<=wt->posx1+1)||
+                (wnew->posx1>=wt->posx-1 && wnew->posx1<=wt->posx1+1)) &&
+                ((wnew->posy>=wt->posy && wnew->posy<=wt->posy1)||
+                (wnew->posy1>=wt->posy && wnew->posy1<=wt->posy1))){
+                    *size = wt->size;
+                    result=TRUE;
+                    break;
+            }
+        }
+        wt = wt->next;        
+    }
+    return result;
+}
+
+void findNewVarPos(ST_Watch * wnew, int debug_line){
+    ST_Watch * wt = Watching;
+    int new_pos=-1;
+    int phase=0;
+    if(wnew->posy<0){
+        wnew->posy =VIEW_LINES-4;
+        wnew->posy1=VIEW_LINES-2;
+        while(wnew->posy<=debug_line && wnew->posy1>=debug_line){
+            wnew->posy--;
+            wnew->posy1--;
+        }
+    }
+    int size=0;
+    boolean isCorrect = FALSE;
+    while(phase<2){        
+        if(phase==0){
+            while(wnew->posy>1){
+                if(!isCollide(wnew, debug_line, &size)){
+                    return;
+                }
+                wnew->posy  -= 3;
+                wnew->posy1 -= 3;
+            }
+            phase++;
+            wnew->posy =VIEW_LINES-4;
+            wnew->posy1=VIEW_LINES-2;
+        }else{
+            while(wnew->posy>1){
+                if(!isCollide(wnew, debug_line, &size)){
+                    return;
+                }
+                int aux = wnew->posx;
+                int aux1= wnew->posx1;
+                wnew->posx  -= size - 2;
+                wnew->posx1 -= size - 2;
+                while(wnew->posx>=10){
+                    if(!isCollide(wnew, debug_line, &size)){
+                       return;
+                    }
+                    wnew->posx  -= size - 2;
+                    wnew->posx1 -= size - 2;
+                }
+                wnew->posx  = aux;
+                wnew->posx1 = aux1;
+                wnew->posy  -= 3;
+                wnew->posy1 -= 3;
+            }
+            phase++;
+            wnew->posy =VIEW_LINES-4;
+            wnew->posy1=VIEW_LINES-2;
+            break;
+        }
+    }
+}
+
+ST_Watch * new_watching(struct st_highlt * exe_line, ST_DebuggerVariable * var){
     ST_Watch * wnew=malloc(sizeof(ST_Watch));
     wnew->var= var;
     wnew->line= exe_line;
-    wnew->posy= posy;
-    wnew->posx = posx;
     wnew->start_time= -1;
     wnew->status=0;
     wnew->next=NULL;
+    wnew->posy=-1;
+    wnew->posx=-1;
+    wnew->size=-1;
+    wnew->new=TRUE;
+    return wnew;
 }
 
 void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line ){
@@ -514,15 +595,15 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
     char aux[100];
     struct st_highlt * h = exe_line;
     int bkg= color_light_gray; //color_dark_red;
-    int fkg= color_dark_blue;
+    int fnew = color_blue;
+    int fgc= color_dark_blue;
+    int pos_y = VIEW_LINES - 4;
 
     ST_Watch * wt = Watching;
     ST_Watch * wt_before = NULL;
     boolean insert=TRUE;
-    int posy_b= 1000; // VIEW_LINES-5;
-    int posy_a = VIEW_LINES-5;
     while(wt!=NULL){
-        if(posy_a>=wt->posy) posy_a=wt->posy-3;
+        // remove or updates variable from the previously checked line
         if(wt->line==exe_line){
             int status=1;
             insert = FALSE;
@@ -530,6 +611,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
             if(wt->start_time<0 && !waitAnser){
                 wt->start_time= time(NULL);
                 wt->status=2;
+                wt->new = FALSE;
             }else if(wt->status==2 && wt->start_time>0){
                 time_t end_time = time(NULL);
                 double elapsed_time = difftime(end_time, wt->start_time);
@@ -539,7 +621,6 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
                     }else{
                         Watching=wt->next;
                     }
-                    if(posy_b>wt->posy) posy_b=wt->posy;
                     ST_Watch * to_free = wt;
                     wt=wt->next;
                     free(to_free);
@@ -548,8 +629,10 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
             }
         }
         wt_before=wt;
+        pos_y = wt->posy-3;
         wt = wt->next;
     }
+    // The line has not been processed yet; we need to check the variables
     if(insert){
         int st=0;
         char chval[500];
@@ -564,13 +647,9 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
                     functionName = MI2getCurrentFunctionName(sendCommandGdb);
                 ST_DebuggerVariable * var =  findVariableByCobol(functionName, toUpper(chval));
                 if(var!=NULL){
-                    if(posy_a<3) posy_a = posy_b;
-                    if(posy_a<3 || posy_a>(VIEW_LINES-5)) posy_a = VIEW_LINES-5;
                     wt = Watching;
-                    wt_before = NULL;
                     while(wt!=NULL){
                         if(strcmp(wt->var->cobolName,var->cobolName)==0) break;
-                        wt_before=wt;
                         wt=wt->next;
                     }
                     if(wt!=NULL){
@@ -578,17 +657,17 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
                         wt->start_time= -1;
                         wt->status=0;
                     }else{
-                        while(posy_a>=(debug_line) && posy_a<debug_line+2 && posy_a>1)
-                             posy_a--;
-                        ST_Watch * wnew = new_watching(exe_line, var, -1, posy_a);
-                        if(wt_before==NULL){
-                            Watching=wnew;
+                        ST_Watch * wnew = new_watching(exe_line, var);                        
+                        wnew->posy = pos_y;
+                        wnew->posy1 = pos_y+2;
+                        if(Watching==NULL){
+                            Watching = wnew;
                         }else{
-                            wt_before->next=wnew;
+                            wt = Watching;
+                            while(wt->next!=NULL) wt=wt->next;
+                            wt->next=wnew;
                         }
-                        wt_before=wnew;
                     }
-                    posy_a-=3;
                 }
             }
             h=h->next;
@@ -625,14 +704,24 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
             int lenVar = wcslen(wcharString);
             if(lenVar>len) len=lenVar;
             if(len>60) len=60;
-            wt->posx= VIEW_COLS - len - 6;
+            if(len>wt->size){
+                wt->posx= VIEW_COLS - len - 4;
+                wt->posx1=VIEW_COLS - 4;
+                wt->size=len;
+            }
+            findNewVarPos(wt, debug_line);
             wt->size= len;
         }else{
-            wt->size= len;
-            wt->posx= VIEW_COLS - len - 6;
+            if(len>wt->size){
+                wt->posx= VIEW_COLS - len - 4;
+                wt->posx1=VIEW_COLS - 4;
+                wt->size=len;
+            }
             wcscpy(wcharString, L"");
+            findNewVarPos(wt, debug_line);
         }
-        print_colorBK(fkg, bkg);
+        int fcollor = (wt->new)?fnew:fgc;
+        print_colorBK(fcollor, bkg);
         int posy=wt->posy;
         draw_box_first(wt->posx,posy++,wt->size,wt->var->cobolName);
         draw_box_border(wt->posx, posy);
