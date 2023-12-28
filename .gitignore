@@ -33,3 +33,8 @@ subsample
 subsample.c
 subsample.c.h
 subsample.c.l.h
+datatype
+datatype.exe
+datatype.c
+datatype.c.h
+datatype.c.l.h

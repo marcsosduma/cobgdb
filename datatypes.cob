@@ -4,7 +4,7 @@
        DATA             DIVISION.
        WORKING-STORAGE  SECTION.
        01  numeric-data.
-           05 disp     usage display   pic s99v999   value -12.34.
+           05 disp1     usage display   pic s99v999   value -12.34.
            05 disp-u   usage display   pic  99v999   value  12.34.
            05 dispp    usage display   pic spppp9999 value -.0000123.
            05 dispp-u  usage display   pic  pppp9999 value  .0000123.
@@ -69,7 +69,7 @@
            move cmp5   to edit-num1, edit-num2, edit-num3, edit-num4
            move cmp5   to net-num1,  net-num2,  net-num3,  net-num4
 
-           display disp
+           display disp1
            display disp-u
            display dispp
            display dispp-u
