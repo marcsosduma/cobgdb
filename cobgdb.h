@@ -299,6 +299,7 @@ ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, bo
 ST_DebuggerVariable * getVariableByCobol(char * cobVar);
 ST_DebuggerVariable * getVariableByC(char * cVar);
 ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar);
+ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVar, ST_DebuggerVariable * start);
 ST_DebuggerVariable * getVariablesByCobol();
 void freeParsed(ST_MIInfo * parsed);
 // mi2.c

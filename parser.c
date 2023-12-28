@@ -1027,6 +1027,26 @@ ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar){
     return search;
 }
 
+ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVar, ST_DebuggerVariable * start){
+    ST_DebuggerVariable * search = start;
+    char tmp1[256];
+    while(search!=NULL){        
+        if(search->variablesByCobol!=NULL){
+            sprintf(tmp1,"%s%c",functionName,'.');
+            if(strstr(search->variablesByCobol,tmp1)!=NULL){
+                sprintf(tmp1,"%c%s",'.',cobVar);
+                if(strstr(search->variablesByCobol,tmp1)!=NULL){
+                    if(strncmp(search->cName,"f_",2)==0) break; 
+                    ST_DebuggerVariable * search1=findFieldVariableByCobol(functionName, cobVar, search->next);
+                    if(search1!=NULL) search=search1;
+                    break;
+                }
+            }
+        }
+        search = search->next;
+    }
+    return search;
+}
 
 
 int fileNameCompare(char * fileOne, char * fileTwo){

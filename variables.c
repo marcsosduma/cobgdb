@@ -645,7 +645,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
                 wcstombs(chval, wcBuffer, len + 1);
                 if(functionName==NULL && !waitAnser) 
                     functionName = MI2getCurrentFunctionName(sendCommandGdb);
-                ST_DebuggerVariable * var =  findVariableByCobol(functionName, toUpper(chval));
+                ST_DebuggerVariable * var =  findFieldVariableByCobol(functionName, toUpper(chval), DebuggerVariable);
                 if(var!=NULL){
                     wt = Watching;
                     while(wt!=NULL){
