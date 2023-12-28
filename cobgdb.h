@@ -284,6 +284,7 @@ int draw_box_first(int posx, int posy, int width, char *text);
 int draw_box_last(int posx, int posy, int width);
 int draw_box_border(int posx, int posy);
 void draw_utf8_text(const char* text);
+int showCobMessage(char * message, int type);
 // parser.c
 void SourceMap(char fileGroup[][512]);
 int parser(char * file_name, int fileN);
@@ -321,6 +322,7 @@ char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *));
 int MI2getStack(int (*sendCommandGdb)(char *), int thread);
 int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]);
 int MI2attach(int (*sendCommandGdb)(char *));
+int MI2lineToJump(int (*sendCommandGdb)(char *));
 //variables.c
 int show_variables(int (*sendCommandGdb)(char *));
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 

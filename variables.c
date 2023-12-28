@@ -873,6 +873,7 @@ void show_help(int (*sendCommandGdb)(char *)){
         "B - Sets a breakpoint at a specific point in the code.",
         "R - Runs the program until a breakpoint is encountered.",
         "C - Runs the program until it reaches the selected line.",
+        "J - Runs the program until it reaches the specified line.",
         "N - Runs the program until the next line but does not enter",
         "    a subroutine executed by CALL or PERFORM.",
         "S - Runs the program until the next line.",
@@ -906,7 +907,7 @@ void show_help(int (*sendCommandGdb)(char *)){
         color_green,
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white,
-        color_white, color_white, color_white, color_white, color_white, 
+        color_white, color_white, color_white, color_white, color_white, color_white, 
         color_yellow,color_yellow,
         color_white, color_white, 
         color_yellow,
@@ -930,12 +931,13 @@ void show_help(int (*sendCommandGdb)(char *)){
             while(pos<10){
                 print_colorBK(frg, bkgr);
                 draw_box_border(col, lin);
-                bkg=(line_pos==pos)?csel:bkgr;
-                print_colorBK(ctext[f], bkg);
                 if(f<qtt_lines){
+                    bkg=(line_pos==pos)?csel:bkgr;
+                    print_colorBK(ctext[f], bkg);
                     printf("%-70s",text[f]);
                     if(line_pos==pos) file_sel=f;
                 }else{
+                    print_colorBK(color_white, bkgr);
                     printf("%-70s"," ");
                 }
                 print_colorBK(frg, bkgr);
@@ -944,6 +946,7 @@ void show_help(int (*sendCommandGdb)(char *)){
             }
             print_colorBK(frg, bkgr);
             draw_box_last(col, lin, size);
+            show=FALSE;
         }
         print_color_reset();
         fflush(stdout);

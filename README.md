@@ -30,6 +30,7 @@ COBGDB running:
 - `B` - Sets a breakpoint at a specific point in the code.
 - `R` - Runs the program until a breakpoint is encountered.
 - `C` - Runs the program until it reaches the selected line.
+- `J` - Runs the program until it reaches the specified line.
 - `N` - Runs the program until the next line but does not enter a subroutine executed by CALL or PERFORM.
 - `S` - Runs the program until the next line.
 - `G` - Continues the program execution until it encounters a stopping point: breakpoint, end of the program, or the return from a subroutine (PERFORM/CALL).

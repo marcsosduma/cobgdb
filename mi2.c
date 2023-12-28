@@ -866,3 +866,38 @@ int MI2attach(int (*sendCommandGdb)(char *)){
     }
     return 0;
 }
+
+
+int MI2lineToJump(int (*sendCommandGdb)(char *)){
+    char aux[500];
+    int bkg= color_dark_red;
+    int ret=TRUE;
+    
+
+    int lin=VIEW_LINES/2-2;
+    gotoxy(10,lin);
+    print_colorBK(color_white, bkg);
+    draw_box_first(10,lin,61,"Jump to Line");
+    draw_box_border(10,lin+1);
+    draw_box_border(72,lin+1);
+    print_colorBK(color_yellow, bkg);
+    gotoxy(11,lin+1);
+    int readLine = lin+1;
+    strcpy(aux,"Line: ");
+    printf("%-61s",aux);
+    lin++;
+    print_colorBK(color_white, bkg);
+    draw_box_last(10,lin+1,61);
+    print_colorBK(color_green, bkg);
+    fflush(stdout);
+    gotoxy(11+strlen(aux),readLine);
+    readchar(aux,50);
+    int line = atoi(aux);
+    int check=hasCobolLine(line);
+    if(check>0){
+        MI2goToCursor(sendCommandGdb, cob.name_file, line);
+    }else{
+        ret = FALSE;
+    } 
+    return ret;
+}

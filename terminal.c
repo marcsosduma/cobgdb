@@ -27,6 +27,7 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #include <stdlib.h>
 #include <wchar.h>
 #endif // Windows/Linux
+#include <time.h>
 #include "cobgdb.h"
 
 #define color_black      0
@@ -652,4 +653,43 @@ int draw_box_border(int posx, int posy) {
     char vertical[]   = "\u2502";   // UTF-8 character for vertical line
     gotoxy(posx, posy);
     draw_utf8_text(vertical);
+}
+
+int showCobMessage(char * message, int type){
+    char aux[500];
+    int bkg= color_dark_red;
+    int lin=VIEW_LINES/2-2;
+    int size = strlen(message);
+    int col = (VIEW_COLS-size)/2;
+    gotoxy(col,lin);
+    print_colorBK(color_white, bkg);
+    switch (type)
+    {
+        case 1:
+            strcpy(aux,"Message");
+            break;
+        case 2:
+            strcpy(aux,"Alert!");
+            break;    
+        default:
+            break;
+    }
+    if(strlen(aux)>size) size=strlen(aux);
+    draw_box_first(col,lin,size+1,aux);
+    draw_box_border(col,lin+1);
+    draw_box_border(col+size+2,lin+1);
+    print_colorBK(color_yellow, bkg);
+    gotoxy(col+1,lin+1);
+    printf("%-*s\r",size+1,message);
+    lin++;
+    print_colorBK(color_white, bkg);
+    draw_box_last(col,lin+1,size+1);
+    print_colorBK(color_green, bkg);
+    fflush(stdout);
+    time_t start_time= time(NULL);;   
+    while(key_press()<=0){
+        time_t end_time = time(NULL);
+        double elapsed_time = difftime(end_time, start_time);
+        if(elapsed_time>2) break;
+    }
 }

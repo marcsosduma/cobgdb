@@ -505,6 +505,16 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                     cob.showFile=TRUE;
                 }
                 break;
+            case 'j':
+            case 'J':
+                if(!cob.waitAnswer){ 
+                    if(!MI2lineToJump(sendCommandGdb)){
+                        show_file(lines, line_pos, &exe_line);
+                        showCobMessage("Not a debuggable line.",2);
+                    }
+                    cob.showFile=TRUE;
+                }
+                break;
             case 'h':
             case 'H':
                 if(!cob.waitAnswer){ 
