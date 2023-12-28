@@ -435,6 +435,7 @@ int MI2stepOut(int (*sendCommandGdb)(char *)){
 }
 
 int MI2start(int (*sendCommandGdb)(char *)){
+    hasCobGetFieldStringFunction=TRUE;
     verify_output(sendCommandGdb); 
     strcpy(lastComand,"exec-next\n");
     char command[]="exec-run\n";
@@ -536,6 +537,7 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
         if(isRunning){
             strcpy(command,"exec-continue\n"); 
         }else{
+            hasCobGetFieldStringFunction=TRUE;
             verify_output(sendCommandGdb);
             strcpy(command,"exec-run\n");
         }
@@ -705,7 +707,6 @@ char* cleanRawValue(const char* rawValue) {
 }
 
 int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue){
-    int hasCobGetFieldStringFunction = FALSE;
     int status, tk;
     char aux[256];
     char command[512];
@@ -718,8 +719,7 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
            MI2onOuput(sendCommandGdb, tk, &status);
         }while(status==GDB_RUNNING);
     }else if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
-        // TODO
-        sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
+        sprintf(command,"data-evaluate-expression \"(int)cob_put_field_str(&%s,\\\"%s\\\")\"\n", var->cName, cleanedRawValue);
         sendCommandGdb(command);
         do{
            sendCommandGdb("");

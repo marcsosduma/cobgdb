@@ -14,8 +14,8 @@
             "windows": {
                 "program": "${workspaceFolder}/cobgdb.exe",
                 //"args": ["--test"],
-                "args": ["customer.cob"],
-                //"args": ["datatypes.cob"],
+                //"args": ["customer.cob"],
+                "args": ["datatypes.cob"],
             },
             "linux": {
                 "program": "${workspaceFolder}/cobgdb",
