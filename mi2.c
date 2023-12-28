@@ -20,6 +20,8 @@ extern char m[10][512];
 extern ST_bk * BPList;
 char lastComand[200];
 int subroutine=-1;
+int isCall = FALSE;
+int hasCobGetFieldStringFunction = TRUE;
 
 enum GDB_STATUS {
     GDB_RUNNING,
@@ -129,6 +131,7 @@ ST_Line * hasLineCobol(ST_MIInfo * parsed){
         hasLine =  getLineCobol( search1->value, lineC);
         if(hasLine!=NULL){
             subroutine = hasLine->endPerformLine;
+            isCall = hasLine->isCall;
             loadCobSourceFile(cob.file_cobol, hasLine->fileCobol);
         } 
     }
@@ -396,7 +399,10 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
 int MI2stepInto(int (*sendCommandGdb)(char *)){
     int status;
     char command[200];
-    strcpy(lastComand,"exec-step\n"); 
+    if(isCall)
+        strcpy(lastComand,"exec-step\n"); 
+    else
+        strcpy(lastComand,"exec-next\n"); 
     if(subroutine>0){
         sprintf(command,"%s%d\n","break-insert -t ",subroutine);
         sendCommandGdb(command);
@@ -541,7 +547,6 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
 }
 
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame){
-    int hasCobGetFieldStringFunction = FALSE;
     int status;
     char command[512];
     char st[100];
@@ -551,7 +556,7 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
         strcat(command,st);
     }
     if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
-        sprintf(st,"\"(char *)cob_get_field_str_buffered(&%s})\"", var->cName);
+        sprintf(st,"\"(char *)cob_get_field_str_buffered(&%s)\"", var->cName);
         strcat(command,st);
     } else if (strncmp(var->cName,"f_",2)==0) {
         sprintf(st,"%s.data", var->cName);
@@ -567,13 +572,30 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
         parsed=MI2onOuput(sendCommandGdb, tk, &status);
     }while(status==GDB_RUNNING);
     //ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk, &status);
-    if(parsed!=NULL){
-        int find=FALSE;
-        ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "value", NULL, &find);
-        if(search!=NULL && search->value!=NULL){
-            var->value=debugParse(search->value, var->size, var->attribute->scale, var->attribute->type);
+    if (hasCobGetFieldStringFunction){
+        if(parsed!=NULL){
+                if(parsed->resultRecords!=NULL && strcmp(parsed->resultRecords->resultClass,"error")==0){
+                    hasCobGetFieldStringFunction=FALSE;
+                    freeParsed(parsed); 
+                    MI2evalVariable(sendCommandGdb, var, thread, frame);
+                }else{
+                    int find=FALSE;
+                    ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "value", NULL, &find);
+                    if(search!=NULL && search->value!=NULL){
+                        var->value= parseUsage(search->value, var->attribute->type);
+                    }
+                    freeParsed(parsed);
+                }
         }
-        freeParsed(parsed);
+    }else{
+        if(parsed!=NULL){
+            int find=FALSE;
+            ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "value", NULL, &find);
+            if(search!=NULL && search->value!=NULL){
+                var->value=debugParse(search->value, var->size, var->attribute->scale, var->attribute->type);
+            }
+            freeParsed(parsed);
+        }
     } 
 }
 

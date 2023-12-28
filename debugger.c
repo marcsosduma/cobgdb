@@ -83,10 +83,11 @@ char * formatNumber(char *valueStr, int fieldSize, int scale, int isSigned) {
 }
 
 
-void formatNumberParser(char *valueStr, int fieldSize, int scale) {
+void formatNumberParser(char *valueStr, int fieldSize, int sc) {
     char *value = strdup(valueStr);
     char *originalLocale = setlocale(LC_NUMERIC, NULL);
 
+    int scale = abs(sc);    
     setlocale(LC_NUMERIC, "C");
     if(fieldSize<0)
         fieldSize=strlen(valueStr)-2;
@@ -100,29 +101,29 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
         if (signCharCode >= ZERO_SIGN_CHAR_CODE) {
             sign[0] = '-';
             sign[1] = '\0';
-            value[strlen(value) - 1] = '\0';
+            value[strlen(value)-1] -= 64;
         }
-        if (strlen(value) < scale) {
+        if (sc < 0) {
+            int diff = scale;
+            char suffix[diff+1];
+            memset(suffix, '0', diff);
+            suffix[diff] = '\0';
+            strcat(value, suffix);
+        }else if (strlen(value) < sc) {
             int diff = scale - strlen(value);
             char prefix[diff+1];
             memset(prefix, '0', diff);
             prefix[diff] = '\0';
             strcat(prefix, value);
             strcpy(value, prefix);
-        } else if (scale < 0) {
-            int diff = abs(scale);
-            char suffix[diff+1];
-            memset(suffix, '0', diff);
-            suffix[diff] = '\0';
-            strcat(value, suffix);
-        }
-        char *wholeNumber = malloc(fieldSize + 1);
-        char *decimals = malloc(scale + 1);
+        } 
+        char *wholeNumber = malloc(scale+fieldSize + 3);
+        char *decimals = malloc(scale + fieldSize + 3);
         wholeNumber[0] = '\0';
         decimals[0] = '\0';
         if (strlen(value) >= abs(scale)) {
             strcpy(wholeNumber, value);
-            if (abs(scale) > 0) {
+            if (sc > 0) {
                 wholeNumber[strlen(wholeNumber) - abs(scale)] = '\0';
                 strcpy(decimals, value + strlen(value) - abs(scale));
             }
@@ -135,7 +136,10 @@ void formatNumberParser(char *valueStr, int fieldSize, int scale) {
             strcat(numericValue, ".");
             strcat(numericValue, decimals);
         }
-        sprintf(valueStr, "%.*f", scale, atof(numericValue));
+        if(sc>0)
+            sprintf(valueStr, "%.*f", scale, atof(numericValue));
+        else
+            sprintf(valueStr, "%.*f", 0, atof(numericValue));
         free(wholeNumber);
         free(decimals);
         free(numericValue);
@@ -300,4 +304,21 @@ char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
         return strdup(valueStr);
     }
     return strdup(valueStr);
+}
+
+char* parseUsage(char* valueStr, char* type) {
+    if (!valueStr || strlen(valueStr) == 0) {
+        return NULL;
+    }
+
+    if (strncmp(valueStr, "0x", 2) == 0) {
+        // Assuming CobolFieldDataParser.parse is a function that modifies valueStr
+        // in a similar way to the TypeScript code
+       valueStr=CobolFieldDataParser(valueStr);
+    }
+
+    if (!valueStr || strlen(valueStr) == 0) {
+        return NULL;
+    }
+    return  strdup(valueStr);;
 }

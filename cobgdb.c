@@ -115,13 +115,13 @@ int isCommandInstalled(const char *command) {
 int cobc_compile(char file[][512], char values[10][256], int arg_count){
     char *param[20]; 
 
-    // Initialize the first 10 elements with the initial values.
+    // Initialize the first elements with the initial values.
     char *initial_params[] = {
         "-g ",
         "-fsource-location ",
         "-ftraceall ",
         "-v ",
-        "-free ",
+        //"-free ",
         "-O0 ",
         "-x "
     };
@@ -712,7 +712,7 @@ int main(int argc, char **argv) {
     }
     print_color_reset();
     cursorON();
-    printf("The end of the COBGBD execution.\n");
+    printf("The end of the COBGDB execution.\n");
     fflush(stdout);
     return 0;
 }

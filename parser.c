@@ -275,7 +275,7 @@ ST_DebuggerVariable * GetVariableByC(char * key){
 }
 // DebuggerVariable - END
 
-int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, int lineProgramExit){
+int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, int lineProgramExit, int isCall){
     ST_Line* new_line = (ST_Line*) malloc(sizeof(ST_Line));
     new_line->next=NULL;
     new_line->before=NULL;
@@ -286,6 +286,7 @@ int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, i
     strcpy(new_line->fileC, filePathC);
     new_line->lineC = lineC;
     new_line->endPerformLine = -1;
+    new_line->isCall = isCall;
     new_line->lineProgramExit=lineProgramExit;
     if(LineDebug==NULL){
          LineDebug=new_line;
@@ -470,6 +471,12 @@ boolean fixOlderFormat(char * value){
 //char frame_ptrFindRegex[] = "frame\\_ptr--;";
 boolean frame_ptrFindRegex(char * value){
     if(value==NULL || istrstr(value,"frame_ptr--;")!=NULL) return TRUE;
+    return FALSE;
+}
+
+//char call_FindRegex[] = "call";
+boolean call_FindRegex(char * value){
+    if(value==NULL || istrstr(value,"call")!=NULL) return TRUE;
     return FALSE;
 }
 
@@ -811,7 +818,8 @@ int parser(char * file_name, int fileN){
                     performLine = -2;
                 else
                     performLine = -1;
-                PushLine(fileCobol, lineCobol, fileC, lineNumber + 2, lineProgramExit);
+                boolean isCall= call_FindRegex(lines->line);
+                PushLine(fileCobol, lineCobol, fileC, lineNumber + 2, lineProgramExit, isCall);
         }
 
         // fix new codegen - new

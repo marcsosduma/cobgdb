@@ -73,6 +73,7 @@ struct ST_Line {
     int lineCobol;
     int lineC;
     int endPerformLine;
+    int isCall;
     int lineProgramExit;
     struct ST_Line * next;
     struct ST_Line * before;
@@ -331,6 +332,7 @@ void show_help(int (*sendCommandGdb)(char *));
 //debugger.c
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);
+char* parseUsage(char* valueStr, char* type);
 // output.c
 void openOuput(int (*sendCommandGdb)(char *), char *target);
 //highlight.c

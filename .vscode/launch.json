@@ -13,12 +13,16 @@
             //"program": "${workspaceFolder}/${fileBasenameNoExtension}.exe",
             "windows": {
                 "program": "${workspaceFolder}/cobgdb.exe",
+                //"args": ["--test"],
+                //"args": ["customer.cob"],
+                "args": ["datatypes.cob"],
             },
             "linux": {
                 "program": "${workspaceFolder}/cobgdb",
+                //"args": ["--test"],
+                //"args": ["customer.cob"],
+                "args": ["datatypes.cob"],
             },
-            //"args": ["--test"],
-            "args": ["customer.cob"],
             "environment": [{ "name": "config", "value": "Debug" }],
             "cwd": "${workspaceFolder}"
         }        
