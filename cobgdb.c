@@ -265,6 +265,9 @@ int show_info(){
             case 2:
                 printf("%s\r", "page down             ");
                 break;
+            case 3:
+                printf("%s\r", "breakpoint            ");
+                break;
             case 10:
                 printf("%s\r", "run                   ");
                 break;

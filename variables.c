@@ -373,6 +373,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     int qtd = 0;
     int st=0;
     int lin=line_start;
+    time_t start_time = time(NULL);
     while(input_character!='R' && input_character!='r' ){
         while(h!=NULL){
             if(h->type==TP_ALPHA){
@@ -406,6 +407,11 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
         }
         fflush(stdout);
         if(qtd==0) break;
+        time_t end_time = time(NULL);
+        if (difftime(end_time, start_time) > 2) {
+            input_character='r';
+            break;
+        }
         input_character =  key_press();
         switch (input_character)
         {
@@ -461,7 +467,11 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
             case VK_ENTER:
                 expand=TRUE;
                 qtd = 0; st=0; lin=line_start;
-            default: 
+            case 'R':
+            case 'r':
+            case 'Q':
+            case 'q':
+            case VK_ESCAPE:
                 if(input_character>0) input_character='r';
                 break;
         }

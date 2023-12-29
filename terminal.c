@@ -56,6 +56,7 @@ void cursorON();
 void cursorOFF();
 void clearScreen();
 int mouseCobAction(int col, int line);
+int mouseCobRigthAction(int col, int line);
 void mouseCobHover(int col, int line);
 
 int TERM_WIDTH = VIEW_COLS;
@@ -154,8 +155,17 @@ int readKeyLinux() {
                 if(mouseEvent.button == 32 ){
                     return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
                 }
+                if(mouseEvent.button == 34 ){
+                    return mouseCobRigthAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
+                }
+                if (mouseEvent.button == 96) {
+                        return VK_UP;
+                }
+                if (mouseEvent.button == 97) {
+                        return VK_DOWN;
+                }
+                //printf("Mouse X: %d, Y: %d, Button: %d\n", mouseEvent.x - 32, mouseEvent.y - 32, mouseEvent.button);
                 return -1;
-                //printf("Mouse X: %d, Y: %d, Button: %d\n", mouseEvent.x - 32, mouseEvent.y - 32, mouseEvent.button - 32);
             }else {
 				switch (seq[1])
 				{
@@ -181,6 +191,7 @@ void mouseCobHover(int col, int line){
     cob.mouse = 0;
     if(col==79 && line<11) cob.mouse=1;
     if(col==79 && line>=11) cob.mouse=2;
+    if(col<2 && line>0 && line<22) cob.mouse=3;
     if(col==67 && line==0) cob.mouse=10;
     if(col==69 && line==0) cob.mouse=20;
     if(col==71 && line==0) cob.mouse=30;
@@ -230,6 +241,19 @@ int mouseCobAction(int col, int line){
     return action;
 }
 
+int mouseCobRigthAction(int col, int line){
+    int action= 'H';
+    if(line>0 && line<22){
+        cob.line_pos = line-1;
+        cob.showFile = TRUE;
+        if(col>1 && col<80){
+            action = 'H';
+        }
+    }
+    return action;
+}
+
+
 int key_press(){
 #if defined(_WIN32)
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -250,6 +274,17 @@ int key_press(){
                 if(mer.dwButtonState == FROM_LEFT_1ST_BUTTON_PRESSED ){
                     return mouseCobAction(mouseX, mouseY);
                 }
+                if(mer.dwButtonState == RIGHTMOST_BUTTON_PRESSED ){
+                    return mouseCobRigthAction(mouseX, mouseY);                        
+                }
+                if (inp.Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
+                    int delta = GET_WHEEL_DELTA_WPARAM(inp.Event.MouseEvent.dwButtonState);
+                    if (delta > 0) 
+                        return VK_UP;
+                    else
+                        return VK_DOWN;
+                }
+                
                 //printf("Mouse X: %d, Y: %d\n", mouseX, mouseY);
             }
             if (inp.EventType == KEY_EVENT){
