@@ -233,7 +233,7 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
     char *xterm_device = findTtyName(target);
     if(xterm_device == NULL){
         message_output(sleepVal);
-        gotoxy(12,15);while(key_press()==0);
+        gotoxy(12,15);while(key_press()<=0);
         xterm_device = findTtyName(target);
     }
     if (xterm_device == NULL) {

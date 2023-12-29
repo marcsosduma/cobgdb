@@ -18,7 +18,8 @@ struct st_cobgdb cob ={
     .waitAnswer = FALSE,
     .changeLine = FALSE,
     .showFile = TRUE,
-    .isStepOver = -1
+    .isStepOver = -1,
+    .mouse = 0
 };
 
 int start_window_line = 0;
@@ -195,38 +196,98 @@ Lines * set_window_pos(int * line_pos){
     return line;
 }
 
+int show_button(){
+    print_colorBK(color_blue, color_cyan);
+    //draw_utf8_text("\u2592");
+    gotoxy(66,1);
+    draw_utf8_text("\u2592 ");
+    print_colorBK((cob.mouse==10)?color_red:color_blue, color_cyan);
+    draw_utf8_text("\u25BA ");
+    print_colorBK((cob.mouse==20)?color_red:color_blue, color_cyan);
+    draw_utf8_text("\u2192 ");
+    print_colorBK((cob.mouse==30)?color_red:color_blue, color_cyan);
+    draw_utf8_text("\u2193 ");
+    print_colorBK((cob.mouse==40)?color_red:color_blue, color_cyan);
+    draw_utf8_text("\u2191 ");
+    print_colorBK((cob.mouse==50)?color_red:color_blue, color_cyan);
+    draw_utf8_text("\u25A0 ");
+    print_colorBK((cob.mouse==60)?color_red:color_blue, color_cyan);
+    printf("? ");
+}
+
 int show_opt(){
-    char * opt = " COBGDB                  GnuCOBOL GDB Interpreter                       (?)Help";
+    char * opt = " COBGDB                  GnuCOBOL GDB Interpreter";
     char aux[100];
-    snprintf(aux,82,"%-80.80s\r", opt);
+    snprintf(aux,82,"%-65.65s\r", opt);
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
+    if(cob.mouse>9) show_button();
+    gotoxy(80,1);
+    print_colorBK(color_light_gray, color_frame);
+    //draw_utf8_text("\u2191");
+    draw_utf8_text("\u2191");
+    // \u25BA > 
     gotoxy(1,VIEW_LINES-1);
-    snprintf(aux,82,"%-80.80s\r",cob.file_cobol);
+    snprintf(aux,82,"%-79.79s\r",cob.file_cobol);
     printBK(aux, color_light_gray, color_frame);
+    gotoxy(80,VIEW_LINES-1);
+    print_colorBK(color_light_gray, color_frame);
+    draw_utf8_text("\u2193");
 }
 
 int show_info(){
     gotoxy(1,VIEW_LINES);
-    if(cob.debug_line>0 && !cob.running){
-        print_colorBK(color_green, color_black);
-        printf("%s\r", "Debugging             ");
-    }else if(cob.debug_line>0 && cob.running){
-        print_colorBK(color_red, color_black);
-        printf("%s\r", "Running               ");
-    }else{
-        print_colorBK(color_yellow, color_black);
-        if(cob.waitAnswer){
-            printf("%s\r", "Waiting               ");
+    if(cob.mouse==0){
+        if(cob.debug_line>0 && !cob.running){
+            print_colorBK(color_green, color_black);
+            printf("%s\r", "Debugging             ");
+        }else if(cob.debug_line>0 && cob.running){
+            print_colorBK(color_red, color_black);
+            printf("%s\r", "Running               ");
         }else{
-            #if defined(_WIN32)
-            printf("%79s\r", " ");
-            #else
-            printf("%80s\r", " ");
-            #endif
+            print_colorBK(color_yellow, color_black);
+            if(cob.waitAnswer){
+                printf("%s\r", "Waiting               ");
+            }else{
+                #if defined(_WIN32)
+                printf("%79s\r", " ");
+                #else
+                printf("%80s\r", " ");
+                #endif
+            }
+        }
+    }else{
+        print_colorBK(color_green, color_black);
+        switch (cob.mouse){
+            case 1:
+                printf("%s\r", "page up               ");
+                break;
+            case 2:
+                printf("%s\r", "page down             ");
+                break;
+            case 10:
+                printf("%s\r", "run                   ");
+                break;
+            case 20:
+                printf("%s\r", "step over             ");
+                break;
+            case 30:
+                printf("%s\r", "step into             ");
+                break;
+            case 40:
+                printf("%s\r", "go                    ");
+                break;
+            case 50:
+                printf("%s\r", "stop                  ");
+                break;
+            case 60:
+                printf("%s\r", "help                  ");
+                break;
         }
     }
     gotoxy(1,VIEW_LINES);
+    show_button();        
+    gotoxy(1,24);
     if(cob.showFile==FALSE) fflush(stdout);
 }
 
@@ -332,6 +393,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     struct st_highlt * exe_line;
     double check_start = getCurrentTime();
 
+    cob.line_pos = line_pos;
     initTerminal();
     //while(key_press()<=0);
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
@@ -347,10 +409,10 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             show_opt();
             exe_line=NULL;
             line_file = lines->file_line; 
-            line_pos=show_file(lines, line_pos, &exe_line);
+            cob.line_pos=show_file(lines, cob.line_pos, &exe_line);
             int aux1=cob.debug_line;
             int aux2=cob.running;
-            var_watching(exe_line, sendCommandGdb, cob.waitAnswer, line_pos);
+            var_watching(exe_line, sendCommandGdb, cob.waitAnswer, cob.line_pos);
             cob.debug_line=aux1;
             cob.running=aux2;
             fflush(stdout);
@@ -374,33 +436,33 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
         switch (input_character)
         {
             case VK_UP:
-                if(line_pos==0 && start_window_line>0){
+                if(cob.line_pos==0 && start_window_line>0){
                     if(lines->line_before!= NULL){
                         start_window_line--;
                         lines = lines->line_before;
                     }
-                }else if(line_pos>0){
-                    line_pos--;
+                }else if(cob.line_pos>0){
+                    cob.line_pos--;
                 }
                 cob.showFile=TRUE;            
                 break;
             case VK_DOWN: 
                 if(lines->line_after!= NULL){
-                    if(line_pos>(VIEW_LINES-5)){
+                    if(cob.line_pos>(VIEW_LINES-5)){
                         start_window_line++;                 
                         lines = lines->line_after;
-                    }else if(line_pos<=(VIEW_LINES-5)){
-                        line_pos++;
+                    }else if(cob.line_pos<=(VIEW_LINES-5)){
+                        cob.line_pos++;
                     }
                 }
                 cob.showFile=TRUE;
                 break;
             case VK_PGUP:
-                if(line_pos>0){
-                    line_pos=0;
+                if(cob.line_pos>0){
+                    cob.line_pos=0;
                 }else{
                     qtd_page = VIEW_LINES-2;
-                    line_pos=0;
+                    cob.line_pos=0;
                     while((qtd_page--)>0 && lines->line_before!=NULL){
                         start_window_line--;
                         lines = lines->line_before;
@@ -410,18 +472,18 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 break;
             case VK_PGDOWN: 
                 qtd_page = 0;
-                if(line_pos<(VIEW_LINES-4)){
-                    line_pos=VIEW_LINES-4;
+                if(cob.line_pos<(VIEW_LINES-4)){
+                    cob.line_pos=VIEW_LINES-4;
                 }else{
                     if((cob.qtd_lines-start_window_line)>(VIEW_LINES-3)){
                         while((qtd_page++)<(VIEW_LINES-2) && lines->line_after!=NULL){
                             start_window_line++;
                             lines=lines->line_after;
                         }
-                        line_pos=VIEW_LINES-4;
+                        cob.line_pos=VIEW_LINES-4;
                     }
                 }
-                while((lines->file_line+line_pos)>cob.qtd_lines) line_pos--;
+                while((lines->file_line+cob.line_pos)>cob.qtd_lines) cob.line_pos--;
                 cob.showFile=TRUE;
                 break;
             case VK_LEFT:
@@ -440,7 +502,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             case 'B':    
                 if(!cob.waitAnswer){
                     lb = lines;     
-                    for(int a=0;a<line_pos;a++) lb=lb->line_after;
+                    for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
                     int check=hasCobolLine(lb->file_line);
                     if(check>0){
                         lb->breakpoint=(lb->breakpoint=='S')?'N':'S';
@@ -457,7 +519,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             case 'd':
                 if(!cob.waitAnswer){ 
                     lb = lines;           
-                    for(int a=0;a<line_pos;a++) lb=lb->line_after;
+                    for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
                     lb->breakpoint='N';
                     MI2removeBreakPoint(sendCommandGdb, lines, cob.name_file, lb->file_line);
                 }
@@ -497,7 +559,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             case 'C':
                 if(!cob.waitAnswer){ 
                     lb = lines;           
-                    for(int a=0;a<line_pos;a++) lb=lb->line_after;
+                    for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
                     int check=hasCobolLine(lb->file_line);
                     if(check>0){
                         MI2goToCursor(sendCommandGdb, cob.name_file, lb->file_line);
@@ -509,7 +571,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             case 'J':
                 if(!cob.waitAnswer){ 
                     if(!MI2lineToJump(sendCommandGdb)){
-                        show_file(lines, line_pos, &exe_line);
+                        show_file(lines, cob.line_pos, &exe_line);
                         showCobMessage("Not a debuggable line.",2);
                     }
                     cob.showFile=TRUE;
@@ -519,7 +581,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             case 'H':
                 if(!cob.waitAnswer){ 
                     lb = lines;           
-                    for(int a=0;a<line_pos;a++) lb=lb->line_after;
+                    for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
                     int check=hasCobolLine(lb->file_line);
                     if(check>0){
                         cob.ctlVar=(cob.ctlVar>10000)?1:cob.ctlVar+1;
@@ -576,7 +638,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
                 if(cob.waitAnswer){
                     MI2verifyGdb(sendCommandGdb);
                     if(cob.showFile && cob.changeLine){
-                        lines = set_window_pos(&line_pos);
+                        lines = set_window_pos(&cob.line_pos);
                         cob.changeLine=FALSE;
                         cob.isStepOver=-1;
                     }

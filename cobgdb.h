@@ -94,7 +94,9 @@ struct st_cobgdb {
 	Lines * lines;
 	int qtd_lines;
     int ctlVar;    
-    double isStepOver;	
+    double isStepOver;
+    int mouse;	
+    int line_pos;
 };
 
 // ATTRIBUTTES -- START

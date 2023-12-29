@@ -50,10 +50,13 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #define STRCURSOR_ON  "\e[?25h"
 
 char color[200];
+extern struct st_cobgdb cob;
 
 void cursorON();
 void cursorOFF();
 void clearScreen();
+int mouseCobAction(int col, int line);
+void mouseCobHover(int col, int line);
 
 int TERM_WIDTH = VIEW_COLS;
 int TERM_HEIGHT= VIEW_LINES;
@@ -79,18 +82,18 @@ struct editorConfig {
 struct editorConfig E;
 void print_colorBK(const int textcolor, const int backgroundcolor);
 
-void die(const char *s) {
+void die(const char *s) {    
 	write(STDOUT_FILENO, "\x1b[2J", 4);
 	write(STDOUT_FILENO, "\x1b[H", 3);
-
 	perror(s);
 	exit(1);
 }
 
 void disableRawMode() {
 	  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
-		      die("tcsetattr");
-
+          die("tcsetattr");
+//      const char seq[] = "\033[?1003l"; 
+//      write(STDOUT_FILENO, seq, sizeof(seq) - 1); 
 }
 
 void enableRawMode() {
@@ -106,6 +109,9 @@ void enableRawMode() {
     raw.c_cc[VTIME] = 1;
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
+    //const char seq[] = "\033[?1003h";
+    //write(STDOUT_FILENO, seq, sizeof(seq) - 1);
+
 }
 
 int readKeyLinux() {
@@ -134,7 +140,23 @@ int readKeyLinux() {
 					}
 				}
 			}
-			else {
+            else if( seq[1] == 'M'){
+                struct {
+                    unsigned char button;
+                    unsigned char x;
+                    unsigned char y;
+                } mouseEvent;
+
+                if (read(STDIN_FILENO, &mouseEvent, sizeof(mouseEvent)) != sizeof(mouseEvent)) {
+                    return -1;
+                }
+                mouseCobHover( mouseEvent.x - 33, mouseEvent.y - 33);
+                if(mouseEvent.button == 32 ){
+                    return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
+                }
+                return -1;
+                //printf("Mouse X: %d, Y: %d, Button: %d\n", mouseEvent.x - 32, mouseEvent.y - 32, mouseEvent.button - 32);
+            }else {
 				switch (seq[1])
 				{
 				case 'A':
@@ -155,14 +177,81 @@ int readKeyLinux() {
 }
 #endif
 
+void mouseCobHover(int col, int line){
+    cob.mouse = 0;
+    if(col==79 && line<11) cob.mouse=1;
+    if(col==79 && line>=11) cob.mouse=2;
+    if(col==67 && line==0) cob.mouse=10;
+    if(col==69 && line==0) cob.mouse=20;
+    if(col==71 && line==0) cob.mouse=30;
+    if(col==73 && line==0) cob.mouse=40;
+    if(col==75 && line==0) cob.mouse=50;    
+    if(col==77 && line==0) cob.mouse=60;    
+}
+
+int mouseCobAction(int col, int line){
+    int action=-1;
+    switch (cob.mouse){
+            case 1:
+                action = VK_PGUP;
+                break;
+            case 2:
+                action = VK_PGDOWN;
+                break;
+            case 10:
+                action = 'R';
+                break;
+            case 20:
+                action = 'N';
+                break;
+            case 30:
+                action = 'S';
+                break;
+            case 40:
+                action = 'G';
+                break;
+            case 50:
+                action = 'Q';
+                break;
+            case 60:
+                action = '?';
+                break;
+            default:
+                action = -1;
+                break;
+    }
+    if(action == -1 && line>0 && line<22){
+        cob.line_pos = line-1;
+        cob.showFile = TRUE;
+        if(col<2){
+            action = 'B';
+        }
+    }
+    return action;
+}
+
 int key_press(){
 #if defined(_WIN32)
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     INPUT_RECORD inp;
     DWORD numEvents;
+    DWORD mode = ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT;
+    MOUSE_EVENT_RECORD mer;
+
+    SetConsoleMode(hIn, mode);
 
     if (PeekConsoleInput(hIn, &inp, 1, &numEvents) && numEvents > 0) {
         if (ReadConsoleInput(hIn, &inp, 1, &numEvents)) {
+            if (inp.EventType == MOUSE_EVENT) {
+                mer = inp.Event.MouseEvent;
+                int mouseX = mer.dwMousePosition.X;
+                int mouseY = mer.dwMousePosition.Y;
+                mouseCobHover(mouseX, mouseY);
+                if(mer.dwButtonState == FROM_LEFT_1ST_BUTTON_PRESSED ){
+                    return mouseCobAction(mouseX, mouseY);
+                }
+                //printf("Mouse X: %d, Y: %d\n", mouseX, mouseY);
+            }
             if (inp.EventType == KEY_EVENT){
                 if (inp.Event.KeyEvent.bKeyDown && inp.Event.KeyEvent.uChar.AsciiChar != 0) {
                     char key = inp.Event.KeyEvent.uChar.AsciiChar;
@@ -369,6 +458,9 @@ void cursorOFF(){
     SetConsoleCursorInfo(consoleHandle, &cursorInfo);
 #else
     printf(STRCURSOR_OFF);
+    const char seq[] = "\033[?1003h";
+    write(STDOUT_FILENO, seq, sizeof(seq) - 1);
+
 #endif
 }
 
@@ -381,6 +473,9 @@ void cursorON(){
     SetConsoleCursorInfo(consoleHandle, &cursorInfo);
 #else
     printf(STRCURSOR_ON);
+    const char seq[] = "\033[?1003l"; 
+    write(STDOUT_FILENO, seq, sizeof(seq) - 1); 
+
 #endif
 }
 
@@ -686,10 +781,12 @@ int showCobMessage(char * message, int type){
     draw_box_last(col,lin+1,size+1);
     print_colorBK(color_green, bkg);
     fflush(stdout);
-    time_t start_time= time(NULL);;   
-    while(key_press()<=0){
-        time_t end_time = time(NULL);
-        double elapsed_time = difftime(end_time, start_time);
-        if(elapsed_time>2) break;
+    clock_t start_time = clock();
+    while (key_press() <= 0) {
+        clock_t end_time = clock();
+        double elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+        if (elapsed_time > 1) {
+            break;
+        }
     }
 }
