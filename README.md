@@ -27,7 +27,7 @@ COBGDB running:
 
 **Main commands:**
 
-- `B` - Sets a breakpoint at a specific point in the code.
+- `B` - Toggles the breakpoint at the current selected line.
 - `R` - Runs the program until a breakpoint is encountered.
 - `C` - Runs the program until it reaches the selected line.
 - `J` - Runs the program until it reaches the specified line.
