@@ -871,8 +871,7 @@ int MI2attach(int (*sendCommandGdb)(char *)){
 int MI2lineToJump(int (*sendCommandGdb)(char *)){
     char aux[500];
     int bkg= color_dark_red;
-    int ret=TRUE;
-    
+    int ret=TRUE;    
 
     int lin=VIEW_LINES/2-2;
     gotoxy(10,lin);

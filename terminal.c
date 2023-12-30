@@ -72,6 +72,9 @@ int TERM_HEIGHT= VIEW_LINES;
 #define VK_LEFT 37
 #define VK_ENTER 13
 #define VK_BACKSPACE 127
+#define TM_ESCAPE '\x1b'
+#define TM_CSI '['
+#define TM_MOUSE 'M'
 
 struct editorConfig {
 	  int cx, cy;
@@ -93,9 +96,7 @@ void die(const char *s) {
 void disableRawMode() {
 	  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
           die("tcsetattr");
-      tcflush(STDIN_FILENO, TCIFLUSH);
-//      const char seq[] = "\033[?1003l"; 
-//      write(STDOUT_FILENO, seq, sizeof(seq) - 1); 
+      //tcflush(STDIN_FILENO, TCIFLUSH);
 }
 
 void enableRawMode() {
@@ -111,9 +112,6 @@ void enableRawMode() {
     raw.c_cc[VTIME] = 1;
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
-    //const char seq[] = "\033[?1003h";
-    //write(STDOUT_FILENO, seq, sizeof(seq) - 1);
-
 }
 
 int readKeyLinux() {
@@ -123,15 +121,15 @@ int readKeyLinux() {
 		if (nread == -1 && errno != EAGAIN)
 			die("read");
 	}
-	if (c == '\x1b'){
+	if (c == TM_ESCAPE){
 		char seq[3];
 
-		if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
-		if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
+		if (read(STDIN_FILENO, &seq[0], 1) != 1) return TM_ESCAPE;
+		if (read(STDIN_FILENO, &seq[1], 1) != 1) return TM_ESCAPE;
 
-		if (seq[0] == '['){
+		if (seq[0] == TM_CSI){
 			if (seq[1] >= '0' && seq[1] <= '9')	{
-				if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
+				if (read(STDIN_FILENO, &seq[2], 1) != 1) return TM_ESCAPE;
 				if (seq[2] == '~')	{
 					switch (seq[1])
 					{
@@ -142,30 +140,30 @@ int readKeyLinux() {
 					}
 				}
 			}
-            else if( seq[1] == 'M'){
+            else if( seq[1] == TM_MOUSE){
                 struct {
                     unsigned char button;
                     unsigned char x;
                     unsigned char y;
                 } mouseEvent;
 
-                if (read(STDIN_FILENO, &mouseEvent, sizeof(mouseEvent)) != sizeof(mouseEvent)) {
-                    return -1;
-                }
-                mouseCobHover( mouseEvent.x - 33, mouseEvent.y - 33);
-                if(mouseEvent.button == 32 ){
-                    return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
-                }
-                if(mouseEvent.button == 34 ){
-                    return mouseCobRigthAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
-                }
-                if (mouseEvent.button == 96) {
+                while(read(STDIN_FILENO, &mouseEvent, sizeof(mouseEvent)) == sizeof(mouseEvent)) {
+                    if (mouseEvent.button == 96) {
                         return VK_UP;
-                }
-                if (mouseEvent.button == 97) {
+                    }
+                    if (mouseEvent.button == 97) {
                         return VK_DOWN;
+                    }
+                    mouseCobHover( mouseEvent.x - 33, mouseEvent.y - 33);
+                    int ret=-1;
+                    if(mouseEvent.button == 32 ){
+                        return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
+                    }
+                    if(mouseEvent.button == 34 ){
+                        return mouseCobRigthAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
+                    }
+                    //printf("Mouse X: %d, Y: %d, Button: %d\n", mouseEvent.x - 32, mouseEvent.y - 32, mouseEvent.button);
                 }
-                //printf("Mouse X: %d, Y: %d, Button: %d\n", mouseEvent.x - 32, mouseEvent.y - 32, mouseEvent.button);
                 return -1;
             }else {
 				switch (seq[1])
@@ -181,7 +179,7 @@ int readKeyLinux() {
 				}
 			}
 		}
-		return '\x1b';
+		return TM_ESCAPE;
 	}else{
 		return c;
 	}
@@ -256,6 +254,29 @@ int mouseCobRigthAction(int col, int line){
     return action;
 }
 
+void disableEcho() {
+#if defined(__linux__)
+    struct termios t;
+    tcgetattr(STDIN_FILENO, &t);
+    t.c_lflag &= ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+#endif
+}
+
+void enableEcho() {
+#if defined(__linux__)
+    struct termios t;
+    tcgetattr(STDIN_FILENO, &t);
+    t.c_lflag |= ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+#endif
+}
+
+void freeInputBuffer(){
+#if defined(__linux__)
+    tcflush(STDIN_FILENO, TCIFLUSH);
+#endif
+}
 
 int key_press(){
 #if defined(_WIN32)
@@ -434,11 +455,11 @@ void set_terminal_size(int width, int height){
     SetForegroundWindow(GetConsoleWindow());
 #elif defined(__linux__)
     // Set the input buffer size to a larger value (e.g., 1024 bytes)
-    int bufferSize = 1024;
-    if (ioctl(STDIN_FILENO, FIONREAD, &bufferSize) == -1) {
-        perror("ioctl");
-        exit(EXIT_FAILURE);
-    }
+    //int bufferSize = 1024;
+    //if (ioctl(STDIN_FILENO, FIONREAD, &bufferSize) == -1) {
+    //    perror("ioctl");
+    //    exit(EXIT_FAILURE);
+    //}
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     if (w.ws_col != width || w.ws_row != height) {
@@ -506,7 +527,6 @@ void cursorOFF(){
     printf(STRCURSOR_OFF);
     const char seq[] = "\033[?1003h";
     write(STDOUT_FILENO, seq, sizeof(seq) - 1);
-    //printf("\e[?9l");
 #endif
 }
 

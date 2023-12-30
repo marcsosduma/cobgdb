@@ -231,9 +231,12 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
     int status, tk;
     char * sleepVal=hashCode(target);
     char *xterm_device = findTtyName(target);
+    disableEcho();
     if(xterm_device == NULL){
         message_output(sleepVal);
-        gotoxy(12,15);while(key_press()<=0);
+        gotoxy(12,15);
+        char key=-1;
+        while(key<20 && key!=VK_ENTER) key=key_press();
         xterm_device = findTtyName(target);
     }
     if (xterm_device == NULL) {
@@ -268,5 +271,6 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
         free(xterm_device);
     }
     free(sleepVal);
+    enableEcho();
 }
 #endif

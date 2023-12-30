@@ -287,6 +287,9 @@ int draw_box_last(int posx, int posy, int width);
 int draw_box_border(int posx, int posy);
 void draw_utf8_text(const char* text);
 int showCobMessage(char * message, int type);
+void disableEcho();
+void enableEcho();
+void freeInputBuffer();
 // parser.c
 void SourceMap(char fileGroup[][512]);
 int parser(char * file_name, int fileN);

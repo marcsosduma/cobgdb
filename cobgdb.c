@@ -411,7 +411,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     clearScreen();
     while(cob.lines!=NULL && !bstop){
         if(cob.showFile){
-            //printf("\e[?9l");
+            disableEcho();
             show_opt();
             exe_line=NULL;
             line_file = lines->file_line; 
@@ -421,10 +421,10 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             var_watching(exe_line, sendCommandGdb, cob.waitAnswer, cob.line_pos);
             cob.debug_line=aux1;
             cob.running=aux2;
-            //printf("\e[?9h");
             print_color_reset();
             fflush(stdout);
             cob.showFile=FALSE;
+            enableEcho();
         }
         input_character = -1;
         if(cob.waitAnswer && cob.isStepOver<0){
