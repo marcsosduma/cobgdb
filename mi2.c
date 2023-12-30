@@ -10,6 +10,9 @@
 #if defined(__linux__)
 #include <unistd.h>
 #endif
+#if !defined (_BSD_SOURCE) && !defined (_XOPEN_SOURCE) && !defined (_POSIX_SOURCE)
+#define strtok_r(str,tok,ptr) strtok(str,tok)
+#endif
 #include "cobgdb.h"
 //#define DEBUG 0
 
