@@ -1006,6 +1006,7 @@ void show_help(int (*sendCommandGdb)(char *)){
             case 'r':
             case 'Q':
             case 'q':
+            case VK_ENTER:
             case VK_ESCAPE:
                 input_character=-100;
                 break;

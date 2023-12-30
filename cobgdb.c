@@ -213,6 +213,7 @@ int show_button(){
     draw_utf8_text("\u25A0 ");
     print_colorBK((cob.mouse==60)?color_red:color_blue, color_cyan);
     printf("? ");
+    print_color_reset();
 }
 
 int show_opt(){
@@ -236,55 +237,56 @@ int show_opt(){
 }
 
 int show_info(){
+    #if defined(_WIN32)
+    int len = 79;
+    #else
+    int len=80;
+    #endif
     gotoxy(1,VIEW_LINES);
     if(cob.mouse==0){
         if(cob.debug_line>0 && !cob.running){
             print_colorBK(color_green, color_black);
-            printf("%s\r", "Debugging             ");
+            printf("%-*s\r",len, "Debugging");
         }else if(cob.debug_line>0 && cob.running){
             print_colorBK(color_red, color_black);
-            printf("%s\r", "Running               ");
+            printf("%-*s\r",len, "Running");
         }else{
             print_colorBK(color_yellow, color_black);
             if(cob.waitAnswer){
-                printf("%s\r", "Waiting               ");
+                printf("%-*s\r",len, "Waiting");
             }else{
-                #if defined(_WIN32)
-                printf("%79s\r", " ");
-                #else
-                printf("%80s\r", " ");
-                #endif
+                printf("%-*s\r",len, " ");
             }
         }
     }else{
         print_colorBK(color_green, color_black);
         switch (cob.mouse){
             case 1:
-                printf("%s\r", "page up               ");
+                printf("%-*s\r",len, "page up");
                 break;
             case 2:
-                printf("%s\r", "page down             ");
+                printf("%-*s\r",len, "page down");
                 break;
             case 3:
-                printf("%s\r", "breakpoint            ");
+                printf("%-*s\r",len, "breakpoint");
                 break;
             case 10:
-                printf("%s\r", "run                   ");
+                printf("%-*s\r",len, "run");
                 break;
             case 20:
-                printf("%s\r", "step over             ");
+                printf("%-*s\r",len, "step over");
                 break;
             case 30:
-                printf("%s\r", "step into             ");
+                printf("%-*s\r",len, "step into");
                 break;
             case 40:
-                printf("%s\r", "go                    ");
+                printf("%-*s\r",len, "go");
                 break;
             case 50:
-                printf("%s\r", "stop                  ");
+                printf("%-*s\r",len, "stop");
                 break;
             case 60:
-                printf("%s\r", "help                  ");
+                printf("%-*s\r",len, "help");
                 break;
         }
     }
@@ -409,6 +411,7 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     clearScreen();
     while(cob.lines!=NULL && !bstop){
         if(cob.showFile){
+            //printf("\e[?9l");
             show_opt();
             exe_line=NULL;
             line_file = lines->file_line; 
@@ -418,8 +421,9 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             var_watching(exe_line, sendCommandGdb, cob.waitAnswer, cob.line_pos);
             cob.debug_line=aux1;
             cob.running=aux2;
-            fflush(stdout);
+            //printf("\e[?9h");
             print_color_reset();
+            fflush(stdout);
             cob.showFile=FALSE;
         }
         input_character = -1;

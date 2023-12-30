@@ -93,6 +93,7 @@ void die(const char *s) {
 void disableRawMode() {
 	  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
           die("tcsetattr");
+      tcflush(STDIN_FILENO, TCIFLUSH);
 //      const char seq[] = "\033[?1003l"; 
 //      write(STDOUT_FILENO, seq, sizeof(seq) - 1); 
 }
@@ -236,6 +237,8 @@ int mouseCobAction(int col, int line){
         cob.showFile = TRUE;
         if(col<2){
             action = 'B';
+        }else{
+            action=VK_ENTER;
         }
     }
     return action;
@@ -430,6 +433,12 @@ void set_terminal_size(int width, int height){
     SetConsoleWindowInfo(hConsole, TRUE, &sr);
     SetForegroundWindow(GetConsoleWindow());
 #elif defined(__linux__)
+    // Set the input buffer size to a larger value (e.g., 1024 bytes)
+    int bufferSize = 1024;
+    if (ioctl(STDIN_FILENO, FIONREAD, &bufferSize) == -1) {
+        perror("ioctl");
+        exit(EXIT_FAILURE);
+    }
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     if (w.ws_col != width || w.ws_row != height) {
@@ -480,7 +489,9 @@ void clearScreen() {
     SetConsoleMode(hStdOut, originalMode);
     return;
 #else
-    printf("\033[H\033[J");
+    //printf("\033[H\033[J");
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
 #endif
 }
 
@@ -495,7 +506,7 @@ void cursorOFF(){
     printf(STRCURSOR_OFF);
     const char seq[] = "\033[?1003h";
     write(STDOUT_FILENO, seq, sizeof(seq) - 1);
-
+    //printf("\e[?9l");
 #endif
 }
 
@@ -510,7 +521,7 @@ void cursorON(){
     printf(STRCURSOR_ON);
     const char seq[] = "\033[?1003l"; 
     write(STDOUT_FILENO, seq, sizeof(seq) - 1); 
-
+    //printf("\e[?9h");
 #endif
 }
 
