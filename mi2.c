@@ -10,9 +10,6 @@
 #if defined(__linux__)
 #include <unistd.h>
 #endif
-#if !defined (_BSD_SOURCE) && !defined (_XOPEN_SOURCE) && !defined (_POSIX_SOURCE)
-#define strtok_r(str,tok,ptr) strtok(str,tok)
-#endif
 #include "cobgdb.h"
 //#define DEBUG 0
 
@@ -751,6 +748,28 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
 }
 
 #define MAX_FILES 100
+
+#ifndef strtok_r
+char *strtok_r(char *str, const char *delim, char **save)
+{
+    char *res, *last;
+
+    if( !save )
+        return strtok(str, delim);
+    if( !str && !(str = *save) )
+        return NULL;
+    last = str + strlen(str);
+    if( (*save = res = strtok(str, delim)) )
+    {
+        *save += strlen(res);
+        if( *save < last )
+            (*save)++;
+        else
+            *save = NULL;
+    }
+    return res;
+}
+#endif
 
 int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
     int status;
