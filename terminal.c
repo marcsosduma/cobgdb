@@ -8,6 +8,12 @@
 #include <Windows.h>
 #include <stdio.h>
 #include <WinCon.h>
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+/* this define is only available in recent Windows SDKs,
+   so we add it, if missing; note that the feature itself needs
+   Windows 10 with a build number 10586 or greater /*
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
 #include <conio.h>
 #include <stdlib.h>
 #include <wchar.h>
