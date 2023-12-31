@@ -43,7 +43,7 @@ COBGDB running:
 COBGDB takes one or more programs with COB/CBL extension as parameters and runs the GnuCOBOL compiler with the following format:
 ```bash
 
-cobc -g -fsource-location -ftraceall -v -free -O0 -x prog.cob prog2.cob ...
+cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...
 ```
 
 **Example:**

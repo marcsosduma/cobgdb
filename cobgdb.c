@@ -225,9 +225,7 @@ int show_opt(){
     if(cob.mouse>9) show_button();
     gotoxy(80,1);
     print_colorBK(color_light_gray, color_frame);
-    //draw_utf8_text("\u2191");
     draw_utf8_text("\u2191");
-    // \u25BA > 
     gotoxy(1,VIEW_LINES-1);
     snprintf(aux,82,"%-79.79s\r",cob.file_cobol);
     printBK(aux, color_light_gray, color_frame);

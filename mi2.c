@@ -750,6 +750,9 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
 #define MAX_FILES 100
 
 #ifndef strtok_r
+/*
+https://stackoverflow.com/questions/12975022/strtok-r-for-mingw
+*/
 char *strtok_r(char *str, const char *delim, char **save)
 {
     char *res, *last;
