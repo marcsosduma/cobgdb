@@ -245,9 +245,7 @@ int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp
 int readCodFile(struct st_cobgdb *program) {
     FILE *fp = fopen(program->name_file, "r");
     if (fp == NULL) {
-        char errorMsg[200];
-        sprintf(errorMsg, "Unable to open file! %s", program->name_file);
-        perror(errorMsg);
+        perror("Unable to open file!");
         exit(1);
     }
 

@@ -323,7 +323,7 @@ int PopLine(){
 int readCFile(struct ST_CFILE * program) {
     FILE *fp = fopen(program->name_cfile, "r");
     if(fp == NULL) {
-        char errorMsg[200];
+        char errorMsg[512];
         sprintf(errorMsg, "Unable to open file! %s", program->name_cfile);
         perror(errorMsg);
         exit(1);

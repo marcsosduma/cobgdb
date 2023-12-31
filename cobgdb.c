@@ -692,7 +692,7 @@ int freeFile(){
 int main(int argc, char **argv) {
     char nameExecFile[256];
     char baseName[256];
-    char nameCFile[256];
+    char nameCFile[259];
     struct lconv *locale_info = localeconv();
     char values[10][256];   // Create an array of strings to store the arguments
     int arg_count = 0;      // Initialize a counter for storing arguments
@@ -760,8 +760,8 @@ int main(int argc, char **argv) {
                     #endif
                     printf("Name: %s\n",nameExecFile);
                 }
-                sprintf(nameCFile,"%s/%s.c", currentDir, baseName );
-                strcpy(fileCobGroup[nfile],argv[i]);
+                snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", currentDir, baseName);
+                strcpy(fileCobGroup[nfile],argv[i]); 
                 normalizePath(fileCobGroup[nfile]);
                 strcpy(fileCGroup[nfile],nameCFile);
                 nfile++;
