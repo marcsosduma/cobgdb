@@ -459,6 +459,10 @@ void set_terminal_size(int width, int height){
     SMALL_RECT sr = {0,0,TERM_WIDTH,TERM_HEIGHT};
     SetConsoleWindowInfo(hConsole, TRUE, &sr);
     SetForegroundWindow(GetConsoleWindow());
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    COORD bufferSize = { csbi.dwSize.X, csbi.srWindow.Bottom + 1 };
+    SetConsoleScreenBufferSize(hConsole, bufferSize);
 #elif defined(__linux__)
     // Set the input buffer size to a larger value (e.g., 1024 bytes)
     //int bufferSize = 1024;

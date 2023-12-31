@@ -735,6 +735,8 @@ int main(int argc, char **argv) {
         // Iterate through the arguments
         boolean withHigh=TRUE;
         int nfile=0;
+        char * currentDir = getCurrentDirectory(); 
+        normalizePath(currentDir);
         for (int i = 1; i < argc; i++) {
             if (argv[i][0] == '-') {
                 // Check if the argument starts with "-"
@@ -748,19 +750,19 @@ int main(int argc, char **argv) {
                 }
             }else{
                 fileNameWithoutExtension(argv[i], &baseName[0]);
+                normalizePath(baseName);
+                strcpy(baseName,getFileNameFromPath(baseName));
                 if(nfile==0){
                     strcpy(cob.name_file,argv[i]);
-                    strcpy(nameExecFile, baseName);
+                    strcpy(nameExecFile,baseName);
                     #if defined(_WIN32)
                     strcat(nameExecFile,".exe");
                     #endif
                     printf("Name: %s\n",nameExecFile);
                 }
-                strcpy(nameCFile,baseName);
-                strcat(nameCFile,".c");
+                sprintf(nameCFile,"%s/%s.c", currentDir, baseName );
                 strcpy(fileCobGroup[nfile],argv[i]);
                 normalizePath(fileCobGroup[nfile]);
-                normalizePath(nameCFile);
                 strcpy(fileCGroup[nfile],nameCFile);
                 nfile++;
             }
@@ -778,8 +780,11 @@ int main(int argc, char **argv) {
         loadfile(cob.file_cobol);
         if(withHigh) highlightParse(); 
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
-        //while(key_press()<=0);        
-        start_gdb(nameExecFile,cwd);
+        //while(key_press()<=0);   
+        
+        normalizePath(currentDir);
+        start_gdb(nameExecFile,currentDir);
+        free(currentDir);
         freeBKList();
         freeFile();
         freeWatchingList();

@@ -323,7 +323,9 @@ int PopLine(){
 int readCFile(struct ST_CFILE * program) {
     FILE *fp = fopen(program->name_cfile, "r");
     if(fp == NULL) {
-        perror("Unable to open file!");
+        char errorMsg[200];
+        sprintf(errorMsg, "Unable to open file! %s", program->name_cfile);
+        perror(errorMsg);
         exit(1);
     }
     // Read lines from a text file using our own a portable getline implementation
@@ -386,11 +388,16 @@ boolean fileCobolRegex(struct st_parse line_parsed[100], int qtt_tk, char * file
         if(m->size!=4 || strncasecmp(m->token,"from", 4)!=0){ break;}
         m1=tk_val(line_parsed, qtt_tk, pos+3);        
         if(m1->type!=TP_ALPHA) { break;}
-        m=tk_val(line_parsed, qtt_tk, pos+4);        
-        if(m->size!=2 || strncmp(m->token,"*/", 2)!=0){ break;}
-        strncpy(fileName, m1->token, m1->size);
-        fileName[m1->size]='\0';
-        ret = TRUE;
+        int p1 = pos+3;
+        strcpy(fileName,"");
+        while(p1<qtt_tk){
+            ret=TRUE;
+            m=tk_val(line_parsed, qtt_tk, p1++);
+            if(m->size==2 && strncmp(m->token,"*/", 2)==0) {break;}
+            int len = strlen(fileName);
+            strncat(fileName, m->token,m->size);
+            fileName[(len+m->size)]='\0';
+        }
         break;
     }
     return ret;
@@ -1067,7 +1074,10 @@ void SourceMap(char fileGroup[][512]){
 
     while(strlen(fileGroup[q])>0){
         strcpy(cwd,"");
+   	    //printf("\n\n Arquivo: %s\n",fileGroup[q]);
+        //while(key_press()<=0);
         parser(fileGroup[q], q);
         q++;
+
     }
 }

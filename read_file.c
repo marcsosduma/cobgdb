@@ -19,7 +19,39 @@
 #include <stdint.h>
 #include <errno.h>
 #include <ctype.h>
+#include <unistd.h>
+#if defined(_WIN32)
+#include <direct.h>
+#endif
 #include "cobgdb.h"
+
+
+// Function to get the current directory
+char* getCurrentDirectory() {
+    char* currentDirectory = NULL;
+
+    #ifdef _WIN32
+        // Windows environment
+        currentDirectory = (char*)_getcwd(NULL, 0);
+        if (currentDirectory == NULL) {
+            perror("Error getting current directory");
+        }
+    #else
+        // POSIX environment (Linux, macOS, etc.)
+        size_t size = pathconf(".", _PC_PATH_MAX);
+        if ((currentDirectory = (char *)malloc((size_t)size)) != NULL) {
+            if (getcwd(currentDirectory, size) == NULL) {
+                perror("Error getting current directory");
+                free(currentDirectory);
+                currentDirectory = NULL;
+            }
+        } else {
+            perror("Error allocating memory for current directory");
+        }
+    #endif
+
+    return currentDirectory;
+}
 
 
 void fileNameWithoutExtension(char * file, char * onlyName){
@@ -213,7 +245,9 @@ int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp
 int readCodFile(struct st_cobgdb *program) {
     FILE *fp = fopen(program->name_file, "r");
     if (fp == NULL) {
-        perror("Unable to open file!");
+        char errorMsg[200];
+        sprintf(errorMsg, "Unable to open file! %s", program->name_file);
+        perror(errorMsg);
         exit(1);
     }
 

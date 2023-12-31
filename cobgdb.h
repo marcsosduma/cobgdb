@@ -266,6 +266,7 @@ char* toUpper(char* str);
 boolean isSpace(char c);
 char *istrstr(const char *haystack, const char *needle);
 void fileNameWithoutExtension(char * file, char * onlyName);
+char* getCurrentDirectory();
 //terminal.c
 void get_terminal_size(int *width, int *height);
 void set_terminal_size(int width, int height);
