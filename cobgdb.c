@@ -19,13 +19,13 @@ struct st_cobgdb cob ={
     .changeLine = FALSE,
     .showFile = TRUE,
     .isStepOver = -1,
-    .mouse = 0
+    .mouse = 0,
+    .num_dig = 4
 };
 
 int start_window_line = 0;
 int qtd_window_line = VIEW_LINES-2;
 int start_line_x = 0;
-int NUM_DIG=4;
 
 char * gdbOutput = NULL;
 int color_frame=color_light_blue;
@@ -299,7 +299,7 @@ int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
     char vbreak = ' ';
     char pline[252];
     char aux[100];
-    int NUM_TXT=76-NUM_DIG;
+    int NUM_TXT=76-cob.num_dig;
     
     gotoxy(1,1);
     show_opt();
@@ -323,7 +323,7 @@ int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
                 printf("%c",chExec);
             }     
             print_color(color_gray);
-            printf("%-*d ", NUM_DIG, show_line->file_line);
+            printf("%-*d ", cob.num_dig, show_line->file_line);
             if(show_line->high==NULL){
                 if(show_line->line !=NULL){
                     show_line->line[strcspn(show_line->line,"\n")]='\0';
@@ -668,7 +668,7 @@ int loadfile(char * nameCobFile) {
     lines = cob.lines;
     char aux[10];
     sprintf(aux,"%d",cob.qtd_lines);
-    NUM_DIG=strlen(aux);
+    cob.num_dig=strlen(aux);
     if(BPList!=NULL){
         Lines * line = cob.lines;
         line->breakpoint='N';

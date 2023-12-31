@@ -196,7 +196,7 @@ void mouseCobHover(int col, int line){
     cob.mouse = 0;
     if(col==79 && line<11) cob.mouse=1;
     if(col==79 && line>=11) cob.mouse=2;
-    if(col<2 && line>0 && line<22) cob.mouse=3;
+    if(col<cob.num_dig+2 && line>0 && line<22) cob.mouse=3;
     if(col==67 && line==0) cob.mouse=10;
     if(col==69 && line==0) cob.mouse=20;
     if(col==71 && line==0) cob.mouse=30;
@@ -239,7 +239,7 @@ int mouseCobAction(int col, int line){
     if(action == -1 && line>0 && line<22){
         cob.line_pos = line-1;
         cob.showFile = TRUE;
-        if(col<2){
+        if(col<cob.num_dig+2){
             action = 'B';
         }else{
             action=VK_ENTER;

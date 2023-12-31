@@ -86,6 +86,7 @@ struct st_cobgdb {
 	char name_file[256];
     char file_cobol[512];
     char first_file[512];
+    int num_dig;
     int debug_line;
     int running;
     int showFile;
