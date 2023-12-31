@@ -36,7 +36,7 @@ HANDLE g_hChildStd_OUT_Wr = NULL;
 HANDLE g_hInputFile = NULL;
 TCHAR command[512];
 
-int debug(int line_pos, int (*sendCommandGdb)(char *));
+int debug(int (*sendCommandGdb)(char *));
 void CreateChildProcess(void);
 int sendCommandGdb(char * command);
 void ErrorExit(char *);
@@ -101,7 +101,7 @@ int start_gdb(char * name, char * cwd)
         sendCommandGdb(gdbSet[idx++]);
    }
    cob.waitAnswer=1;
-   debug(0, &sendCommandGdb );
+   debug(&sendCommandGdb );
    printf("\n->End of parent execution.\n");
    return 0;
 }
@@ -235,7 +235,7 @@ void ErrorExit(char *msg)
 #elif defined(__linux__)
 
 int stInPid, stOutPid;
-int debug(int line_pos, int (*sendCommandGdb)(char *));
+int debug(int (*sendCommandGdb)(char *));
 
 // Read output from the child process's pipe for STDOUT
 // and write to the parent process's pipe for STDOUT.
@@ -366,7 +366,7 @@ int start_gdb(char * name, char * cwd){
            sendCommandGdb(gdbSet[idx++]);
         }        
         cob.waitAnswer=1;
-        debug(0, &sendCommandGdb );
+        debug(&sendCommandGdb );
         printf("\n->End of parent execution.\n");
         waitpid(pid, NULL, 1);
     }

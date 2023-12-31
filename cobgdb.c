@@ -326,8 +326,8 @@ int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
             printf("%-*d ", cob.num_dig, show_line->file_line);
             if(show_line->high==NULL){
                 if(show_line->line !=NULL){
+                    //show_line->line[strcspn(show_line->line,"\t")]=' ';
                     show_line->line[strcspn(show_line->line,"\n")]='\0';
-                    show_line->line[strcspn(show_line->line,"\t")]=' ';
                 }   
                 size_t  len=strlen(show_line->line);
                 wchar_t *wcharString = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
@@ -349,7 +349,7 @@ int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
                     nm=NUM_TXT-qtdMove;
                     if(nm>0) printf("%*s", nm, " ");
                 }else{
-                    printf("%72s", " ");
+                    printf("%73s", " ");
                 }
                 free(wcharString);
             }else{
@@ -386,7 +386,29 @@ int initTerminal(){
     printf(", height= %d\n", height);
 }
 
-int debug(int line_pos, int (*sendCommandGdb)(char *)){
+int set_first_break(int (*sendCommandGdb)(char *)){
+    ST_Line * debug = LineDebug;
+    int ret = 0;
+    if(debug!=NULL){
+        MI2addBreakPoint(sendCommandGdb, cob.name_file, debug->lineCobol);
+        Lines * line = cob.lines;
+        while(line!=NULL){
+            if(line->file_line==debug->lineCobol){
+                line->breakpoint='S';
+                ret= line->file_line;
+                if(cob.qtd_lines>5){
+                    start_window_line = line->file_line-4;
+                    ret = 3;                
+                }
+                break;
+            }
+            line=line->line_after;
+        }
+    }
+    return ret;
+}
+
+int debug(int (*sendCommandGdb)(char *)){
     int width=0, height=0;
     int qtd_page = 0;
     char input_character;
@@ -396,14 +418,13 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
     struct st_highlt * exe_line;
     double check_start = getCurrentTime();
 
-    cob.line_pos = line_pos;
     initTerminal();
+    cob.line_pos=set_first_break(sendCommandGdb);
     //while(key_press()<=0);
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
-    lines = cob.lines;
+    lines = set_window_pos(&cob.line_pos);
     Lines * lb = NULL;
-    int line_file=0;
-    int bstop = 0;
+    int bstop = FALSE;
     //(void)setvbuf(stdout, NULL, _IONBF, 16384);
     cursorOFF();
     clearScreen();
@@ -412,7 +433,6 @@ int debug(int line_pos, int (*sendCommandGdb)(char *)){
             disableEcho();
             show_opt();
             exe_line=NULL;
-            line_file = lines->file_line; 
             cob.line_pos=show_file(lines, cob.line_pos, &exe_line);
             int aux1=cob.debug_line;
             int aux2=cob.running;
@@ -742,7 +762,7 @@ int main(int argc, char **argv) {
                 // Check if the argument starts with "-"
                 if (arg_count < 10) {
                     strncpy(values[arg_count], argv[i], sizeof(values[0]) - 1);
-                    values[arg_count][sizeof(values[0]) - 1] = '\0';  // Ensure the string is terminated
+                    values[arg_count][sizeof(values[0]) - 1] = '\0';
                     if(strcmp(values[arg_count],"-nh")==0)
                         withHigh=FALSE;
                     else
