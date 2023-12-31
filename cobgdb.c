@@ -145,7 +145,7 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
     
     for (int a = 0; a < param_count; a++) {
         strcat(compiler, param[a]);
-        if(a>=initFree) free(param[a]);  // Free the dynamically allocated memory for the values.
+        if(a>=initFree) free(param[a]); 
     }
     int nfile=0;
     while(strlen(file[nfile])>1){
@@ -752,6 +752,7 @@ int main(int argc, char **argv) {
                 fileNameWithoutExtension(argv[i], &baseName[0]);
                 normalizePath(baseName);
                 strcpy(baseName,getFileNameFromPath(baseName));
+                // Exe File
                 if(nfile==0){
                     strcpy(cob.name_file,argv[i]);
                     strcpy(nameExecFile,baseName);
@@ -760,10 +761,13 @@ int main(int argc, char **argv) {
                     #endif
                     printf("Name: %s\n",nameExecFile);
                 }
+                // C File
                 snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", currentDir, baseName);
-                strcpy(fileCobGroup[nfile],argv[i]); 
-                normalizePath(fileCobGroup[nfile]);
                 strcpy(fileCGroup[nfile],nameCFile);
+                // Cobol File
+                //strcpy(fileCobGroup[nfile],argv[i]); 
+                realpath(argv[i], fileCobGroup[nfile]);
+                normalizePath(fileCobGroup[nfile]);
                 nfile++;
             }
         }
