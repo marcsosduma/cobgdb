@@ -420,7 +420,6 @@ int debug(int (*sendCommandGdb)(char *)){
 
     initTerminal();
     cob.line_pos=set_first_break(sendCommandGdb);
-    //while(key_press()<=0);
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
     lines = set_window_pos(&cob.line_pos);
     Lines * lb = NULL;
@@ -718,7 +717,6 @@ int main(int argc, char **argv) {
     char nameExecFile[256];
     char baseName[256];
     char nameCFile[259];
-    struct lconv *locale_info = localeconv();
     char values[10][256];   // Create an array of strings to store the arguments
     int arg_count = 0;      // Initialize a counter for storing arguments
     char fileCGroup[10][512];
@@ -731,9 +729,6 @@ int main(int argc, char **argv) {
     SetConsoleOutputCP(CP_UTF8);
     #endif    
     strcpy(cob.file_cobol,"");
-    //if (locale_info != NULL) {
-    //    cob.decimal_separator = locale_info->decimal_point[0];
-    //}
     if(!isCommandInstalled("cobc")){
         printf("The GnuCOBOL cobc command is not available!\n");
         while(key_press()<=0);
@@ -811,8 +806,6 @@ int main(int argc, char **argv) {
 		SourceMap(fileCGroup);
         printf("Parser end...\n");
         strcpy(cob.file_cobol,cob.name_file);
-        char cwd[512];
-        getPathName(cwd, cob.file_cobol);
         strcpy(cob.first_file, cob.file_cobol);
         loadfile(cob.file_cobol);
         if(withHigh) highlightParse(); 
