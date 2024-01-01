@@ -40,22 +40,6 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #include <time.h>
 #include "cobgdb.h"
 
-#define color_black      0
-#define color_dark_blue  1
-#define color_dark_green 2
-#define color_light_blue 3
-#define color_dark_red   4
-#define color_magenta    5
-#define color_orange     6
-#define color_light_gray 7
-#define color_gray       8
-#define color_blue       9
-#define color_green     10
-#define color_cyan      11
-#define color_red       12
-#define color_pink      13
-#define color_yellow    14
-#define color_white     15
 #define STRCURSOR_OFF "\e[?25l"
 #define STRCURSOR_ON  "\e[?25h"
 
@@ -73,15 +57,6 @@ int TERM_WIDTH = VIEW_COLS;
 int TERM_HEIGHT= VIEW_LINES;
 
 #if defined(__linux__)
-#define CTRL_KEY(k) ((k) & 0x1f)
-#define VK_DOWN 40
-#define VK_UP 38
-#define VK_PGDOWN 34
-#define VK_PGUP 33
-#define VK_RIGHT 39
-#define VK_LEFT 37
-#define VK_ENTER 13
-#define VK_BACKSPACE 127
 #define TM_ESCAPE '\x1b'
 #define TM_CSI '['
 #define TM_MOUSE 'M'

@@ -6,6 +6,8 @@
 #define VK_PGUP 33
 #define VK_ENTER 13
 #elif defined(__linux__)
+#define CTRL_KEY(k) ((k) & 0x1f)
+#define VK_BACKSPACE 127
 #define VK_DOWN 40
 #define VK_UP 38
 #define VK_PGDOWN 34

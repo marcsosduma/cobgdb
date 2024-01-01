@@ -164,11 +164,7 @@ int sendCommandGdb(char * command)
    HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
    int qtdAlloc = 0;   
    int mustReturn=1;
-   #if defined(_WIN32)
    int l1 = 8;
-   #else
-   int l1 = 7;
-   #endif
    int count0=0;
    char test[7];
    

@@ -310,13 +310,9 @@ char* parseUsage(char* valueStr, char* type) {
     if (!valueStr || strlen(valueStr) == 0) {
         return NULL;
     }
-
     if (strncmp(valueStr, "0x", 2) == 0) {
-        // Assuming CobolFieldDataParser.parse is a function that modifies valueStr
-        // in a similar way to the TypeScript code
        valueStr=CobolFieldDataParser(valueStr);
     }
-
     if (!valueStr || strlen(valueStr) == 0) {
         return NULL;
     }
