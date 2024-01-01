@@ -27,7 +27,7 @@ COBGDB running:
 
 **Main commands:**
 
-- `B` - Toggles the breakpoint at the current selected line.
+- `B` - Toggles the breakpoint at the current selected line (can also be done with the mouse).
 - `R` - Runs the program until a breakpoint is encountered.
 - `C` - Runs the program until it reaches the selected line.
 - `J` - Runs the program until it reaches the specified line.
@@ -35,7 +35,7 @@ COBGDB running:
 - `S` - Runs the program until the next line.
 - `G` - Continues the program execution until it encounters a stopping point: breakpoint, end of the program, or the return from a subroutine (PERFORM/CALL).
 - `V` - Displays the set of variables for the running program.
-- `H` - Shows the values of variables for the selected line.
+- `H` - Shows the values of variables for the selected line (right-click also functions).
 - `F` - Allows selecting the source file for debugging.
 - `A` - Attach to GDBSERVER or Application PID.
 - `Q` - Quits the program.

@@ -1,7 +1,11 @@
 /* 
    The functions related to colorization were obtained from the following site: 
    https://stackoverflow.com/questions/4053837/colorizing-text-in-the-console-with-c
-   It is provided without any warranty, express or implied. 
+   The information on how to use the rawmode function on Linux was obtained 
+   from this website: https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
+   Much of the information about the Windows Console interface was obtained from this
+   website: https://learn.microsoft.com/en-us/windows/console/
+   This program is provided without any warranty, express or implied.
    You may modify and distribute it at your own risk.
 */
 #if defined(_WIN32)
