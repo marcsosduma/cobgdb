@@ -681,8 +681,13 @@ int loadfile(char * nameCobFile) {
     start_window_line = 0;
     start_line_x = 0;
     cob.debug_line = -1;
+    char baseName[512];
 
     strcpy(cob.name_file, nameCobFile);
+    fileNameWithoutExtension(nameCobFile, &baseName[0]);
+    normalizePath(baseName);
+    strcpy(baseName,getFileNameFromPath(baseName));
+    snprintf(cob.cfile, sizeof(cob.cfile), "%s/%s.c", cob.cwd, baseName);
     readCodFile(&cob);
     freeWatchingList();
     lines = cob.lines;
@@ -755,8 +760,10 @@ int main(int argc, char **argv) {
         // Iterate through the arguments
         boolean withHigh=TRUE;
         int nfile=0;
-        char * currentDir = getCurrentDirectory(); 
-        normalizePath(currentDir);
+        char * current_dir = getCurrentDirectory(); 
+        strcpy(cob.cwd, current_dir);
+        normalizePath(cob.cwd);
+        free(current_dir);
         for (int i = 1; i < argc; i++) {
             if (argv[i][0] == '-') {
                 // Check if the argument starts with "-"
@@ -782,7 +789,7 @@ int main(int argc, char **argv) {
                     printf("Name: %s\n",nameExecFile);
                 }
                 // C File
-                snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", currentDir, baseName);
+                snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
                 strcpy(fileCGroup[nfile],nameCFile);
                 // Cobol File
                 //strcpy(fileCobGroup[nfile],argv[i]); 
@@ -806,9 +813,7 @@ int main(int argc, char **argv) {
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
         //while(key_press()<=0);   
         
-        normalizePath(currentDir);
-        start_gdb(nameExecFile,currentDir);
-        free(currentDir);
+        start_gdb(nameExecFile,cob.cwd);
         freeBKList();
         freeFile();
         freeWatchingList();

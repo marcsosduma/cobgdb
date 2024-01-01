@@ -359,11 +359,7 @@ int MI2getStack(int (*sendCommandGdb)(char *), int thread){
             ST_TableValues * search1=parseMIvalueOf(parsed->resultRecords->results, "@frame.fullname", NULL, &find);
             if(search1!=NULL && search1->value!=NULL){
                 normalizePath(search1->value);
-                char * fone=strdup(search1->value);
-                char * ftwo=strdup(cob.file_cobol);
-                fileNameWithoutExtension(search1->value, fone);
-                fileNameWithoutExtension(cob.file_cobol, ftwo);
-                if(strcmp(fone, ftwo)==0){
+                if(strcmp(search1->value, cob.cfile)==0){
                     find=FALSE;
                     ST_TableValues * search2=parseMIvalueOf(parsed->resultRecords->results, "@frame.line", NULL, &find);
                     if(search2!=NULL && search2->value!=NULL){
@@ -373,8 +369,6 @@ int MI2getStack(int (*sendCommandGdb)(char *), int thread){
                             cob.debug_line = hasLine->lineCobol;
                     }
                 }
-                free(fone);
-                free(ftwo);
             }
         }
         freeParsed(parsed);
