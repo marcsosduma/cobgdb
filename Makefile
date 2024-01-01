@@ -58,47 +58,47 @@ clean: clean-custom
 $(BIN): $(OBJ)
 	$(CC) $(LINKOBJ) -o $(BIN) $(LIBS)
 
-cobgdb.o: $(SRCDIR)/cobgdb.c
+cobgdb.o: $(SRCDIR)/cobgdb.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/cobgdb.c -o cobgdb.o $(CFLAGS)
 
-terminal.o: $(SRCDIR)/terminal.c
+terminal.o: $(SRCDIR)/terminal.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/terminal.c -o terminal.o $(CFLAGS)
 
-read_file.o: $(SRCDIR)/read_file.c
+read_file.o: $(SRCDIR)/read_file.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/read_file.c -o read_file.o $(CFLAGS)
 
-parser.o: $(SRCDIR)/parser.c
+parser.o: $(SRCDIR)/parser.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/parser.c -o parser.o $(CFLAGS)
 
-gdb_process.o: $(SRCDIR)/gdb_process.c
+gdb_process.o: $(SRCDIR)/gdb_process.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/gdb_process.c -o gdb_process.o $(CFLAGS)
 
-mi2.o: $(SRCDIR)/mi2.c
+mi2.o: $(SRCDIR)/mi2.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/mi2.c -o mi2.o $(CFLAGS)
 
-parser_mi2.o: $(SRCDIR)/parser_mi2.c
+parser_mi2.o: $(SRCDIR)/parser_mi2.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/parser_mi2.c -o parser_mi2.o $(CFLAGS)
 
-testMI2.o: $(SRCDIR)/testMI2.c
+testMI2.o: $(SRCDIR)/testMI2.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/testMI2.c -o testMI2.o $(CFLAGS)
 
-testParser.o: $(SRCDIR)/testParser.c
+testParser.o: $(SRCDIR)/testParser.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/testParser.c -o testParser.o $(CFLAGS)
 
 realpath.o: $(SRCDIR)/realpath.c
 	$(CC) -c $(SRCDIR)/realpath.c -o realpath.o $(CFLAGS)
 
-variables.o: $(SRCDIR)/variables.c
+variables.o: $(SRCDIR)/variables.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/variables.c -o variables.o $(CFLAGS)
 
-debugger.o: $(SRCDIR)/debugger.c
+debugger.o: $(SRCDIR)/debugger.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/debugger.c -o debugger.o $(CFLAGS)
 
-output.o: $(SRCDIR)/output.c
+output.o: $(SRCDIR)/output.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/output.c -o output.o $(CFLAGS)
 
-highlight.o: $(SRCDIR)/highlight.c
+highlight.o: $(SRCDIR)/highlight.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/highlight.c -o highlight.o $(CFLAGS)
 
-string_parser.o: $(SRCDIR)/string_parser.c
+string_parser.o: $(SRCDIR)/string_parser.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/string_parser.c -o string_parser.o $(CFLAGS)
