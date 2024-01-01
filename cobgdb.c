@@ -166,8 +166,8 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
         printf("%s", buf);
     }
 
-    pclose(pfd);
-    return 0;
+    int ret = pclose(pfd);
+    return ret;
 }
 
 Lines * set_window_pos(int * line_pos){
@@ -800,7 +800,13 @@ int main(int argc, char **argv) {
         }
 		strcpy(fileCobGroup[nfile], "");
 		strcpy(fileCGroup[nfile], "");
-        cobc_compile(fileCobGroup, values, arg_count);
+        int ret = cobc_compile(fileCobGroup, values, arg_count);
+        if (ret) {
+            // TODO: use wait.h macros to output signal/status/...
+            printf("COBGDB: Issue in cobc, code %d\n", ret);
+            fflush(stdout);
+            return 1;
+        }
         printf("Parser starting...\n");
 		SourceMap(fileCGroup);
         printf("Parser end...\n");
