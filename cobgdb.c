@@ -419,14 +419,15 @@ int debug(int (*sendCommandGdb)(char *)){
     double check_start = getCurrentTime();
 
     initTerminal();
-    cob.line_pos=set_first_break(sendCommandGdb);
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
-    lines = set_window_pos(&cob.line_pos);
     Lines * lb = NULL;
     int bstop = FALSE;
     //(void)setvbuf(stdout, NULL, _IONBF, 16384);
     cursorOFF();
     clearScreen();
+    cob.line_pos=set_first_break(sendCommandGdb);
+    cob.waitAnswer=TRUE;
+    lines = set_window_pos(&cob.line_pos);
     while(cob.lines!=NULL && !bstop){
         if(cob.showFile){
             disableEcho();
