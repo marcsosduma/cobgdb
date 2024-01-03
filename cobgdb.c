@@ -419,8 +419,6 @@ int debug(int (*sendCommandGdb)(char *)){
     double check_start = getCurrentTime();
 
     initTerminal();
-    cob.line_pos=0;
-    //cob.line_pos=set_first_break(sendCommandGdb);
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
     Lines * lb = NULL;
     int bstop = FALSE;
