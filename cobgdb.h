@@ -248,6 +248,7 @@ enum types{
     char *realpath( const char *name, char *resolved );
 #endif
 int show_info();
+int isCommandInstalled(const char *command);
 // Tests
 int testMI2();
 int testParser();

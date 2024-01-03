@@ -81,7 +81,7 @@ void die(const char *s) {
 void disableRawMode() {
 	  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
           die("tcsetattr");
-      //tcflush(STDIN_FILENO, TCIFLUSH);
+      tcflush(STDIN_FILENO, TCIFLUSH);
 }
 
 void enableRawMode() {
@@ -132,7 +132,7 @@ int readKeyLinux() {
                     unsigned char y;
                 } mouseEvent;
 
-                while(read(STDIN_FILENO, &mouseEvent, sizeof(mouseEvent)) == sizeof(mouseEvent)) {
+                if(read(STDIN_FILENO, &mouseEvent, sizeof(mouseEvent)) == sizeof(mouseEvent)) {
                     if (mouseEvent.button == 96) {
                         return VK_UP;
                     }
@@ -153,14 +153,14 @@ int readKeyLinux() {
             }else {
 				switch (seq[1])
 				{
-				case 'A':
-					return VK_UP;
-				case 'B':
-					return VK_DOWN;
-				case 'C':
-					return VK_RIGHT;
-				case 'D':
-					return VK_LEFT;
+                    case 'A':
+                        return VK_UP;
+                    case 'B':
+                        return VK_DOWN;
+                    case 'C':
+                        return VK_RIGHT;
+                    case 'D':
+                        return VK_LEFT;
 				}
 			}
 		}
@@ -456,7 +456,10 @@ void set_terminal_size(int width, int height){
         w.ws_row = height;
         ioctl(STDOUT_FILENO, TIOCSWINSZ, &w);
         printf("\033[8;%d;%dt", height, width);
+        printf("\033[?47l");
+        printf("\033[0;0r");
         fflush(stdout);
+        tcflush(STDIN_FILENO, TCIFLUSH);
     }
 #endif // Windows/Linux
 }

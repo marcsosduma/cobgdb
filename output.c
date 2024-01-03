@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h> 
 #include "cobgdb.h"
 
 #define BUFFER 512
@@ -187,6 +188,22 @@ int isTerminalInstalled(const char *terminalCommand) {
     return system(command) == 0;
 }
 
+int copyToClipboard(const char *text) {
+    // Check if xclip is available
+    if (system("which xclip > /dev/null 2> /dev/null") == 0) {
+        FILE *clipboard = popen("xclip -selection clipboard", "w");
+        if (clipboard) {
+            fprintf(clipboard, "%s", text);
+            pclose(clipboard);
+            return 1;
+        }
+    }
+
+    // If neither OSC52 nor xclip is supported, return 0
+    return 0;
+}
+
+
 void message_output(char * sleepVal){
     char alert1[80];
     char aux[100];
@@ -219,9 +236,22 @@ void message_output(char * sleepVal){
     draw_box_border(10,lin+7);
     draw_box_border(70,lin+7);
     gotoxy(11,lin+7);
+    if(copyToClipboard(alert1)){
+        printBK("(this value is in the clipboard)                           \r",color_green, bkg);
+        print_colorBK(color_yellow, bkg);
+        draw_box_border(10,lin+8);
+        draw_box_border(70,lin+8);
+        gotoxy(11,lin+8);
+    }else{
+        printBK("(install xclip to copy this information to the clipboard)  \r",color_green, bkg);
+        print_colorBK(color_yellow, bkg);
+        draw_box_border(10,lin+8);
+        draw_box_border(70,lin+8);
+        gotoxy(11,lin+8);
+    }
     printBK("After that, press a key in this window.                    \r",color_green, bkg);
     print_colorBK(color_yellow, bkg);
-    draw_box_last(10,lin+8,59);
+    draw_box_last(10,lin+9,59);
     print_color_reset();
     fflush(stdout);
 }
@@ -231,6 +261,7 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
     int status, tk;
     char * sleepVal=hashCode(target);
     char *xterm_device = findTtyName(target);
+
     disableEcho();
     if(xterm_device == NULL){
         message_output(sleepVal);
