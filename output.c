@@ -198,8 +198,6 @@ int copyToClipboard(const char *text) {
             return 1;
         }
     }
-
-    // If neither OSC52 nor xclip is supported, return 0
     return 0;
 }
 

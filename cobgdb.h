@@ -72,6 +72,7 @@ typedef struct st_lines Lines;
 struct ST_Line {
     char * fileCobol;
     char * fileC;
+    struct st_show_var * show_var;
     int lineCobol;
     int lineC;
     int endPerformLine;
@@ -102,6 +103,7 @@ struct st_cobgdb {
     double isStepOver;
     int mouse;	
     int line_pos;
+    int input_character;
 };
 
 // ATTRIBUTTES -- START
@@ -177,9 +179,15 @@ struct ST_DebuggerVariable {
 typedef struct ST_DebuggerVariable ST_DebuggerVariable;
 
 
+struct st_show_var {
+    ST_DebuggerVariable * var;
+    struct st_show_var * next;
+};
+
+
 struct ST_Watch{
     ST_DebuggerVariable * var;
-    struct st_highlt * line;
+    ST_Line * line;
     int status;
     int posx;
     int posy;
@@ -313,6 +321,7 @@ ST_DebuggerVariable * getVariableByCobol(char * cobVar);
 ST_DebuggerVariable * getVariableByC(char * cVar);
 ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar);
 ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVar, ST_DebuggerVariable * start);
+ST_DebuggerVariable * getShowVariableByC(char * functionName, char * cVar);
 ST_DebuggerVariable * getVariablesByCobol();
 void freeParsed(ST_MIInfo * parsed);
 // mi2.c
@@ -341,7 +350,7 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
                    int end_lin, int lin, int start_linex_x,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *), int bkg);
 int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));  
-void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line);  
+void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line);  
 void show_sources(int (*sendCommandGdb)(char *)); 
 void show_help(int (*sendCommandGdb)(char *));
 //debugger.c

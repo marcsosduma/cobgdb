@@ -724,7 +724,7 @@ void draw_utf8_text(const char* text) {
         MultiByteToWideChar(CP_UTF8, 0, text, -1, wcharString, (strlen(text) + 1));
         WriteConsoleW(hStdOut, wcharString, (DWORD)wcslen(wcharString), &written, NULL);
     #else
-        // If it's not Windows, just print the text directly
+        // Linux -> print the text directly
         printf("%s", text);
     #endif
 }
@@ -735,7 +735,7 @@ int draw_box_first(int posx, int posy, int width, char *text) {
     char topLeftCorner[] = "\u250C";      // UTF-8 character for top-left corner
     char topRightCorner[] = "\u2510";     // UTF-8 character for top-right corner
     char line_h[500];
-    wchar_t utext[100];
+    wchar_t utext[500];
     #if defined(_WIN32)
     MultiByteToWideChar(CP_UTF8, 0, text, -1, utext,(strlen(text) + 1) * sizeof(wchar_t) / sizeof(utext[0]));
     #else
@@ -743,13 +743,12 @@ int draw_box_first(int posx, int posy, int width, char *text) {
     #endif
     // Line 1
     gotoxy(posx, posy);
-    // Build the horizontal line by repeating the character
+    // Horizontal line
     snprintf(line_h, sizeof(line_h), "%s%s", topLeftCorner, text);
     for (int i = 0; i < (width - wcslen(utext)); ++i) {
         strcat(line_h, horizontal);
     }
     strcat(line_h, topRightCorner);
-    // Add newline and display
     strcat(line_h, "\r");
     draw_utf8_text(line_h);
 }
@@ -766,7 +765,6 @@ int draw_box_last(int posx, int posy, int width) {
         strcat(line_h, horizontal);
     }
     strcat(line_h, bottomRightCorner);
-    // Add newline and display
     strcat(line_h, "\r");
     gotoxy(posx, posy);
     draw_utf8_text(line_h);

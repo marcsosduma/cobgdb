@@ -268,10 +268,6 @@ int show_variables(int (*sendCommandGdb)(char *)){
             case 'R':
                 input_character='r';
                 break;
-            case 'b':
-            case 'B':
-                printf("stop\n");
-                break;
             default: 
                 break;
         }
@@ -584,10 +580,10 @@ void findNewVarPos(ST_Watch * wnew, int debug_line){
     }
 }
 
-ST_Watch * new_watching(struct st_highlt * exe_line, ST_DebuggerVariable * var){
+ST_Watch * new_watching(ST_Line * debug, ST_DebuggerVariable * var){
     ST_Watch * wnew=malloc(sizeof(ST_Watch));
     wnew->var= var;
-    wnew->line= exe_line;
+    wnew->line= debug;
     wnew->start_time= -1;
     wnew->status=0;
     wnew->next=NULL;
@@ -598,23 +594,26 @@ ST_Watch * new_watching(struct st_highlt * exe_line, ST_DebuggerVariable * var){
     return wnew;
 }
 
-void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line ){
+void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser , int debug_line){
     char command[256];
     int start_window_line = 0;
     expand = FALSE;
     char aux[100];
-    struct st_highlt * h = exe_line;
+
     int bkg= color_light_gray; //color_dark_red;
     int fnew = color_blue;
     int fgc= color_dark_blue;
     int pos_y = VIEW_LINES - 4;
+
+    ST_Line * debug = getLineC(cob.file_cobol, exe_line->file_line);
+    struct st_show_var* show_var = debug->show_var;
 
     ST_Watch * wt = Watching;
     ST_Watch * wt_before = NULL;
     boolean insert=TRUE;
     while(wt!=NULL){
         // remove or updates variable from the previously checked line
-        if(wt->line==exe_line){
+        if(wt->line==debug){
             int status=1;
             insert = FALSE;
         }else{
@@ -646,41 +645,31 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
     if(insert){
         int st=0;
         char chval[500];
-        char * functionName = NULL;
-        while(h!=NULL){
-            if(h->type==TP_ALPHA || h->type==TP_VAR_RESERVED){
-                wcsncpy(wcBuffer, &h->token[st], h->size);
-                wcBuffer[h->size]='\0';   
-                int len = wcstombs(NULL, wcBuffer, 0);
-                wcstombs(chval, wcBuffer, len + 1);
-                if(functionName==NULL && !waitAnser) 
-                    functionName = MI2getCurrentFunctionName(sendCommandGdb);
-                ST_DebuggerVariable * var =  findFieldVariableByCobol(functionName, toUpper(chval), DebuggerVariable);
-                if(var!=NULL){
-                    wt = Watching;
-                    while(wt!=NULL){
-                        if(strcmp(wt->var->cobolName,var->cobolName)==0) break;
-                        wt=wt->next;
-                    }
-                    if(wt!=NULL){
-                        wt->line= exe_line;
-                        wt->start_time= -1;
-                        wt->status=0;
+        while(show_var!=NULL){
+            wt = Watching;
+            while(wt!=NULL){
+                if(strcmp(wt->var->cobolName,show_var->var->cobolName)==0) break;
+                wt=wt->next;
+            }
+            if(wt!=NULL){
+                wt->line= debug;
+                wt->start_time= -1;
+                wt->status=0;
+            }else{
+                if(strstr( show_var->var->cobolName, "Implicit")==NULL){
+                    ST_Watch * wnew = new_watching(debug, show_var->var);                        
+                    wnew->posy = pos_y;
+                    wnew->posy1 = pos_y+2;
+                    if(Watching==NULL){
+                        Watching = wnew;
                     }else{
-                        ST_Watch * wnew = new_watching(exe_line, var);                        
-                        wnew->posy = pos_y;
-                        wnew->posy1 = pos_y+2;
-                        if(Watching==NULL){
-                            Watching = wnew;
-                        }else{
-                            wt = Watching;
-                            while(wt->next!=NULL) wt=wt->next;
-                            wt->next=wnew;
-                        }
+                        wt = Watching;
+                        while(wt->next!=NULL) wt=wt->next;
+                        wt->next=wnew;
                     }
                 }
             }
-            h=h->next;
+            show_var=show_var->next;
         }
     }
     wt = Watching;
@@ -693,6 +682,7 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
                 wt->var->value=EspecialTrim(wt->var->value);
             }
         int len = strlen(wt->var->cobolName)+2;
+        if(wt->var->parent!=NULL && strcmp(wt->var->parent->cobolName, wt->var->cobolName)!=0) len += strlen(wt->var->parent->cobolName)+1;
         if(wt->var->value!=NULL){
             #if defined(_WIN32)
             int new_size = MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, NULL, 0);
@@ -733,7 +723,13 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
         int fcollor = (wt->new)?fnew:fgc;
         print_colorBK(fcollor, bkg);
         int posy=wt->posy;
-        draw_box_first(wt->posx,posy++,wt->size,wt->var->cobolName);
+        if(wt->var->parent!=NULL && strcmp(wt->var->parent->cobolName, wt->var->cobolName)!=0){
+            char name[500];
+            sprintf(name,"%s%c%s",wt->var->parent->cobolName, '.', wt->var->cobolName);
+            draw_box_first(wt->posx,posy++,wt->size,name);
+        }else{
+            draw_box_first(wt->posx,posy++,wt->size,wt->var->cobolName);
+        }
         draw_box_border(wt->posx, posy);
         int to_move=wcslen(wcharString);
         if(to_move>wt->size) to_move=wt->size;
@@ -748,7 +744,6 @@ void var_watching(struct st_highlt * exe_line, int (*sendCommandGdb)(char *), in
 }
 
 #define MAX_FILES 100
-
 void show_sources(int (*sendCommandGdb)(char *)){
     char input_character=-1;
     int bkgr = color_dark_red;

@@ -32,6 +32,8 @@ ST_DebuggerVariable * AtuDebuggerVariable;
 static char cwd[512]="";
 static char cleanedFile[256];
 static char version[100]="";
+char functionName[512];
+
 
 // File C structure
 struct st_clines{
@@ -284,6 +286,7 @@ int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, i
     new_line->lineCobol = lineCobol;
     new_line->fileC = (char *) malloc(strlen(filePathC)+1);
     strcpy(new_line->fileC, filePathC);
+    new_line->show_var = NULL;
     new_line->lineC = lineC;
     new_line->endPerformLine = -1;
     new_line->isCall = isCall;
@@ -318,6 +321,44 @@ int PopLine(){
         if(toRemove->fileC!=NULL) free(toRemove->fileC);
         free(toRemove);
     }
+}
+
+int PushVarLine(char * function, char var[][MAX_MATCH_LENGTH]){
+    if(LineAtu!=NULL){
+        int idx=0;
+        struct st_show_var * var_first=NULL;
+        struct st_show_var * var_before=NULL;
+        while(strcmp(var[idx],"")!=0){
+            struct st_show_var * new_show= malloc(sizeof(struct  st_show_var));
+            ST_DebuggerVariable * search = DebuggerVariable;
+            while(search!=NULL){
+                if(strcmp(search->cName,var[idx])==0 && strcmp(search->functionName, function)==0){
+                    new_show->var = search;
+                    new_show->next=NULL;
+                    if(var_first==NULL){
+                        var_first = new_show;
+                        var_before = new_show;
+                    }else{
+                        var_before->next = new_show;
+                    }
+                    var_before = new_show;
+                    break;
+                }
+                search=search->next;
+            }
+            idx++;
+        }
+        if(var_first!=NULL){
+            if(LineAtu->show_var==NULL){
+                LineAtu->show_var=var_first;
+            }else{
+                struct st_show_var * show= LineAtu->show_var;
+                while(show->next!=NULL) show=show->next;
+                show->next=var_first;
+            }        
+        }
+    }
+
 }
 
 int readCFile(struct ST_CFILE * program) {
@@ -736,10 +777,29 @@ boolean fileIncludeRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[]
     return ret;
 }
 
+// b_xxxx or f_xxxx
+boolean showVarRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
+    int idx=0;
+    int pos=0;
+    boolean ret = FALSE;
+    struct st_parse * m;
+    while(pos<qtt_tk){
+        m=tk_val(line_parsed, qtt_tk, pos);        
+        if(m->size<2){ pos++; continue;}
+        if(strncmp(m->token,"f_", 2)!=0 && strncmp(m->token,"b_", 2)!=0){pos++; continue;}
+        strncpy(mm[idx],m->token, m->size);
+        mm[idx++][m->size]='\0';
+        pos++;
+        ret=TRUE;
+    }
+    strcpy(mm[idx],"");
+    return ret;
+}
+
+
 int parser(char * file_name, int fileN){
     char m[10][512];
     char fileCobol[1024];
-    char functionName[512];
     char fileC[512];
     char basename[512];
     char buffer[512];
@@ -811,6 +871,14 @@ int parser(char * file_name, int fileN){
             }else{
                 strcpy(functionName,toLower(m[0]));
                 strcat(functionName, "_");
+            }
+        }
+
+        if(LineAtu!=NULL){
+            //qtd=regex(functionRegex1, lines->line, m);
+            boolean bshowVarRegex = showVarRegex(line_parsed, qtt_tk, m);
+            if(bshowVarRegex){
+                PushVarLine(functionName, m);
             }
         }
 
@@ -906,7 +974,7 @@ int parser(char * file_name, int fileN){
             if(m[0][0]=='\'' || m[0][0]=='"'){
                 char dest[100];
                 subString(m[0],1,strlen(m[0])-2, dest);
-                parser(dest, fileN);
+                parser(dest, fileN+1);
             }
         }
         //qtd=regex(versionRegex, lines->line, m);
@@ -1054,6 +1122,17 @@ ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVa
     }
     return search;
 }
+
+ST_DebuggerVariable * getShowVariableByC(char * functionName, char * cVar){
+    ST_DebuggerVariable * search = DebuggerVariable;
+    while(search!=NULL){        
+        if(search->variablesByCobol!=NULL && strcmp(search->variablesByC, cVar)==0)
+            break;
+        search = search->next;
+    }
+    return search;
+}
+
 
 
 int fileNameCompare(char * fileOne, char * fileTwo){

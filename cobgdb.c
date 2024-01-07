@@ -198,7 +198,6 @@ Lines * set_window_pos(int * line_pos){
 
 int show_button(){
     print_colorBK(color_blue, color_cyan);
-    //draw_utf8_text("\u2592");
     gotoxy(66,1);
     draw_utf8_text("\u2592 ");
     print_colorBK((cob.mouse==10)?color_red:color_blue, color_cyan);
@@ -294,7 +293,7 @@ int show_info(){
     if(cob.showFile==FALSE) fflush(stdout);
 }
 
-int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
+int show_file(Lines * lines, int line_pos, Lines ** line_debug){
     Lines * show_line=lines;
     char vbreak = ' ';
     char pline[252];
@@ -315,8 +314,9 @@ int show_file(Lines * lines, int line_pos, struct st_highlt ** exe_line){
             }
             if(cob.debug_line==show_line->file_line && !cob.running){
                 print(">", color_green); //print_color(color_green); draw_utf8_text("\u25BA");
-                if(show_line->high!=NULL) 
-                    *exe_line=show_line->high;
+                if(show_line->high!=NULL){ 
+                    *line_debug=show_line;
+                }
             }else{
                 chExec = (cob.debug_line==show_line->file_line)?'!': ' ';
                 print_color(color_red);
@@ -411,14 +411,14 @@ int set_first_break(int (*sendCommandGdb)(char *)){
 int debug(int (*sendCommandGdb)(char *)){
     int width=0, height=0;
     int qtd_page = 0;
-    char input_character;
     char command[256];
     int dblAux = -1;
     int check_size=0;
-    struct st_highlt * exe_line;
     double check_start = getCurrentTime();
 
     initTerminal();
+    cob.line_pos=0;
+    //cob.line_pos=set_first_break(sendCommandGdb);
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
     Lines * lb = NULL;
     int bstop = FALSE;
@@ -430,25 +430,12 @@ int debug(int (*sendCommandGdb)(char *)){
     cob.waitAnswer=TRUE;
     #endif
     lines = set_window_pos(&cob.line_pos);
+    Lines * line_debug=NULL;
     while(cob.lines!=NULL && !bstop){
-        if(cob.showFile){
-            disableEcho();
-            show_opt();
-            exe_line=NULL;
-            cob.line_pos=show_file(lines, cob.line_pos, &exe_line);
-            int aux1=cob.debug_line;
-            int aux2=cob.running;
-            var_watching(exe_line, sendCommandGdb, cob.waitAnswer, cob.line_pos);
-            cob.debug_line=aux1;
-            cob.running=aux2;
-            print_color_reset();
-            fflush(stdout);
-            cob.showFile=FALSE;
-            enableEcho();
-        }
-        input_character = -1;
+        
+        cob.input_character = -1;
         if(cob.waitAnswer && cob.isStepOver<0){
-            input_character = key_press();
+            cob.input_character = key_press();
         }else{
             if(check_size<3){
                 double end_time = getCurrentTime();
@@ -458,9 +445,24 @@ int debug(int (*sendCommandGdb)(char *)){
                     check_start = getCurrentTime();
                 }
             }
-            if(cob.isStepOver<0) input_character = key_press();
+            if(cob.isStepOver<0) cob.input_character = key_press();
         }
-        switch (input_character)
+        if(cob.showFile){
+            line_debug=NULL;
+            disableEcho();
+            show_opt();
+            cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
+            int aux1=cob.debug_line;
+            int aux2=cob.running;
+            if(line_debug!=NULL) var_watching(line_debug, sendCommandGdb, cob.waitAnswer, cob.line_pos);
+            cob.debug_line=aux1;
+            cob.running=aux2;
+            print_color_reset();
+            fflush(stdout);
+            cob.showFile=FALSE;
+            enableEcho();
+        }
+        switch (cob.input_character)
         {
             case VK_UP:
                 if(cob.line_pos==0 && start_window_line>0){
@@ -598,7 +600,8 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'J':
                 if(!cob.waitAnswer){ 
                     if(!MI2lineToJump(sendCommandGdb)){
-                        show_file(lines, cob.line_pos, &exe_line);
+                        line_debug=NULL;
+                        show_file(lines, cob.line_pos, &line_debug);
                         showCobMessage("Not a debuggable line.",2);
                     }
                     cob.showFile=TRUE;

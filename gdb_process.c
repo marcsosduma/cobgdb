@@ -258,7 +258,7 @@ int sendCommandGdb(char * command)
       #ifdef DEBUG
       printf("%s",chBuf);
       #endif
-      write(stOutPid, chBuf, strlen(chBuf));
+      int res = write(stOutPid, chBuf, strlen(chBuf));
       if(mustReturn) return tk;
    }
    if(gdbOutput!=NULL){
