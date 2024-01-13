@@ -31,14 +31,14 @@ COBGDB running:
 - `R` - Runs the program until a breakpoint is encountered.
 - `C` - Runs the program until it reaches the selected line.
 - `J` - Runs the program until it reaches the specified line.
-- `N` - Runs the program until the next line but does not enter a subroutine executed by CALL or PERFORM.
-- `S` - Runs the program until the next line.
-- `G` - Continues the program execution until it encounters a stopping point: breakpoint, end of the program, or the return from a subroutine (PERFORM/CALL).
+- `N` - Runs the program until the next line but does not enter a subroutine executed by CALL or PERFORM (step over).
+- `S` - Runs the program until the next line (step into).
+- `G` - Continues the program execution until it encounters a stopping point: breakpoint, end of the program, or the return from a subroutine - PERFORM/CALL (go).
 - `V` - Displays the set of variables for the running program.
 - `H` - Shows the values of variables for the selected line (right-click also functions).
 - `F` - Allows selecting the source file for debugging.
 - `A` - Attach to GDBSERVER or Application PID.
-- `Q` - Quits the program.
+- `Q` - Quits the program (stop).
 
 COBGDB takes one or more programs with COB/CBL extension as parameters and runs the GnuCOBOL compiler with the following format:
 ```bash

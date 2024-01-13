@@ -777,7 +777,7 @@ boolean fileIncludeRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[]
     return ret;
 }
 
-// b_xxxx or f_xxxx
+// variables -> b_xxxx or f_xxxx
 boolean showVarRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
     int idx=0;
     int pos=0;

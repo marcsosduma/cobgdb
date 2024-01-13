@@ -103,7 +103,6 @@ int isCommandInstalled(const char *command) {
     // Windows implementation
     char fullPath[MAX_PATH];
     DWORD result = SearchPath(NULL, command, ".exe", MAX_PATH, fullPath, NULL);
-
     return result != 0;
 #else
     // Linux implementation
@@ -185,7 +184,6 @@ Lines * set_window_pos(int * line_pos){
             }else{
                 start_window_line = cob.debug_line - VIEW_LINES + 4;
                 *line_pos=(VIEW_LINES-5);
-                //debug_line--;
             }
         }
     }
@@ -314,9 +312,7 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
             }
             if(cob.debug_line==show_line->file_line && !cob.running){
                 print(">", color_green); //print_color(color_green); draw_utf8_text("\u25BA");
-                if(show_line->high!=NULL){ 
-                    *line_debug=show_line;
-                }
+                *line_debug=show_line;
             }else{
                 chExec = (cob.debug_line==show_line->file_line)?'!': ' ';
                 print_color(color_red);
@@ -418,7 +414,6 @@ int debug(int (*sendCommandGdb)(char *)){
 
     initTerminal();
     cob.line_pos=0;
-    //cob.line_pos=set_first_break(sendCommandGdb);
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
     Lines * lb = NULL;
     int bstop = FALSE;
@@ -577,7 +572,6 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'N':
                 if(!cob.waitAnswer){
                     MI2stepOver(sendCommandGdb);
-                    //cob.start_time = getCurrentTime();
                 }
                 break;
             case 'g':
@@ -816,8 +810,7 @@ int main(int argc, char **argv) {
         loadfile(cob.file_cobol);
         if(withHigh) highlightParse(); 
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
-        //while(key_press()<=0);   
-        
+        //while(key_press()<=0);           
         start_gdb(nameExecFile,cob.cwd);
         freeBKList();
         freeFile();
