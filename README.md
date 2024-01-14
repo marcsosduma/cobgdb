@@ -34,7 +34,7 @@ COBGDB running:
 - `N` - Next: runs the program until the next line but does not enter a subroutine executed by CALL or PERFORM.
 - `S` - Step: runs the program until the next line.
 - `G` - GO: continues the program execution until it encounters a stopping point: breakpoint, end of the program, or the return from a subroutine - PERFORM/CALL.
-- `V` - Variables: cisplays the set of variables for the running program.
+- `V` - Variables: displays the set of variables for the running program.
 - `H` - Show: shows the values of variables for the selected line (right-click also functions).
 - `F` - File: allows selecting the source file for debugging.
 - `A` - Attach: attach to GDBSERVER or Application PID.
