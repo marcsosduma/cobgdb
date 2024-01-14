@@ -269,16 +269,16 @@ int show_info(){
                 printf("%-*s\r",len, "run");
                 break;
             case 20:
-                printf("%-*s\r",len, "step over");
+                printf("%-*s\r",len, "next");
                 break;
             case 30:
-                printf("%-*s\r",len, "step into");
+                printf("%-*s\r",len, "step");
                 break;
             case 40:
                 printf("%-*s\r",len, "go");
                 break;
             case 50:
-                printf("%-*s\r",len, "stop");
+                printf("%-*s\r",len, "quit");
                 break;
             case 60:
                 printf("%-*s\r",len, "help");

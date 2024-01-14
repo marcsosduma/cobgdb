@@ -369,7 +369,6 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     int qtd = 0;
     int st=0;
     int lin=line_start;
-    time_t start_time = time(NULL);
     while(input_character!='R' && input_character!='r' ){
         while(h!=NULL){
             if(h->type==TP_ALPHA){
@@ -403,11 +402,6 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
         }
         fflush(stdout);
         if(qtd==0) break;
-        time_t end_time = time(NULL);
-        if (difftime(end_time, start_time) > 2) {
-            input_character='r';
-            break;
-        }
         input_character =  key_press();
         switch (input_character)
         {
@@ -875,22 +869,23 @@ void show_help(int (*sendCommandGdb)(char *)){
     char *text[] = {
         "                     COBGDB - Commands",
         " ",
-        "B - Toggles the breakpoint at the current selected line",
+        "B - Breakpoint: toggles the breakpoint at the current selected line",
         "    (can also be done with the mouse).",
-        "R - Runs the program until a breakpoint is encountered.",
-        "C - Runs the program until it reaches the selected line.",
-        "J - Runs the program until it reaches the specified line.",
-        "N - Runs the program until the next line but does not enter",
-        "    a subroutine executed by CALL or PERFORM (step over).",
-        "S - Runs the program until the next line (step into).",
-        "G - Continues the program execution until it encounters a ",
+        "R - Run: runs the program until a breakpoint is encountered.",
+        "C - Cursor or Continue: runs the program until it reaches the",
+        "    selected line.",
+        "J - Jump: runs the program until it reaches the specified line.",
+        "N - Next: runs the program until the next line but does not enter",
+        "    a subroutine executed by CALL or PERFORM.",
+        "S - Step: runs the program until the next line.",
+        "G - GO: continues the program execution until it encounters a ",
         "    stopping point: breakpoint, end of the program, or the ",
-        "    return from a subroutine - PERFORM/CALL - (go).",
-        "V - Displays the set of variables for the running program.",
-        "H - Shows the values of variables for the selected line",
+        "    return from a subroutine - PERFORM/CALL.",
+        "V - Variables: displays the set of variables for the running program.",
+        "H - Show: shows the values of variables for the selected line",
         "    (right-click also functions).",
-        "F - Allows selecting the source file for debugging.",
-        "Q - Quits the program (stop).",
+        "F - File: allows selecting the source file for debugging.",
+        "Q - Quite: quits the program.",
         " ",
         "COBGDB takes one or more programs with COB/CBL extension as parameters",
         "and runs the GnuCOBOL compiler with the following format:",
@@ -914,7 +909,7 @@ void show_help(int (*sendCommandGdb)(char *)){
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white, 
-        color_white, color_white, 
+        color_white, color_white, color_white, 
         color_yellow,
         color_white, color_white, 
         color_yellow,
