@@ -463,7 +463,15 @@ boolean procedureRegex(struct st_parse line_parsed[100], int qtt_tk, char * numb
         m=tk_val(line_parsed, qtt_tk, pos+4);        
         if(m->size!=1 || strncmp(m->token,":", 1)!=0){ break;}
         m=tk_val(line_parsed, qtt_tk, pos+5);        
-        if(m->size==5 && strncasecmp(m->token,"Entry", 5)==0){ break;}
+        if(m->size==5 && strncasecmp(m->token,"Entry", 5)==0){ 
+            if(cob.entry<0){
+                char temp[50];
+                strncpy(temp, m1->token, m1->size);
+                temp[m1->size]='\0';
+                cob.entry = atoi(temp);
+            }
+            break;
+        }
         strncpy(numberLine, m1->token, m1->size);
         numberLine[m1->size]='\0';
         ret = TRUE;

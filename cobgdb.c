@@ -20,7 +20,8 @@ struct st_cobgdb cob ={
     .showFile = TRUE,
     .isStepOver = -1,
     .mouse = 0,
-    .num_dig = 4
+    .num_dig = 4,
+    .entry = -1
 };
 
 int start_window_line = 0;
@@ -385,6 +386,10 @@ int initTerminal(){
 int set_first_break(int (*sendCommandGdb)(char *)){
     ST_Line * debug = LineDebug;
     int ret = 0;
+    while(debug!=NULL){
+        if(debug->lineCobol>=cob.entry) break;
+        debug=debug->next;
+    }
     if(debug!=NULL){
         MI2addBreakPoint(sendCommandGdb, cob.name_file, debug->lineCobol);
         Lines * line = cob.lines;

@@ -104,6 +104,7 @@ struct st_cobgdb {
     int mouse;	
     int line_pos;
     int input_character;
+    int entry;
 };
 
 // ATTRIBUTTES -- START
