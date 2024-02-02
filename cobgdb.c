@@ -323,7 +323,6 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
             printf("%-*d ", cob.num_dig, show_line->file_line);
             if(show_line->high==NULL){
                 if(show_line->line !=NULL){
-                    //show_line->line[strcspn(show_line->line,"\t")]=' ';
                     show_line->line[strcspn(show_line->line,"\n")]='\0';
                 }   
                 size_t  len=strlen(show_line->line);
@@ -562,6 +561,13 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'r':
             case 'R':
                 if(!cob.waitAnswer){
+                    if(cob.debug_line>0){
+                        char key = showCobMessage("Would you like to run the program again?", 3);
+                        if(key!='Y' & key!='y'){
+                            cob.showFile=TRUE;
+                            break;
+                        }
+                    }
                     MI2start(sendCommandGdb);
                 }
                 break;

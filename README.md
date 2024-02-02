@@ -28,7 +28,7 @@ COBGDB running:
 **Main commands:**
 
 - `B` - Breakpoint: toggles the breakpoint at the current selected line (can also be done with the mouse).
-- `R` - Run: runs the program until a breakpoint is encountered.
+- `R` - Run: runs the program from the first statement until a breakpoint is encountered.
 - `C` - Cursor or Continue: runs the program until it reaches the selected line.
 - `J` - Jump: runs the program until it reaches the specified line.
 - `N` - Next: runs the program until the next line but does not enter a subroutine executed by CALL or PERFORM.

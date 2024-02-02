@@ -101,7 +101,9 @@ struct st_cobgdb {
 	int qtd_lines;
     int ctlVar;    
     double isStepOver;
-    int mouse;	
+    int mouse;
+    int mouseX;
+    int mouseY;	
     int line_pos;
     int input_character;
     int entry;

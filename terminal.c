@@ -140,6 +140,7 @@ int readKeyLinux() {
                         return VK_DOWN;
                     }
                     mouseCobHover( mouseEvent.x - 33, mouseEvent.y - 33);
+                    cob.mouseX = mouseEvent.x - 33; cob.mouseY = mouseEvent.y - 33;
                     int ret=-1;
                     if(mouseEvent.button == 32 ){
                         return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
@@ -277,14 +278,14 @@ int key_press(){
         if (ReadConsoleInput(hIn, &inp, 1, &numEvents)) {
             if (inp.EventType == MOUSE_EVENT) {
                 mer = inp.Event.MouseEvent;
-                int mouseX = mer.dwMousePosition.X;
-                int mouseY = mer.dwMousePosition.Y;
-                mouseCobHover(mouseX, mouseY);
+                cob.mouseX = mer.dwMousePosition.X;
+                cob.mouseY = mer.dwMousePosition.Y;
+                mouseCobHover(cob.mouseX, cob.mouseY);
                 if(mer.dwButtonState == FROM_LEFT_1ST_BUTTON_PRESSED ){
-                    return mouseCobAction(mouseX, mouseY);
+                    return mouseCobAction(cob.mouseX, cob.mouseY);
                 }
                 if(mer.dwButtonState == RIGHTMOST_BUTTON_PRESSED ){
-                    return mouseCobRigthAction(mouseX, mouseY);                        
+                    return mouseCobRigthAction(cob.mouseX, cob.mouseY);                        
                 }
                 if (inp.Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
                     int delta = GET_WHEEL_DELTA_WPARAM(inp.Event.MouseEvent.dwButtonState);
@@ -782,6 +783,9 @@ int showCobMessage(char * message, int type){
     int lin=VIEW_LINES/2-2;
     int size = strlen(message);
     int col = (VIEW_COLS-size)/2;
+    int key = -1;
+    int posYes=-1;
+    int posLine = -1;
     gotoxy(col,lin);
     print_colorBK(color_white, bkg);
     switch (type)
@@ -792,27 +796,63 @@ int showCobMessage(char * message, int type){
         case 2:
             strcpy(aux,"Alert!");
             break;    
+        case 3:
+            strcpy(aux,"Message");
+            break;
         default:
             break;
     }
     if(strlen(aux)>size) size=strlen(aux);
+    if(size<12) size=12;
     draw_box_first(col,lin,size+1,aux);
     draw_box_border(col,lin+1);
     draw_box_border(col+size+2,lin+1);
     print_colorBK(color_yellow, bkg);
     gotoxy(col+1,lin+1);
     printf("%-*s\r",size+1,message);
+    if(type==3){
+        lin++;
+        posLine=lin;
+        print_colorBK(color_white, bkg);
+        draw_box_border(col,lin+1);
+        int a = size/2-5;
+        posYes=col + a;
+        gotoxy(col+1,lin+1); printf("%-*s",a," ");
+        print_colorBK(color_white, color_blue);
+        printf(" Yes ");
+        print_colorBK(color_white, bkg);
+        printf("  ");
+        print_colorBK(color_white, color_blue);
+        printf(" No ");
+        print_colorBK(color_white, bkg);
+        if(size>11)
+            printf("%-*s\r",a," ");
+        print_colorBK(color_white, bkg);
+        draw_box_border(col+size+2,lin+1);
+    }
     lin++;
     print_colorBK(color_white, bkg);
     draw_box_last(col,lin+1,size+1);
     print_colorBK(color_green, bkg);
     fflush(stdout);
-    clock_t start_time = clock();
-    while (key_press() <= 0) {
-        clock_t end_time = clock();
-        double elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
-        if (elapsed_time > 1) {
-            break;
+    if(type==3){
+        key = -1;
+        while(key!='Y' && key!='y' && key!='N' && key!='n'){
+            key = key_press();
+            if(key==VK_ENTER && cob.mouseY == posLine){
+                if(cob.mouseX>=posYes && cob.mouseX<=posYes+4) key='Y';
+                if(cob.mouseX>=posYes+7 && cob.mouseX<=posYes+10) key='N';
+            }
+        }
+    }else{
+        clock_t start_time = clock();
+        while (key_press() <= 0) {
+            clock_t end_time = clock();
+            double elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+            if (elapsed_time > 1) {
+                break;
+            }
         }
     }
+    return key;
 }
