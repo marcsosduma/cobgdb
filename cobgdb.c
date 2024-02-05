@@ -434,7 +434,7 @@ int debug(int (*sendCommandGdb)(char *)){
         
         cob.input_character = -1;
         if(cob.waitAnswer && cob.isStepOver<0){
-            cob.input_character = key_press();
+            cob.input_character = key_press(TRUE);
         }else{
             if(check_size<3){
                 double end_time = getCurrentTime();
@@ -444,7 +444,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     check_start = getCurrentTime();
                 }
             }
-            if(cob.isStepOver<0) cob.input_character = key_press();
+            if(cob.isStepOver<0) cob.input_character = key_press(TRUE);
         }
         if(cob.showFile){
             line_debug=NULL;
@@ -562,7 +562,7 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'R':
                 if(!cob.waitAnswer){
                     if(cob.debug_line>0){
-                        char key = showCobMessage("Would you like to run the program again?", 3);
+                        char key = showCobMessage("Would you like to \"Run\" the program again ? (= Restart)", 3);
                         if(key!='Y' & key!='y'){
                             cob.showFile=TRUE;
                             break;
@@ -742,13 +742,13 @@ int main(int argc, char **argv) {
     strcpy(cob.file_cobol,"");
     if(!isCommandInstalled("cobc")){
         printf("The GnuCOBOL cobc command is not available!\n");
-        while(key_press()<=0);
+        while(key_press(FALSE)<=0);
         return 0;
     }
  
     if(!isCommandInstalled("gdb")){
         printf("GDB is not installed.\n");
-        while(key_press()<=0);
+        while(key_press(FALSE)<=0);
         return 0;
     }
     if(argc<2){

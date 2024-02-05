@@ -49,7 +49,7 @@ extern struct st_cobgdb cob;
 void cursorON();
 void cursorOFF();
 void clearScreen();
-int mouseCobAction(int col, int line);
+int mouseCobAction(int col, int line, int isPrincipal);
 int mouseCobRigthAction(int col, int line);
 void mouseCobHover(int col, int line);
 
@@ -99,7 +99,7 @@ void enableRawMode() {
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 }
 
-int readKeyLinux() {
+int readKeyLinux(int isPrincipal) {
 	int nread;
 	char c;
 	if ((nread = read(STDIN_FILENO, &c, 1)) != 1)	{
@@ -143,9 +143,9 @@ int readKeyLinux() {
                     cob.mouseX = mouseEvent.x - 33; cob.mouseY = mouseEvent.y - 33;
                     int ret=-1;
                     if(mouseEvent.button == 32 ){
-                        return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
+                        return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33, isPrincipal);                        
                     }
-                    if(mouseEvent.button == 34 ){
+                    if(mouseEvent.button == 34 && isPrincipal){
                         return mouseCobRigthAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
                     }
                     //printf("Mouse X: %d, Y: %d, Button: %d\n", mouseEvent.x - 32, mouseEvent.y - 32, mouseEvent.button);
@@ -185,7 +185,7 @@ void mouseCobHover(int col, int line){
     if(col==77 && line==0) cob.mouse=60;    
 }
 
-int mouseCobAction(int col, int line){
+int mouseCobAction(int col, int line, int isPrincipal){
     int action=-1;
     switch (cob.mouse){
             case 1:
@@ -217,8 +217,10 @@ int mouseCobAction(int col, int line){
                 break;
     }
     if(action == -1 && line>0 && line<22){
-        cob.line_pos = line-1;
-        cob.showFile = TRUE;
+        if(isPrincipal){
+            cob.line_pos = line-1;
+            cob.showFile = TRUE;
+        }
         if(col<cob.num_dig+2){
             action = 'B';
         }else{
@@ -264,7 +266,8 @@ void freeInputBuffer(){
 #endif
 }
 
-int key_press(){
+
+int key_press(int isPrincipal){
 #if defined(_WIN32)
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     INPUT_RECORD inp;
@@ -282,9 +285,9 @@ int key_press(){
                 cob.mouseY = mer.dwMousePosition.Y;
                 mouseCobHover(cob.mouseX, cob.mouseY);
                 if(mer.dwButtonState == FROM_LEFT_1ST_BUTTON_PRESSED ){
-                    return mouseCobAction(cob.mouseX, cob.mouseY);
+                    return mouseCobAction(cob.mouseX, cob.mouseY, isPrincipal);
                 }
-                if(mer.dwButtonState == RIGHTMOST_BUTTON_PRESSED ){
+                if(mer.dwButtonState == RIGHTMOST_BUTTON_PRESSED && isPrincipal){
                     return mouseCobRigthAction(cob.mouseX, cob.mouseY);                        
                 }
                 if (inp.Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
@@ -322,7 +325,7 @@ int key_press(){
       
 #elif defined(__linux__)
   enableRawMode();
-  int ch_lin= readKeyLinux();
+  int ch_lin= readKeyLinux(isPrincipal);
   disableRawMode();
   return ch_lin;
 #endif // Windows/Linux
@@ -335,7 +338,7 @@ int readchar(char * str, int size) {
     cursorON();
     while (1) {
         do{
-            c = key_press();
+            c = key_press(FALSE);
             fflush(stdout);
         }while(c<=0);
         if (c == 13) {
@@ -826,7 +829,7 @@ int showCobMessage(char * message, int type){
         printf(" No ");
         print_colorBK(color_white, bkg);
         if(size>11)
-            printf("%-*s\r",a," ");
+            printf("%-*s\r",a+1," ");
         print_colorBK(color_white, bkg);
         draw_box_border(col+size+2,lin+1);
     }
@@ -838,7 +841,7 @@ int showCobMessage(char * message, int type){
     if(type==3){
         key = -1;
         while(key!='Y' && key!='y' && key!='N' && key!='n'){
-            key = key_press();
+            key = key_press(FALSE);
             if(key==VK_ENTER && cob.mouseY == posLine){
                 if(cob.mouseX>=posYes && cob.mouseX<=posYes+4) key='Y';
                 if(cob.mouseX>=posYes+7 && cob.mouseX<=posYes+10) key='N';
@@ -846,7 +849,7 @@ int showCobMessage(char * message, int type){
         }
     }else{
         clock_t start_time = clock();
-        while (key_press() <= 0) {
+        while (key_press(FALSE) <= 0) {
             clock_t end_time = clock();
             double elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
             if (elapsed_time > 1) {

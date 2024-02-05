@@ -198,7 +198,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
         gotoxy(1,1);
         expand = FALSE;
         var = NULL;
-        input_character =  key_press();
+        input_character =  key_press(FALSE);
         switch (input_character)
         {
             case VK_UP:
@@ -402,7 +402,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
         }
         fflush(stdout);
         if(qtd==0) break;
-        input_character =  key_press();
+        input_character =  key_press(FALSE);
         switch (input_character)
         {
             case VK_UP:
@@ -791,7 +791,7 @@ void show_sources(int (*sendCommandGdb)(char *)){
         print_color_reset();
         fflush(stdout);
         gotoxy(1,1);
-        input_character =  key_press();
+        input_character =  key_press(FALSE);
         switch (input_character)
         {
             case VK_UP:
@@ -954,7 +954,7 @@ void show_help(int (*sendCommandGdb)(char *)){
         print_color_reset();
         fflush(stdout);
         gotoxy(1,1);
-        input_character =  key_press();
+        input_character =  key_press(FALSE);
         switch (input_character)
         {
             case VK_UP:

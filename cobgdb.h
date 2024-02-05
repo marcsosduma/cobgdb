@@ -286,7 +286,7 @@ char* getCurrentDirectory();
 //terminal.c
 void get_terminal_size(int *width, int *height);
 void set_terminal_size(int width, int height);
-int key_press();
+int key_press(int isPrincipal);
 void gotoxy(int x, int y);
 void clearScreen();
 void cursorON();
