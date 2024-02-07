@@ -142,9 +142,17 @@ int change_var(int (*sendCommandGdb)(char *),int lin){
     draw_box_last(10,lin+3,61);
     print_colorBK(color_green, bkg);
     fflush(stdout);
-    gotoxy(12+strlen(aux),lin+2);
-    readchar(aux,50);    
-    MI2changeVariable(sendCommandGdb, currentVar, aux);
+    //gotoxy(12+strlen(aux),lin+2);
+    char * new_value=NULL;
+    if(currentVar->value!=NULL){
+        new_value = strdup(currentVar->value);
+    }else{
+        new_value = malloc(500);
+        new_value[0]='\0';
+    }
+    updateStr(new_value,60-strlen(aux), 12+strlen(aux),lin+2);    
+    MI2changeVariable(sendCommandGdb, currentVar, new_value);
+    free(new_value);
     MI2variablesRequest(sendCommandGdb);
     cob.ctlVar=(cob.ctlVar>10000)?1:cob.ctlVar+1;
 }

@@ -365,6 +365,69 @@ int readchar(char * str, int size) {
     return 0;
 }
 
+
+int updateStr(char * value, int size, int x, int y) {
+    char c =' ';
+    int i = 0;
+    char * str = value;
+    int len = strlen(str);
+    if (str[0] == '"') {
+        str = &str[1];
+        len = strlen(str);
+        if (str[len - 1] == '"') {
+            len--;
+            str[len]='\0';
+        }
+    }
+    int lt = (len>size)?size:len;
+    int startChar = 0;
+    int isPrint = TRUE;
+    cursorON();
+    i = 0;
+    while (1) {
+        if(isPrint){
+            gotoxy(x, y);
+            printf("%.*s\r",size,&str[startChar]);
+            fflush(stdout);
+            isPrint=FALSE;
+        }
+        gotoxy(x+i, y);
+        do{
+            c = key_press(FALSE);
+            fflush(stdout);
+        }while(c<=0);
+        if (c == 13) {
+            break;
+        }
+        if ((c == VK_BACKSPACE | c==37) && i >= 0) {
+            i--;
+            if(i<0){
+                startChar = (startChar>0)?startChar-1: startChar;
+                isPrint=TRUE;
+                i=0;
+            }
+        }else if(c==39){
+            i++;
+            if(i>=lt){
+                startChar = (str[i+startChar]!='\0')? startChar+1: startChar;
+                isPrint=TRUE;
+                i--;
+            }
+        } else if (i < lt && c >= 32) {
+            if(c==37 && i==0) continue;
+            str[startChar+i] = c;
+            i++;
+            if(i>=lt){
+                startChar = (str[i+startChar]!='\0')? startChar+1: startChar;
+                i--;
+            }
+            isPrint=TRUE;
+        }
+    }
+    cursorOFF();
+    return 0;
+}
+
 void get_terminal_size(int *width, int *height) {
 #if defined(_WIN32)
     CONSOLE_SCREEN_BUFFER_INFO csbi;
