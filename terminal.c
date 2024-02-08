@@ -40,8 +40,10 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #include <time.h>
 #include "cobgdb.h"
 
-#define STRCURSOR_OFF "\e[?25l"
-#define STRCURSOR_ON  "\e[?25h"
+#define STRCURSOR_OFF  "\e[?25l"
+#define STRCURSOR_ON   "\e[?25h"
+#define ANSI_UNDERLINE "\033[4m"
+#define ANSI_RESET     "\033[0m"
 
 char color[200];
 extern struct st_cobgdb cob;
@@ -843,6 +845,20 @@ int draw_box_border(int posx, int posy) {
     draw_utf8_text(vertical);
 }
 
+void print_underlined(const char *text) {
+    #ifdef _WIN32
+       HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hOut == INVALID_HANDLE_VALUE) return;
+        DWORD dwMode = 0;
+        GetConsoleMode(hOut, &dwMode);
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        SetConsoleMode(hOut, dwMode);
+        printf(ANSI_UNDERLINE "%s" ANSI_RESET, text);
+    #else
+        printf(ANSI_UNDERLINE "%s" ANSI_RESET, text);
+    #endif
+}
+
 int showCobMessage(char * message, int type){
     char aux[500];
     int bkg= color_dark_red;
@@ -885,11 +901,11 @@ int showCobMessage(char * message, int type){
         posYes=col + a;
         gotoxy(col+1,lin+1); printf("%-*s",a," ");
         print_colorBK(color_white, color_blue);
-        printf(" Yes ");
+        printf(" "); print_underlined("Y"); print_colorBK(color_white, color_blue); printf("es ");
         print_colorBK(color_white, bkg);
         printf("  ");
         print_colorBK(color_white, color_blue);
-        printf(" No ");
+        printf(" "); print_underlined("N"); print_colorBK(color_white, color_blue); printf("o ");
         print_colorBK(color_white, bkg);
         if(size>11)
             printf("%-*s\r",a+1," ");
