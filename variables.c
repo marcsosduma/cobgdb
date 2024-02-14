@@ -150,8 +150,9 @@ int change_var(int (*sendCommandGdb)(char *),int lin){
         new_value = malloc(500);
         new_value[0]='\0';
     }
-    updateStr(new_value,60-strlen(aux), 12+strlen(aux),lin+2);    
-    MI2changeVariable(sendCommandGdb, currentVar, new_value);
+    if(updateStr(new_value,60-strlen(aux), 12+strlen(aux),lin+2)==TRUE){
+        MI2changeVariable(sendCommandGdb, currentVar, new_value);
+    }
     free(new_value);
     MI2variablesRequest(sendCommandGdb);
     cob.ctlVar=(cob.ctlVar>10000)?1:cob.ctlVar+1;

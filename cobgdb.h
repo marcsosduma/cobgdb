@@ -5,6 +5,12 @@
 #define VK_PGDOWN 34
 #define VK_PGUP 33
 #define VK_ENTER 13
+#ifndef VK_ESCAPE
+#define VK_ESCAPE 27
+#endif
+#define VK_DELETE 46
+#define VK_LEFT 37
+#define VK_RIGHT 39
 #elif defined(__linux__)
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define VK_BACKSPACE 127
@@ -16,6 +22,7 @@
 #define VK_LEFT 37
 #define VK_ENTER 13
 #define VK_ESCAPE 27
+#define VK_DELETE 46
 #endif // Windows/Linux
 #ifndef boolean 
 #define boolean int

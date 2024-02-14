@@ -704,6 +704,10 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
     int status, tk;
     char aux[256];
     char command[512];
+    if(gdbOutput!=NULL){
+        free(gdbOutput);
+        gdbOutput=NULL;
+    }
     char * cleanedRawValue = cleanRawValue(rawValue);
     if (var->attribute!=NULL && strcmp(var->attribute->type,"integer")==0){
         sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
