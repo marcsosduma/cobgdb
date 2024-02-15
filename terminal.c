@@ -121,7 +121,7 @@ int readKeyLinux(int isPrincipal) {
 					switch (seq[1])
 					{
                     case '3':
-                        return VK_DELETE;
+                        return VK_DEL;
 					case '5':
 						return VK_PGUP;
 					case '6':
@@ -318,6 +318,10 @@ int key_press(int isPrincipal){
                         ReadConsoleInput( hIn, &inp, 1, &numEvents); 
                         return 0; // accents problem...
                     }
+                    if (virtualKeyCode == VK_DELETE) {
+                        ReadConsoleInput( hIn, &inp, 1, &numEvents); 
+                        return VK_DEL;
+                    }
                     if(!inp.Event.KeyEvent.bKeyDown) return 0;
                     FlushConsoleInputBuffer(hIn);
                     return virtualKeyCode;
@@ -410,6 +414,7 @@ int updateStr(char * value, int size, int x, int y) {
             result=FALSE;
             break;
         }
+        if( c == VK_DEL) c=' ';
         if (c==VK_LEFT && i >= 0) {
             i--;
             if(i<0){
@@ -434,7 +439,6 @@ int updateStr(char * value, int size, int x, int y) {
                 i--;
             }
         } else if (i < lt && c >= 32) {
-            if(c==46) c=' ';
             if(c==37 && i==0) continue;
             str[startChar+i] = c;
             i++;

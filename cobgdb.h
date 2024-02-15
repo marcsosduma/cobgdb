@@ -8,7 +8,7 @@
 #ifndef VK_ESCAPE
 #define VK_ESCAPE 27
 #endif
-#define VK_DELETE 46
+#define VK_DEL 3
 #define VK_LEFT 37
 #define VK_RIGHT 39
 #elif defined(__linux__)
@@ -22,7 +22,7 @@
 #define VK_LEFT 37
 #define VK_ENTER 13
 #define VK_ESCAPE 27
-#define VK_DELETE 46
+#define VK_DEL 3
 #endif // Windows/Linux
 #ifndef boolean 
 #define boolean int
