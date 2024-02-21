@@ -148,6 +148,12 @@ enum CobFlag {
     CONSTANT
 };
 
+enum MOUSE_READ {
+    MOUSE_OFF,
+    MOUSE_NORMAL,
+    MOUSE_EXT
+};
+
 struct st_parse {
     char * token;
     int size;
@@ -293,7 +299,7 @@ char* getCurrentDirectory();
 //terminal.c
 void get_terminal_size(int *width, int *height);
 void set_terminal_size(int width, int height);
-int key_press(int isPrincipal);
+int key_press(int type);
 void gotoxy(int x, int y);
 void clearScreen();
 void cursorON();

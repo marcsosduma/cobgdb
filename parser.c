@@ -1162,7 +1162,7 @@ void SourceMap(char fileGroup[][512]){
     while(strlen(fileGroup[q])>0){
         strcpy(cwd,"");
    	    //printf("\n\n Arquivo: %s\n",fileGroup[q]);
-        //while(key_press()<=0);
+        //while(key_press(MOUSE_OFF)<=0);
         parser(fileGroup[q], q);
         q++;
 

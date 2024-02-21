@@ -434,7 +434,7 @@ int debug(int (*sendCommandGdb)(char *)){
         
         cob.input_character = -1;
         if(cob.waitAnswer && cob.isStepOver<0){
-            cob.input_character = key_press(TRUE);
+            cob.input_character = key_press(MOUSE_EXT);
         }else{
             if(check_size<3){
                 double end_time = getCurrentTime();
@@ -444,7 +444,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     check_start = getCurrentTime();
                 }
             }
-            if(cob.isStepOver<0) cob.input_character = key_press(TRUE);
+            if(cob.isStepOver<0) cob.input_character = key_press(MOUSE_EXT);
         }
         if(cob.showFile){
             line_debug=NULL;
@@ -742,13 +742,13 @@ int main(int argc, char **argv) {
     strcpy(cob.file_cobol,"");
     if(!isCommandInstalled("cobc")){
         printf("The GnuCOBOL cobc command is not available!\n");
-        while(key_press(FALSE)<=0);
+        while(key_press(MOUSE_OFF)<=0);
         return 0;
     }
  
     if(!isCommandInstalled("gdb")){
         printf("GDB is not installed.\n");
-        while(key_press(FALSE)<=0);
+        while(key_press(MOUSE_OFF)<=0);
         return 0;
     }
     if(argc<2){
@@ -821,7 +821,7 @@ int main(int argc, char **argv) {
         loadfile(cob.file_cobol);
         if(withHigh) highlightParse(); 
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
-        //while(key_press()<=0);           
+        //while(key_press(MOUSE_OFF)<=0);           
         start_gdb(nameExecFile,cob.cwd);
         freeBKList();
         freeFile();

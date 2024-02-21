@@ -265,7 +265,7 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
         message_output(sleepVal);
         gotoxy(12,15);
         char key=-1;
-        while(key<20 && key!=VK_ENTER) key=key_press(FALSE);
+        while(key<20 && key!=VK_ENTER) key=key_press(MOUSE_EXT);
         xterm_device = findTtyName(target);
     }
     if (xterm_device == NULL) {

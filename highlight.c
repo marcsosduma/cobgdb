@@ -329,5 +329,5 @@ int highlightParse(){
         }
         lines=lines->line_after;     
     }
-    //while(key_press()==0);
+    //while(key_press(MOUSE_OFF)==0);
 }
