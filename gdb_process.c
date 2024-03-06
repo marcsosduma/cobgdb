@@ -309,7 +309,7 @@ int start_gdb(char * name, char * cwd){
     int fd1[2];
     int p2[2];
     char *cmd[] = {"gdb", 
-                   "-nx",
+                   //"-nx",
                    "--quiet", 
                    "--interpreter=mi2",
                    NULL

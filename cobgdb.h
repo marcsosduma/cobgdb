@@ -95,7 +95,7 @@ typedef struct ST_Line ST_Line;
 struct st_cobgdb {
 	char name_file[256];
     char file_cobol[512];
-    char cfile[512];
+    char cfile[1048];
     char cwd[512];
     char first_file[512];
     int num_dig;

@@ -49,9 +49,11 @@ void free_memory()
         lines = lines->line_after;
         if (current_line->line != NULL) {
             free(current_line->line);
+            current_line->line= NULL;
         }
         if (current_line->high != NULL) {
             freeHighlight(current_line->high);
+            current_line->high= NULL;
         }
         free(current_line);
     }
@@ -727,7 +729,7 @@ int freeFile(){
 int main(int argc, char **argv) {
     char nameExecFile[256];
     char baseName[256];
-    char nameCFile[259];
+    char nameCFile[1024];
     char values[10][256];   // Create an array of strings to store the arguments
     int arg_count = 0;      // Initialize a counter for storing arguments
     char fileCGroup[10][512];

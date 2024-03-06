@@ -101,78 +101,75 @@ void enableRawMode() {
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 }
 
+
 int readKeyLinux(int type) {
-	int nread;
-	char c;
-	if ((nread = read(STDIN_FILENO, &c, 1)) != 1)	{
-		if (nread == -1 && errno != EAGAIN)
-			die("read");
-	}
-	if (c == TM_ESCAPE){
-		char seq[3];
+    unsigned char buf[32];
+    ssize_t nread;
 
-		if (read(STDIN_FILENO, &seq[0], 1) != 1) return TM_ESCAPE;
-		if (read(STDIN_FILENO, &seq[1], 1) != 1) return TM_ESCAPE;
+    if ((nread = read(STDIN_FILENO, buf, sizeof(buf))) <= 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            return 0;
+        } else {
+            die("read");
+        }
+    }
 
-		if (seq[0] == TM_CSI){
-			if (seq[1] >= '0' && seq[1] <= '9')	{
-				if (read(STDIN_FILENO, &seq[2], 1) != 1) return TM_ESCAPE;
-				if (seq[2] == '~')	{
-					switch (seq[1])
-					{
-                    case '3':
-                        return VK_DEL;
-					case '5':
-						return VK_PGUP;
-					case '6':
-						return VK_PGDOWN;
-					}
-				}
-			}
-            else if( seq[1] == TM_MOUSE){
-                struct {
-                    unsigned char button;
-                    unsigned char x;
-                    unsigned char y;
-                } mouseEvent;
+    if (buf[0] == TM_ESCAPE && buf[1] == TM_CSI) {
+        if (nread >= 3) {
+            switch (buf[2]) {
+                case '3':
+                    return VK_DEL;
+                case '5':
+                    return VK_PGUP;
+                case '6':
+                    return VK_PGDOWN;
+                case 'A':
+                    return VK_UP;
+                case 'B':
+                    return VK_DOWN;
+                case 'C':
+                    return VK_RIGHT;
+                case 'D':
+                    return VK_LEFT;
+            }
+        }
+        if (buf[2] == TM_MOUSE) {
+            // Mouse
+            struct {
+                unsigned char button;
+                unsigned char x;
+                unsigned char y;
+            } mouseEvent;
 
-                if(type > 0 && read(STDIN_FILENO, &mouseEvent, sizeof(mouseEvent)) == sizeof(mouseEvent)) {
-                    if (mouseEvent.button == 96) {
-                        return VK_UP;
-                    }
-                    if (mouseEvent.button == 97) {
-                        return VK_DOWN;
-                    }
-                    mouseCobHover( mouseEvent.x - 33, mouseEvent.y - 33);
-                    cob.mouseX = mouseEvent.x - 33; cob.mouseY = mouseEvent.y - 33;
-                    int ret=-1;
-                    if(mouseEvent.button == 32 ){
-                        return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33, type);                        
-                    }
-                    if(mouseEvent.button == 34){
-                        return mouseCobRigthAction(mouseEvent.x - 33, mouseEvent.y - 33);                        
-                    }
-                    //printf("Mouse X: %d, Y: %d, Button: %d\n", mouseEvent.x - 32, mouseEvent.y - 32, mouseEvent.button);
+            if (type > 0 && nread >= sizeof(mouseEvent)) {
+                memcpy(&mouseEvent, buf + 3, sizeof(mouseEvent)); 
+                if (mouseEvent.button == 96) {
+                    return VK_UP;
                 }
-                return -1;
-            }else {
-				switch (seq[1])
-				{
-                    case 'A':
-                        return VK_UP;
-                    case 'B':
-                        return VK_DOWN;
-                    case 'C':
-                        return VK_RIGHT;
-                    case 'D':
-                        return VK_LEFT;
-				}
-			}
-		}
-		return TM_ESCAPE;
-	}else{
-		return c;
-	}
+                if (mouseEvent.button == 97) {
+                    return VK_DOWN;
+                }
+                mouseCobHover(mouseEvent.x - 33, mouseEvent.y - 33);
+                cob.mouseX = mouseEvent.x - 33;
+                cob.mouseY = mouseEvent.y - 33;
+                int ret = -1;
+                if (mouseEvent.button == 32) {
+                    return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33, type);
+                }
+                if (mouseEvent.button == 34) {
+                    return mouseCobRigthAction(mouseEvent.x - 33, mouseEvent.y - 33);
+                }
+            }
+            return 0;
+        }
+    } else {
+        wchar_t wc;
+        if (mbtowc(&wc, (const char *)buf, nread) <= 0) {
+            return buf[0];
+        }
+        return (int)wc;
+    }
+    return 0;
 }
 #endif
 
@@ -277,12 +274,17 @@ int key_press(int type){
     INPUT_RECORD inp;
     DWORD numEvents;
     DWORD mode = ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT;
+  
     MOUSE_EVENT_RECORD mer;
+
+    wchar_t input[3] = {0}; // Permitindo a entrada de caracteres de até 2 bytes (incluindo acentos)
+    int numCharsRead = 0;
+    int virtualKeyCode = 0;
 
     SetConsoleMode(hIn, mode);
 
     if (PeekConsoleInput(hIn, &inp, 1, &numEvents) && numEvents > 0) {
-        if (ReadConsoleInput(hIn, &inp, 1, &numEvents)) {
+        if(ReadConsoleInputW(hIn, &inp, 1, &numEvents)) {
             if (type>0 && inp.EventType == MOUSE_EVENT) {
                 mer = inp.Event.MouseEvent;
                 cob.mouseX = mer.dwMousePosition.X;
@@ -303,33 +305,28 @@ int key_press(int type){
                 }                
                 //printf("Mouse X: %d, Y: %d\n", mouseX, mouseY);
             }
-            if (inp.EventType == KEY_EVENT){
-                if (inp.Event.KeyEvent.bKeyDown && inp.Event.KeyEvent.uChar.AsciiChar != 0) {
-                    char key = inp.Event.KeyEvent.uChar.AsciiChar;
-                    if(key<0){
-                          ReadConsoleInput( hIn, &inp, 1, &numEvents); 
-                          key=0;
-                    }
-                    return (int)key;
-                } else {
-                    int virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
-                    if (virtualKeyCode==219) {
-                        ReadConsoleInput( hIn, &inp, 1, &numEvents); 
-                        return 0; // accents problem...
-                    }
-                    if (virtualKeyCode == VK_DELETE) {
-                        ReadConsoleInput( hIn, &inp, 1, &numEvents); 
-                        return VK_DEL;
-                    }
-                    if(!inp.Event.KeyEvent.bKeyDown) return 0;
+            if (inp.Event.KeyEvent.bKeyDown && inp.Event.KeyEvent.uChar.UnicodeChar != 0) {
+                    WCHAR key = inp.Event.KeyEvent.uChar.UnicodeChar;
                     FlushConsoleInputBuffer(hIn);
+                    return (int)key;
+            } else if((virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode)!=0){
+                if(virtualKeyCode==VK_PGUP || virtualKeyCode==VK_PGDOWN || virtualKeyCode==VK_UP ||
+                   virtualKeyCode==VK_DOWN || virtualKeyCode==VK_RIGHT || virtualKeyCode==VK_LEFT){
+                    ReadConsoleInputW( hIn, &inp, 1, &numEvents); 
+                    //FlushConsoleInputBuffer(hIn);
                     return virtualKeyCode;
                 }
+                if (virtualKeyCode == VK_DELETE) {
+                    ReadConsoleInput( hIn, &inp, 1, &numEvents); 
+                    return VK_DEL;
+                }
+                FlushConsoleInputBuffer(hIn);
+                return 0;
             }
         }
     }
-    return 0;
-      
+    
+    return 0;      
 #elif defined(__linux__)
   enableRawMode();
   int ch_lin= readKeyLinux(type);
@@ -372,83 +369,106 @@ int readchar(char * str, int size) {
     return 0;
 }
 
-
-int updateStr(char * value, int size, int x, int y) {
-    char c =' ';
+int updateStr(char *value, int size, int x, int y) {
+    int len = strlen(value);
+    int len_char = len;
+    wchar_t *str = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
+    wchar_t *wcBuffer = NULL;
+    wchar_t c = L' ';
     int i = 0;
     int result = TRUE;
-    char * str = value;
-    int len = strlen(str);
-    if (str[0] == '"') {
-        str = &str[1];
-        len = strlen(str);
-        if (str[len - 1] == '"') {
+
+    #if defined(_WIN32)
+    MultiByteToWideChar(CP_UTF8, 0, value, -1, str,(len_char + 1) * sizeof(wchar_t) / sizeof(str[0]));
+    #else
+    mbstowcs(str, value, len_char + 1);
+    #endif
+
+    len = wcslen(str);
+    if (str[0] == L'"') {
+        wcBuffer = wcsdup(str);
+        wcscpy(str, wcBuffer + 1);
+        free(wcBuffer);
+        len = wcslen(str);
+        if (str[len - 1] == L'"') {
+            str[len - 1] = L'\0';
             len--;
-            str[len]='\0';
         }
     }
-    int lt = (len>size)?size:len;
+    wcBuffer = malloc(256);
+
+    int lt = (len > size) ? size : len;
     int startChar = 0;
     int isPrint = TRUE;
     print_colorBK(color_green, color_red);
     cursorON();
     i = 0;
     while (1) {
-        if(isPrint){
+        if (isPrint) {
+            wcsncpy(wcBuffer, &str[startChar], lt);
+            wcBuffer[lt]=L'\0';
             gotoxy(x, y);
-            printf("%.*s\r",size,&str[startChar]);
-            //fflush(stdout);
-            isPrint=FALSE;
+            printf("%*ls\r", lt, wcBuffer);
+            fflush(stdout);
+            isPrint = FALSE;
         }
-        gotoxy(x+i, y);
-        do{
+        gotoxy(x + i, y);
+        do {
             c = key_press(MOUSE_OFF);
             fflush(stdout);
-        }while(c<=0);
-        //gotoxy(1,1); printf("Key = %d    \r", c);
+        } while (c == 0 || c == -1);
+        //gotoxy(1, 1); printf("Key = %d    \r", c); fflush(stdout);
         if (c == VK_ENTER) {
             break;
         }
-        if(c == VK_ESCAPE){
-            result=FALSE;
+        if (c == VK_ESCAPE) {
+            result = FALSE;
             break;
         }
-        if( c == VK_DEL) c=' ';
-        if (c==VK_LEFT && i >= 0) {
+        if (c == VK_DEL) c = L' ';
+        if (c == VK_LEFT && i >= 0) {
             i--;
-            if(i<0){
-                startChar = (startChar>0)?startChar-1: startChar;
-                isPrint=TRUE;
-                i=0;
+            if (i < 0) {
+                startChar = (startChar > 0) ? startChar - 1 : startChar;
+                isPrint = TRUE;
+                i = 0;
             }
-        }else if (c == VK_BACKSPACE && i >= 0) {
+        } else if (c == VK_BACKSPACE && i >= 0) {
             i--;
-            isPrint=TRUE;
-            if(i<0){
-                startChar = (startChar>0)?startChar-1: startChar;
-                i=0;
-            }else{
-                str[startChar+i] = ' ';
+            isPrint = TRUE;
+            if (i < 0) {
+                startChar = (startChar > 0) ? startChar - 1 : startChar;
+                i = 0;
+            } else {
+                str[startChar + i] = L' ';
             }
-        }else if(c==VK_RIGHT){
+        } else if (c == VK_RIGHT) {
             i++;
-            if(i>=lt){
-                startChar = (str[i+startChar]!='\0')? startChar+1: startChar;
-                isPrint=TRUE;
+            int ln = wcslen(&str[startChar]);
+            if (i >= lt) {
+                startChar = (str[i + startChar] != L'\0') ? startChar + 1 : startChar;
+                isPrint = TRUE;
                 i--;
             }
-        } else if (i < lt && c >= 32) {
-            if(c==37 && i==0) continue;
-            str[startChar+i] = c;
+        } else if (i < lt) {
+            if (c == 37 && i == 0) continue;
+            str[startChar + i] = c;
             i++;
-            if(i>=lt){
-                startChar = (str[i+startChar]!='\0')? startChar+1: startChar;
+            if (i >= lt) {
+                startChar = (str[i + startChar] != L'\0') ? startChar + 1 : startChar;
                 i--;
             }
-            isPrint=TRUE;
+            isPrint = TRUE;
         }
     }
     cursorOFF();
+    #if defined(_WIN32)
+    WideCharToMultiByte(CP_UTF8, 0, str, -1, value, len_char+1, NULL, NULL);
+    //wcsrtombs(value, (const wchar_t **) &str, len_char+1, NULL);
+    #else
+    wcsrtombs(value, (const wchar_t **) &str, len_char+1, NULL);
+    #endif
+    free(wcBuffer);
     return result;
 }
 
@@ -560,27 +580,15 @@ void gotoxy(int x, int y){
     #endif
 }
 
-#ifdef _WIN32
-    HANDLE hBuffer1;
-    COORD bufferSize = {VIEW_COLS, VIEW_LINES};
-    CHAR_INFO buffer[VIEW_COLS * VIEW_LINES];
-    SMALL_RECT rect;
-#endif
-
-
 void clearScreen() {
 #ifdef _WIN32
     HANDLE hStdOut;
     hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    // Fetch existing console mode so we correctly add a flag and not turn off others
     DWORD mode = 0;
     GetConsoleMode(hStdOut, &mode);
-    // Hold original mode to restore on exit to be cooperative with other command-line apps.
     DWORD originalMode = mode;
     mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    // Try to set the mode.
     SetConsoleMode(hStdOut, mode);
-    // Write the sequence for clearing the display.
     DWORD written = 0;
     PCWSTR sequence = L"\x1b[2J";
     WriteConsoleW(hStdOut, sequence, (DWORD)wcslen(sequence), &written, NULL);
