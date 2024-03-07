@@ -743,12 +743,14 @@ int main(int argc, char **argv) {
     strcpy(cob.file_cobol,"");
     if(!isCommandInstalled("cobc")){
         printf("The GnuCOBOL cobc command is not available!\n");
+        fflush(stdout);
         while(key_press(MOUSE_OFF)<=0);
         return 0;
     }
  
     if(!isCommandInstalled("gdb")){
         printf("GDB is not installed.\n");
+        fflush(stdout);
         while(key_press(MOUSE_OFF)<=0);
         return 0;
     }

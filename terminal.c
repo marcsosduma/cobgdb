@@ -109,9 +109,8 @@ int readKeyLinux(int type) {
     if ((nread = read(STDIN_FILENO, buf, sizeof(buf))) <= 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             return 0;
-        } else {
-            die("read");
         }
+        return -1;
     }
 
     if (buf[0] == TM_ESCAPE && buf[1] == TM_CSI) {
