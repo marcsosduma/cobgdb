@@ -48,7 +48,6 @@ int start_gdb(char * name, char * cwd)
    char fixCommand[] = "gdb -nx --quiet --interpreter=mi2 ";
    sprintf(command, "%s", fixCommand);
    SECURITY_ATTRIBUTES saAttr;
-   int looking[]={0}; 
 
    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
    saAttr.bInheritHandle = TRUE;
@@ -63,7 +62,7 @@ int start_gdb(char * name, char * cwd)
        ErrorExit("Stdout SetHandleInformation");
    // Non blocking mode
    DWORD dwMode = PIPE_NOWAIT;
-   BOOL fSuccess = SetNamedPipeHandleState( 
+   SetNamedPipeHandleState( 
       g_hChildStd_OUT_Rd,    // pipe handle 
       &dwMode,  // new pipe mode 
       NULL,     // don't set maximum bytes 
@@ -161,12 +160,10 @@ int sendCommandGdb(char * command)
    DWORD dwRead, dwWritten;
    CHAR chBuf[BUFSIZE];
    BOOL bSuccess = FALSE;   
-   HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+   //HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
    int qtdAlloc = 0;   
    int mustReturn=1;
-   int l1 = 8;
    int count0=0;
-   char test[7];
    
    int tk = token;
    if(strlen(command)>0){
@@ -240,7 +237,6 @@ int sendCommandGdb(char * command)
    char chBuf[BUFSIZE];
    int qtdAlloc = BUFSIZE;  
    int mustReturn=1;
-   int l1 = 7;
    fd_set read_fds;
 
    int tk = token;
@@ -258,7 +254,7 @@ int sendCommandGdb(char * command)
       #ifdef DEBUG
       printf("%s",chBuf);
       #endif
-      int res = write(stOutPid, chBuf, strlen(chBuf));
+      write(stOutPid, chBuf, strlen(chBuf));
       if(mustReturn) return tk;
    }
    if(gdbOutput!=NULL){
@@ -302,6 +298,7 @@ int sendCommandGdb(char * command)
          #endif
       }
    }
+   return TRUE;
 }
 
 int start_gdb(char * name, char * cwd){
@@ -334,7 +331,6 @@ int start_gdb(char * name, char * cwd){
         close(fd1[0]);
         close(p2[1]);
 
-        char chBuf[256];
         char env_dir[512]; 
         char f_symb[512];
         sprintf(env_dir,"-environment-directory \"%s\"\n", cwd);

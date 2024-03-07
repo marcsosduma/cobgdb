@@ -25,7 +25,6 @@ int isProc=0;
 
 wchar_t * toWUpper(wchar_t* str) {
   int j = 0;
-  wchar_t ch;
  
   while (str[j]) {
         str[j]=towupper(str[j]);
@@ -109,7 +108,6 @@ int parseDigitOrAlpha(wchar_t * ch,struct st_highlt * h){
 }
 
 int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
-    wchar_t vl[100];
     struct st_highlt * h = hight;
     int tot=total;
     int qtdMove=0;
@@ -126,9 +124,6 @@ int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
     bkg=(bkg>0)?bkg:color_black;
     print_colorBK(bkg, bkg);
     while(h!=NULL && tot>0){
-        if(h->size>total){
-            int x=0;
-        }
         qtdMove = (tot < h->size - st)? tot : h->size - st;
         if(qtdMove>0){
             print_colorBK(h->color,bkg);
@@ -147,6 +142,7 @@ int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
     }
     print_color_reset();
     free(wcBuffer);
+    return TRUE;
 }
 
 void freeHighlight(struct st_highlt * hight){
@@ -216,10 +212,6 @@ char *cleanLine(const char *input) {
 
 int highlightParse(){
     Lines * lines = cob.lines;
-    char * line;
-    char *saveptr1;
-    struct st_highlt * tk_before = NULL;
-    struct st_highlt * high = NULL;
     int pos=1;
     int tp_before=-1;
     clearScreen();
@@ -232,7 +224,6 @@ int highlightParse(){
             free(lines->line);
             lines->line=newValue;
         }
-        char * ch=lines->line;
         int lenLine=strlen(lines->line);
         wchar_t *wcharString = (wchar_t *)malloc((lenLine + 1) * sizeof(wchar_t));
         #if defined(_WIN32)
@@ -330,4 +321,5 @@ int highlightParse(){
         lines=lines->line_after;     
     }
     //while(key_press(MOUSE_OFF)==0);
+    return TRUE;
 }

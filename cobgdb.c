@@ -214,6 +214,7 @@ int show_button(){
     print_colorBK((cob.mouse==60)?color_red:color_blue, color_cyan);
     printf("? ");
     print_color_reset();
+    return TRUE;
 }
 
 int show_opt(){
@@ -232,6 +233,7 @@ int show_opt(){
     gotoxy(80,VIEW_LINES-1);
     print_colorBK(color_light_gray, color_frame);
     draw_utf8_text("\u2193");
+    return TRUE;
 }
 
 int show_info(){
@@ -292,20 +294,18 @@ int show_info(){
     show_button();        
     gotoxy(1,24);
     if(cob.showFile==FALSE) fflush(stdout);
+    return TRUE;
 }
 
 int show_file(Lines * lines, int line_pos, Lines ** line_debug){
     Lines * show_line=lines;
-    char vbreak = ' ';
-    char pline[252];
-    char aux[100];
     int NUM_TXT=76-cob.num_dig;
     
     gotoxy(1,1);
     show_opt();
-    size_t  bkgColor=color_gray;
+    int  bkgColor=color_gray;
     char chExec = ' ';
-    for(size_t i=0;i<(VIEW_LINES-3);i++){
+    for(int i=0;i<(VIEW_LINES-3);i++){
         if(show_line != NULL){
             gotoxy(1,i+2);
             if(show_line->breakpoint=='S'){
@@ -327,7 +327,7 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
                 if(show_line->line !=NULL){
                     show_line->line[strcspn(show_line->line,"\n")]='\0';
                 }   
-                size_t  len=strlen(show_line->line);
+                int  len=strlen(show_line->line);
                 wchar_t *wcharString = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
                 #if defined(_WIN32)
                 MultiByteToWideChar(CP_UTF8, 0, show_line->line, -1, wcharString,(len + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
@@ -335,7 +335,6 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
                 mbstowcs(wcharString, show_line->line, strlen(show_line->line) + 1);
                 #endif
                 len = wcslen(wcharString);
-                //if(len>0) show_line->line[strcspn(show_line->line,"\n")]='\0';
                 if(line_pos==i)
                     print_colorBK(color_green, bkgColor);
                 else
@@ -382,6 +381,7 @@ int initTerminal(){
     get_terminal_size(&width, &height);
     printf("width= %d", width);
     printf(", height= %d\n", height);
+    return TRUE;
 }
 
 int set_first_break(int (*sendCommandGdb)(char *)){
@@ -411,9 +411,7 @@ int set_first_break(int (*sendCommandGdb)(char *)){
 }
 
 int debug(int (*sendCommandGdb)(char *)){
-    int width=0, height=0;
     int qtd_page = 0;
-    char command[256];
     int dblAux = -1;
     int check_size=0;
     double check_start = getCurrentTime();
@@ -442,7 +440,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 double end_time = getCurrentTime();
                 double elapsed_time = end_time - check_start;
                 if(elapsed_time>1){
-                    cob.showFile=win_size_verify(cob.showFile, &check_size);
+                    cob.showFile=win_size_verify(cob.showFile);
                     check_start = getCurrentTime();
                 }
             }
@@ -539,7 +537,7 @@ int debug(int (*sendCommandGdb)(char *)){
                         if(lb->breakpoint=='S'){
                             MI2addBreakPoint(sendCommandGdb, cob.name_file, lb->file_line);
                         }else{
-                            MI2removeBreakPoint(sendCommandGdb, lines, cob.name_file, lb->file_line);
+                            MI2removeBreakPoint(sendCommandGdb, cob.name_file, lb->file_line);
                         }  
                         cob.showFile=TRUE;
                         MI2getStack(sendCommandGdb,1);
@@ -551,7 +549,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     lb = lines;           
                     for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
                     lb->breakpoint='N';
-                    MI2removeBreakPoint(sendCommandGdb, lines, cob.name_file, lb->file_line);
+                    MI2removeBreakPoint(sendCommandGdb, cob.name_file, lb->file_line);
                 }
                 break;
             case 'q':
@@ -565,7 +563,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 if(!cob.waitAnswer){
                     if(cob.debug_line>0){
                         char key = showCobMessage("Would you like to \"Run\" the program again ? (= Restart)", 3);
-                        if(key!='Y' & key!='y'){
+                        if(key!='Y' && key!='y'){
                             cob.showFile=TRUE;
                             break;
                         }
@@ -685,11 +683,10 @@ int debug(int (*sendCommandGdb)(char *)){
         show_info();
         //printf("Key = %d", input_character);
     }
+    return TRUE;
 }
 
 int loadfile(char * nameCobFile) {
-    int input_character;
-
     start_window_line = 0;
     start_line_x = 0;
     cob.debug_line = -1;
@@ -720,10 +717,12 @@ int loadfile(char * nameCobFile) {
             line=line->line_after;
         }
     }
+    return TRUE;
 }
 
 int freeFile(){
     free_memory();
+    return TRUE;
 }
 
 int main(int argc, char **argv) {

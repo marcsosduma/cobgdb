@@ -67,7 +67,6 @@ int testParser()
 	{
 		printf("------------------------------------------------\n");
 		char * cFile = realpath("./resources/hello3.c", buffer);
-		char c[512];
 		char cobol[] = "/home/developer/projects/gnucobol-debug/test/resources/hello3.cbl";
 		char version[50];
 		normalizePath(cobol);
@@ -130,7 +129,6 @@ int testParser()
 		normalizePath(cSample);
 		normalizePath(cSubSample);
 		normalizePath(cSubSubSample);
-		char c[512];
 		char version[50];
 		char fileGroup[4][512];
 		strcpy(fileGroup[0],cSample);
@@ -173,8 +171,6 @@ int testParser()
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/petstore.c", buffer));
 		normalizePath(cSample);
-		char c[512];
-		char version[50];
 		char fileGroup[4][512];
 		strcpy(fileGroup[0],cSample);
 		strcpy(fileGroup[1], "");
@@ -198,8 +194,6 @@ int testParser()
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/petstore.c", buffer));
 		normalizePath(cSample);
-		char c[512];
-		char version[50];
 		char fileGroup[4][512];
 		strcpy(fileGroup[0],cSample);
 		strcpy(fileGroup[1], "");
@@ -223,8 +217,6 @@ int testParser()
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/datatypes.c", buffer));
 		normalizePath(cSample);
-		char c[512];
-		char version[50];
 		char fileGroup[4][512];
 		strcpy(fileGroup[0],cSample);
 		strcpy(fileGroup[1], "");
@@ -250,7 +242,6 @@ int testParser()
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/func.c", buffer));
 		normalizePath(cSample);
-		char c[512];
 		char version[50];
 		char fileGroup[4][512];
 		strcpy(fileGroup[0],cSample);

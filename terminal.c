@@ -141,7 +141,7 @@ int readKeyLinux(int type) {
                 unsigned char y;
             } mouseEvent;
 
-            if (type > 0 && nread >= sizeof(mouseEvent)) {
+            if (type > 0 && nread >= (ssize_t) sizeof(mouseEvent)) {
                 memcpy(&mouseEvent, buf + 3, sizeof(mouseEvent)); 
                 if (mouseEvent.button == 96) {
                     return VK_UP;
@@ -152,7 +152,6 @@ int readKeyLinux(int type) {
                 mouseCobHover(mouseEvent.x - 33, mouseEvent.y - 33);
                 cob.mouseX = mouseEvent.x - 33;
                 cob.mouseY = mouseEvent.y - 33;
-                int ret = -1;
                 if (mouseEvent.button == 32) {
                     return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33, type);
                 }
@@ -274,15 +273,10 @@ int key_press(int type){
     INPUT_RECORD inp;
     DWORD numEvents;
     DWORD mode = ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT;
-  
     MOUSE_EVENT_RECORD mer;
-
-    wchar_t input[3] = {0}; // Permitindo a entrada de caracteres de até 2 bytes (incluindo acentos)
-    int numCharsRead = 0;
     int virtualKeyCode = 0;
 
     SetConsoleMode(hIn, mode);
-
     if (PeekConsoleInput(hIn, &inp, 1, &numEvents) && numEvents > 0) {
         if(ReadConsoleInputW(hIn, &inp, 1, &numEvents)) {
             if (type>0 && inp.EventType == MOUSE_EVENT) {
@@ -348,17 +342,17 @@ int readchar(char * str, int size) {
         if (c == 13) {
             break;
         }
-        if ((c == VK_BACKSPACE | c==37) && i > 0) {
+        if ((c == VK_BACKSPACE || c==37) && i > 0) {
             putchar(8);
             putchar(' ');
             putchar(8);
             i--;
             str[i] = '\0';
-        }else if(c==39 && strlen(str) < size){
+        }else if(c==39 && strlen(str) < (size_t) size){
             putchar(' ');
             str[i++]=' ';
             str[i]='\0';
-        } else if (strlen(str) < size && c >= 32) {
+        } else if (strlen(str) < (size_t) size && c >= 32) {
             str[i] = c;
             putchar(c);
             i++;
@@ -416,7 +410,7 @@ int updateStr(char *value, int size, int x, int y) {
         do {
             c = key_press(MOUSE_OFF);
             fflush(stdout);
-        } while (c == 0 || c == -1);
+        } while (c == 0);
         //gotoxy(1, 1); printf("Key = %d    \r", c); fflush(stdout);
         if (c == VK_ENTER) {
             break;
@@ -444,7 +438,6 @@ int updateStr(char *value, int size, int x, int y) {
             }
         } else if (c == VK_RIGHT) {
             i++;
-            int ln = wcslen(&str[startChar]);
             if (i >= lt) {
                 startChar = (str[i + startChar] != L'\0') ? startChar + 1 : startChar;
                 isPrint = TRUE;
@@ -487,13 +480,12 @@ void get_terminal_size(int *width, int *height) {
 }
 
 #if defined(_WIN32)
-int win_size_verify(int showFile, int *check_size){
+int win_size_verify(int showFile){
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    COORD consoleSize;
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     BOOL isMaximized = IsZoomed(hConsole);
     GetConsoleScreenBufferInfo(hConsole, &csbi);
-    consoleSize = GetLargestConsoleWindowSize(hConsole);
+    //GetLargestConsoleWindowSize(hConsole);
     if (isMaximized==TRUE || csbi.dwSize.X != TERM_WIDTH || csbi.dwSize.Y != TERM_HEIGHT) {
         if (isMaximized) {
             ShowWindow(hConsole, SW_RESTORE); 
@@ -542,7 +534,6 @@ void set_terminal_size(int width, int height){
     TERM_WIDTH = width;
     TERM_HEIGHT = height;
 #if defined(_WIN32)
-    int chesize=0;
     HANDLE hConsole = GetStdHandle( STD_OUTPUT_HANDLE );
     SetForegroundWindow(hConsole);
     SetConsoleSize(hConsole, width, height);
@@ -839,12 +830,13 @@ int draw_box_first(int posx, int posy, int width, char *text) {
     gotoxy(posx, posy);
     // Horizontal line
     snprintf(line_h, sizeof(line_h), "%s%s", topLeftCorner, text);
-    for (int i = 0; i < (width - wcslen(utext)); ++i) {
+    for (int i = 0; i < (int) (width - wcslen(utext)); ++i) {
         strcat(line_h, horizontal);
     }
     strcat(line_h, topRightCorner);
     strcat(line_h, "\r");
     draw_utf8_text(line_h);
+    return TRUE;
 }
 
 int draw_box_last(int posx, int posy, int width) {
@@ -862,12 +854,14 @@ int draw_box_last(int posx, int posy, int width) {
     strcat(line_h, "\r");
     gotoxy(posx, posy);
     draw_utf8_text(line_h);
+    return TRUE;
 }
 
 int draw_box_border(int posx, int posy) {
     char vertical[]   = "\u2502";   // UTF-8 character for vertical line
     gotoxy(posx, posy);
     draw_utf8_text(vertical);
+    return TRUE;
 }
 
 void print_underlined(const char *text) {
@@ -909,7 +903,7 @@ int showCobMessage(char * message, int type){
         default:
             break;
     }
-    if(strlen(aux)>size) size=strlen(aux);
+    if(strlen(aux)> (size_t) size) size=strlen(aux);
     if(size<12) size=12;
     draw_box_first(col,lin,size+1,aux);
     draw_box_border(col,lin+1);

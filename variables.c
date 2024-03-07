@@ -31,6 +31,7 @@ int show_opt_var(){
     gotoxy(1,VIEW_LINES-1);
     sprintf(aux,"%80s\r"," ");
     printBK(aux, color_frame, color_frame);
+    return TRUE;
 }
 
 int print_variable(int level, int * notShow, int line_pos, int start_lin, 
@@ -156,6 +157,7 @@ int change_var(int (*sendCommandGdb)(char *),int lin){
     free(new_value);
     MI2variablesRequest(sendCommandGdb);
     cob.ctlVar=(cob.ctlVar>10000)?1:cob.ctlVar+1;
+    return TRUE;
 }
 
 int show_variables(int (*sendCommandGdb)(char *)){
@@ -163,16 +165,14 @@ int show_variables(int (*sendCommandGdb)(char *)){
     int lin=0;    
     int line_pos=0;
     int start_window_line = 0;
-    int qtd_window_line = VIEW_LINES-2;
     int start_linex_x = 0;      
     expand = FALSE;
-    char aux[100];
     int bkg;
 
     currentVar= NULL;
     char input_character= ' ';
-    ST_DebuggerVariable * var = firstVar(var);
-    int old_lin=lin;
+    ST_DebuggerVariable * var = NULL;
+    var = firstVar(var);
     int notShow;
     char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
     if(functionName==NULL) return 0;
@@ -284,6 +284,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
         //if(input_character>0) printf("%d\n", input_character);
     }
     if(functionName!=NULL) free(functionName);
+    return TRUE;
 }
 
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 
@@ -360,19 +361,15 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
 }
 
 int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *)){
-    char command[256];
     int line_pos=0;
     int start_window_line = 0;
-    int qtd_window_line = VIEW_LINES-2;
     int start_linex_x = 0;  
     int line_start = 7;    
     expand = FALSE;
-    char aux[100];
     struct st_highlt * h = high;
 
     gotoxy(1,1);
     char input_character= ' ';
-    wchar_t vl[100];
     wchar_t *wcBuffer = (wchar_t *)malloc(512);
     int bkg= color_dark_red;
     int qtd = 0;
@@ -466,7 +463,9 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
             case VK_ENTER:
                 expand=TRUE;
                 qtd = 0; st=0; lin=line_start;
-            case 'R':
+                if(input_character>0) input_character='r';
+                break;
+            case 'R': 
             case 'r':
             case 'Q':
             case 'q':
@@ -478,6 +477,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
         //if(input_character>0) printf("%d\n", input_character);
     }
     free(wcBuffer);
+    return TRUE;
 }
 
 
@@ -529,8 +529,6 @@ boolean isCollide(ST_Watch * wnew, int debug_line, int * size){
 }
 
 void findNewVarPos(ST_Watch * wnew, int debug_line){
-    ST_Watch * wt = Watching;
-    int new_pos=-1;
     int phase=0;
     if(wnew->posy<0){
         wnew->posy =VIEW_LINES-4;
@@ -541,7 +539,6 @@ void findNewVarPos(ST_Watch * wnew, int debug_line){
         }
     }
     int size=0;
-    boolean isCorrect = FALSE;
     while(phase<2){        
         if(phase==0){
             while(wnew->posy>1){
@@ -598,11 +595,7 @@ ST_Watch * new_watching(ST_Line * debug, ST_DebuggerVariable * var){
 }
 
 void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser , int debug_line){
-    char command[256];
-    int start_window_line = 0;
     expand = FALSE;
-    char aux[100];
-
     int bkg= color_light_gray; //color_dark_red;
     int fnew = color_blue;
     int fgc= color_dark_blue;
@@ -617,7 +610,6 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
     while(wt!=NULL){
         // remove or updates variable from the previously checked line
         if(wt->line==debug){
-            int status=1;
             insert = FALSE;
         }else{
             if(wt->start_time<0 && !waitAnser){
@@ -646,8 +638,6 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
     }
     // The line has not been processed yet; we need to check the variables
     if(insert){
-        int st=0;
-        char chval[500];
         while(show_var!=NULL){
             wt = Watching;
             while(wt!=NULL){
@@ -697,7 +687,7 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
             MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, wcharString,(strlen(wt->var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
             #else
             size_t new_size = mbstowcs(NULL, wt->var->value, 0);
-            if(new_size>wideCharSize){
+            if(new_size>(size_t)wideCharSize){
                 wideCharSize = new_size;
                 free(wcharString);
                 wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
@@ -863,7 +853,7 @@ void show_sources(int (*sendCommandGdb)(char *)){
     }
 }
 
-void show_help(int (*sendCommandGdb)(char *)){
+void show_help(){
     char input_character=-1;
     int bkgr = color_dark_red;
     int bkg;
@@ -872,7 +862,7 @@ void show_help(int (*sendCommandGdb)(char *)){
     int line_pos=0;
     int qtt_lines=0;
     int start_file=0;
-    int file_sel = -1;
+    //int file_sel = -1;
     boolean show = TRUE;
 
     char *text[] = {
@@ -939,7 +929,6 @@ void show_help(int (*sendCommandGdb)(char *)){
             draw_box_first(col,lin++,size,"COBGDB HELP");
             int f = start_file;
             int pos=0;
-            file_sel=-1;
             while(pos<10){
                 print_colorBK(frg, bkgr);
                 draw_box_border(col, lin);
@@ -947,7 +936,6 @@ void show_help(int (*sendCommandGdb)(char *)){
                     bkg=(line_pos==pos)?csel:bkgr;
                     print_colorBK(ctext[f], bkg);
                     printf("%-70s",text[f]);
-                    if(line_pos==pos) file_sel=f;
                 }else{
                     print_colorBK(color_white, bkgr);
                     printf("%-70s"," ");

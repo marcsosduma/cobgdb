@@ -56,7 +56,6 @@ char* getCurrentDirectory() {
 
 void fileNameWithoutExtension(char * file, char * onlyName){
     int qtd=strlen(file);
-    int a=0;
     if(strchr(file,'.')!=NULL){
         while(file[qtd]!='.') qtd--;
         onlyName[qtd--]='\0';
@@ -87,7 +86,6 @@ char *istrstr(const char *haystack, const char *needle) {
 
 char* toLower(char* str) {
   int j = 0;
-  char ch;
  
   while (str[j]) {
         str[j]=(char) tolower(str[j]);
@@ -98,7 +96,6 @@ char* toLower(char* str) {
 
 char* toUpper(char* str) {
   int j = 0;
-  char ch;
  
   while (str[j]) {
         str[j]=(char) toupper(str[j]);
@@ -152,7 +149,6 @@ char* subString(const char* input, int offset, int len, char* dest)
 }
 
 void normalizePath(char * path){
-    char sep = '/';
     char bef = ' ';
     char * temp = strdup(path);
     int x=0;
@@ -279,4 +275,5 @@ int readCodFile(struct st_cobgdb *program) {
     fclose(fp);
     program->lines = lines;
     program->qtd_lines = qtd;
+    return TRUE;
 }

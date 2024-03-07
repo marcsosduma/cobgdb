@@ -313,7 +313,7 @@ void print_color(int textcolor);
 void print_colorBK(const int textcolor, const int backgroundcolor);
 int readchar(char * str, int size);
 int updateStr(char * value, int size, int x, int y);
-int win_size_verify(int showFile, int *check_size);
+int win_size_verify(int showFile);
 int draw_box_first(int posx, int posy, int width, char *text);
 int draw_box_last(int posx, int posy, int width);
 int draw_box_border(int posx, int posy);
@@ -338,14 +338,14 @@ ST_DebuggerVariable * getVariableByCobol(char * cobVar);
 ST_DebuggerVariable * getVariableByC(char * cVar);
 ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar);
 ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVar, ST_DebuggerVariable * start);
-ST_DebuggerVariable * getShowVariableByC(char * functionName, char * cVar);
+ST_DebuggerVariable * getShowVariableByC(char * cVar);
 ST_DebuggerVariable * getVariablesByCobol();
 void freeParsed(ST_MIInfo * parsed);
 // mi2.c
 int couldBeOutput(char * line);
 int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber );
 int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber );
-int MI2removeBreakPoint (int (*sendCommandGdb)(char *), Lines * lines, char * fileCobol, int lineNumber );
+int MI2removeBreakPoint (int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber );
 int MI2start(int (*sendCommandGdb)(char *));
 int MI2stepOver(int (*sendCommandGdb)(char *));
 int MI2stepInto(int (*sendCommandGdb)(char *));
@@ -369,11 +369,11 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
 int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));  
 void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line);  
 void show_sources(int (*sendCommandGdb)(char *)); 
-void show_help(int (*sendCommandGdb)(char *));
+void show_help();
 //debugger.c
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);
-char* parseUsage(char* valueStr, char* type);
+char* parseUsage(char* valueStr);
 // output.c
 void openOuput(int (*sendCommandGdb)(char *), char *target);
 //highlight.c

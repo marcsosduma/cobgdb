@@ -41,7 +41,7 @@ char * formatNumber(char *valueStr, int fieldSize, int scale, int isSigned) {
         }
     }
     char *valueResult = malloc(fieldSize + 1);
-    if(strlen(wholeNumber)>fieldSize){
+    if(strlen(wholeNumber)>(size_t) fieldSize){
         strncpy(valueResult, wholeNumber, fieldSize);
         valueResult[fieldSize]='\0';
     }else{
@@ -94,7 +94,6 @@ void formatNumberParser(char *valueStr, int fieldSize, int sc) {
     if (value[0] == '"') {
         memmove(value, value + 1, fieldSize+1);  // Remove comma
         value[fieldSize]='\0';        
-        char *endPtr;
         int signCharCode = value[strlen(value) - 1];
         char sign[2];
         sign[0] = '\0';
@@ -109,7 +108,7 @@ void formatNumberParser(char *valueStr, int fieldSize, int sc) {
             memset(suffix, '0', diff);
             suffix[diff] = '\0';
             strcat(value, suffix);
-        }else if (strlen(value) < sc) {
+        }else if (strlen(value) < (size_t) sc) {
             int diff = scale - strlen(value);
             char prefix[diff+1];
             memset(prefix, '0', diff);
@@ -273,7 +272,7 @@ char* dbStringValues(char* valueStr, int fieldSize) {
     if (value[0] == '"') {
         shift = 1;
     }
-    int size = (fieldSize + shift) < strlen(valueStr) ? (fieldSize + shift) : strlen(valueStr);
+    int size = (fieldSize + shift) < (int) strlen(valueStr) ? (int) (fieldSize + shift) : (int) strlen(valueStr);
     char* result = malloc(size + 3);  // +3 for 2 x double quote and null character
     snprintf(result, size + 3, "\"%.*s\"", size-shift, value + shift);
     return result;
@@ -306,7 +305,7 @@ char* debugParse(char* valueStr, int fieldSize, int scale, char* type) {
     return strdup(valueStr);
 }
 
-char* parseUsage(char* valueStr, char* type) {
+char* parseUsage(char* valueStr) {
     if (!valueStr || strlen(valueStr) == 0) {
         return NULL;
     }

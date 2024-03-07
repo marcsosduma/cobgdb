@@ -59,7 +59,7 @@ char *hashCode(const char *target) {
         code = code * 31 + target[i];
     }
 
-    if (code < 0) code *= -1;
+    //if (code < 0) code *= -1;
     if (code < 900000) code += 900000;
 
     sprintf(strCode, "%u", code);
@@ -256,7 +256,7 @@ void message_output(char * sleepVal){
 
 void openOuput(int (*sendCommandGdb)(char *), char *target){
     char aux[200];
-    int status, tk;
+    int status, tk=0;
     char * sleepVal=hashCode(target);
     char *xterm_device = findTtyName(target);
 

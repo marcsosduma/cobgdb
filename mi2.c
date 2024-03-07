@@ -36,11 +36,14 @@ enum GDB_STATUS {
     GDB_CONNECTED
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 void MI2log(char * log){
     #ifdef DEBUG
     printf("%s\n", log);
     #endif
 }
+#pragma GCC diagnostic pop
 
 //char nonOutput[] = "(([0-9]*|undefined)[\\*\\+\\-\\=\\~\\@\\&\\^])([^\\*\\+\\-\\=\\~\\@\\&\\^]{1,})";
 int fNonOutput(char * line, char mm[][MAX_MATCH_LENGTH]){
@@ -162,7 +165,7 @@ int fGdbRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
         pos+=9;
    }
    len = strlen(&line[pos]);
-   if(len>=5 & strncmp(&line[pos],"(gdb)",5)){
+   if(len>=5 && strncmp(&line[pos],"(gdb)",5)){
     strcat(m[0],"(gdb)");
     strcat(m[1],"(gdb)");
     ret=1;
@@ -325,12 +328,14 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
    return parsedRet;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 void verify_output(int (*sendCommandGdb)(char *)){
     #if defined(__linux__)
     openOuput(sendCommandGdb, cob.name_file);
     #endif
 }
-
+#pragma GCC diagnostic pop
 
 void wait_gdb_answer(int (*sendCommandGdb)(char *)){
     if(gdbOutput!=NULL) strcpy(gdbOutput,"");
@@ -388,6 +393,7 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
     cob.waitAnswer = TRUE;
     cob.showFile = TRUE;
     cob.running = TRUE;
+    return TRUE;
 }
 
 int MI2stepInto(int (*sendCommandGdb)(char *)){
@@ -476,9 +482,10 @@ int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNu
         else    
             before->next=newbk;
     }
+    return TRUE;
 }
 
-int MI2removeBreakPoint (int (*sendCommandGdb)(char *), Lines * lines, char * fileCobol, int lineNumber ){
+int MI2removeBreakPoint (int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
     ST_Line * line = getLineC(fileCobol, lineNumber);
     int status=0;
     if(line!=NULL){
@@ -540,6 +547,7 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
         cob.showFile = TRUE;
         cob.running=TRUE;
     }
+    return TRUE;
 }
 
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame){
@@ -578,7 +586,7 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
                     int find=FALSE;
                     ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "value", NULL, &find);
                     if(search!=NULL && search->value!=NULL){
-                        var->value= parseUsage(search->value, var->attribute->type);
+                        var->value= parseUsage(search->value);
                     }
                     freeParsed(parsed);
                 }
@@ -593,6 +601,7 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
             freeParsed(parsed);
         }
     } 
+    return TRUE;
 }
 
 char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *)){
@@ -673,6 +682,7 @@ int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * line ){
     char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
     show_line_var(line->high, functionName, sendCommandGdb);
     if(functionName!=NULL) free(functionName);
+    return TRUE;
 }
 
 char* cleanRawValue(const char* rawValue) {
@@ -687,7 +697,6 @@ char* cleanRawValue(const char* rawValue) {
         cleanedRawValue[length - 1] = '\0';
     }
     char* currentPos = cleanedRawValue;
-    char* result = NULL;
     while (1) {
         currentPos = strstr(currentPos, containsQuotes);
         if (!currentPos) {
@@ -701,7 +710,7 @@ char* cleanRawValue(const char* rawValue) {
 }
 
 int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue){
-    int status, tk;
+    int status, tk=0;
     char aux[256];
     char command[512];
     if(gdbOutput!=NULL){
@@ -743,6 +752,7 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
         }
     }
     free(cleanedRawValue);
+    return TRUE;
 }
 
 #define MAX_FILES 100
@@ -751,6 +761,8 @@ int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, 
 /*
 https://stackoverflow.com/questions/12975022/strtok-r-for-mingw
 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull-compare"
 char *strtok_r(char *str, const char *delim, char **save)
 {
     char *res, *last;
@@ -770,10 +782,10 @@ char *strtok_r(char *str, const char *delim, char **save)
     }
     return res;
 }
+#pragma GCC diagnostic pop
 #endif
 
 int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
-    int status;
     char* token;
     int fileCount = 0;
     char fileload[512];
@@ -834,7 +846,7 @@ int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
 
 
 int MI2attach(int (*sendCommandGdb)(char *)){
-    int status, tk;
+    int status, tk=0;
     int lin=10;
     char aux[100];
     int bkg= color_dark_red;

@@ -47,7 +47,6 @@ ST_TableValues * newTableValues(){
 int fOctalMatch(char * line, char mm[][MAX_MATCH_LENGTH]){
     if(strlen(line)<3) return -1;
     for(int a=0;a<3;a++){
-        char ch = line[a];
         if(line[a]>='0' && line[a]<='7'){
             mm[0][a]=line[a];
         }else{
@@ -67,11 +66,9 @@ char * parseString(char * str){
     int tot=strlen(str)-2;
     subString(str,1, strlen(str)-2, str);
     str[tot]='\0';
-    int bufIndex = 0;
     boolean escaped = FALSE;
     int x=0;
-    int i=0;
-    for(int i=0;i<strlen(str);i++){
+    for(int i=0;i<(int) strlen(str);i++){
         if(escaped){
             if (str[i] == '\\'){
                ret[x++] = '\\';}
@@ -413,9 +410,7 @@ ST_MIInfo * parseMI(char * out){
         }
         if(qtd>3 && strlen(match[3])>0){
             char classMatch[10][512];
-            //char classMatch1[10][512];
-            //int qtd2 = regex(asyncClassRegex, output, classMatch);
-            int qtd2 = fAsyncClassRegex(output, classMatch);
+            fAsyncClassRegex(output, classMatch);
             subString(output,strlen(classMatch[1]), strlen(output)-strlen(classMatch[1]), output);
             ST_OutOfBandRecord * asyncRecord = malloc(sizeof(ST_OutOfBandRecord));            
             if(outOfBandRecord==NULL) outOfBandRecord = asyncRecord;
@@ -564,7 +559,7 @@ int fIndexRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     int len=strlen(line);
     if(len<1) return 0;
     char ch = line[0];
-    int qtt=1, ret = 0, idx=0, pos=1, pos1=0, pos2=0, find=0;
+    int qtt=1, ret = 0, pos=1, pos1=0, pos2=0;
     if(ch!='[') return 0;
     strcpy(mm[0],"[");
     if(qtt<len){
@@ -617,7 +612,7 @@ ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, bo
                 if(qt>0){
                     path += strlen(m[0]);
                     idx=atoi(m[1]);
-                    int qtd=fPathRegex(path, m);
+                    fPathRegex(path, m);
                     ST_TableValues * sch=start;
                     while((idx--)>0){
                         sch=sch->array;

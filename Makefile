@@ -23,7 +23,7 @@ LINKOBJ  = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o m
 LIBS     = 
 INCS     = 
 BIN      = cobgdb.exe
-CFLAGS   = $(INCS) -fdiagnostics-color=always -g
+CFLAGS   = $(INCS) -fdiagnostics-color=always -g -Wall -Wextra
 RM       = del
 CP       = copy
 else
@@ -37,7 +37,7 @@ LINKOBJ  = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o m
 LIBS     = 
 INCS     = 
 BIN      = cobgdb
-CFLAGS   = $(INCS) -fdiagnostics-color=always -g
+CFLAGS   = $(INCS) -fdiagnostics-color=always -g -Wall -Wextra
 RM       = rm -f
 CP		 = cp
 endif

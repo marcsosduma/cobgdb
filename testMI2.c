@@ -220,7 +220,6 @@ int testMI2()
         printf("Test-> 2^done,asm_insns=[src_and_asm_line={line=\"134\",file=\"source/app.d\",fullname=\"/path/to/source/app.d\",line_asm_insn=[{address=\"0x00000000004e7da4\",func-name=\"_Dmain\",offset=\"0\",inst=\"push   %%rbp\"},{address=\"0x00000000004e7da5\",func-name=\"_Dmain\",offset=\"1\",inst=\"mov    %%rsp,%%rbp\"}]}]");
         ST_MIInfo * parsed;
         ST_TableValues * search= NULL;
-        int x=0;
         parsed = parseMI("2^done,asm_insns=[src_and_asm_line={line=\"134\",file=\"source/app.d\",fullname=\"/path/to/source/app.d\",line_asm_insn=[{address=\"0x00000000004e7da4\",func-name=\"_Dmain\",offset=\"0\",inst=\"push   %rbp\"},{address=\"0x00000000004e7da5\",func-name=\"_Dmain\",offset=\"1\",inst=\"mov    %rsp,%rbp\"}]}]");
         assert(parsed!=NULL);
         assert(parsed->token == 2);
@@ -370,7 +369,6 @@ int testMI2()
         ST_MIInfo * parsed;
         ST_TableValues * search= NULL;
         boolean find=FALSE;
-        int x=0;
         printf("Test-> 15^done,register-names=[\"r0\",\"pc\",\"\",\"xpsr\",\"\",\"control\"]\n");
         parsed = parseMI("15^done,register-names=[\"r0\",\"pc\",\"\",\"xpsr\",\"\",\"control\"]");
         search=parseMIvalueOf(parsed->resultRecords->results, "register-names", NULL, &find);

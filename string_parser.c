@@ -14,7 +14,6 @@ struct st_parse parse_blank = {
 
 char * toStUpper(char* str) {
   int j = 0;
-  char ch;
  
   while (str[j]) {
         str[j]=toupper(str[j]);
@@ -101,10 +100,6 @@ struct st_parse * tk_val(struct st_parse line_parsed[100], int qtt_tk, int pos){
 
 
 void lineParse(char * line_to_parse, struct st_parse h[100], int *qtt ){
-    struct st_parse * tk_before = NULL;
-    struct st_parse * tk = NULL;
-    int tp_before=-1;
-    int lenLine=strlen(line_to_parse);
     char * ch = line_to_parse;
     *qtt=0;
     while(*ch!='\0' && *qtt<100){

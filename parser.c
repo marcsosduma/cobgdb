@@ -69,7 +69,7 @@ int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp
 int strpos(char *str1, char *str2)
 {
     int b=strlen(str2);
-    for(int a=0;a<strlen(str1);a++){
+    for(int a=0;a<(int)strlen(str1);a++){
         if(strncmp(&str1[a], str2, b)==0){
             return a;
         }
@@ -100,7 +100,6 @@ void buildFlags(ST_Attribute * attribute){
             attribute->flags[0]=-1;
             return;
         }
-        char m[10][512];
         int a=0;
         int qtd = searchflagMatchers(attribute->flagStr);
         if(qtd>=0){
@@ -139,6 +138,7 @@ int PushAttribute(char * key, char * cName, char * type, int digits, int scale, 
          AtualAttrib = new_attrib;
          Attributes->last = new_attrib;
     }
+    return TRUE;
 }
 
 int PopAttribute(){
@@ -156,6 +156,7 @@ int PopAttribute(){
         if(toRemove->flagStr!=NULL) free(toRemove->flagStr);
         free(toRemove);
     }
+    return TRUE;
 }
 
 char * VariableType(char * type_org){
@@ -209,6 +210,7 @@ int PushDebuggerVariable(char * cobolName, char * cName, char * functionName, ST
          AtuDebuggerVariable = debVar;
          DebuggerVariable->last = AtuDebuggerVariable;
     }
+    return TRUE;
 }
 
 void AddChildDebuggerVariable(ST_DebuggerVariable * father, ST_DebuggerVariable * child){
@@ -305,6 +307,7 @@ int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, i
          LineDebug->last=new_line;
          LineAtu = new_line;
     }
+    return TRUE;
 }
 
 int PopLine(){
@@ -321,6 +324,7 @@ int PopLine(){
         if(toRemove->fileC!=NULL) free(toRemove->fileC);
         free(toRemove);
     }
+    return TRUE;
 }
 
 int PushVarLine(char * function, char var[][MAX_MATCH_LENGTH]){
@@ -358,7 +362,7 @@ int PushVarLine(char * function, char var[][MAX_MATCH_LENGTH]){
             }        
         }
     }
-
+    return TRUE;
 }
 
 int readCFile(struct ST_CFILE * program) {
@@ -394,6 +398,7 @@ int readCFile(struct ST_CFILE * program) {
     }
     fclose(fp);
     program->qtd_clines=qtd;
+    return TRUE;
 }
 
 void freeST_CFILE(struct ST_CFILE * program_cfile){
@@ -542,7 +547,6 @@ boolean attributeRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][M
     int idx=0;
     boolean ret = FALSE;
     struct st_parse * m;
-    struct st_parse * m1;
     int qtt = 0;
     while(qtt<qtt_tk){
         m=tk_val(line_parsed, qtt_tk, pos);        
@@ -582,13 +586,12 @@ boolean dataStorageRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[]
     int idx=0;
     boolean ret = FALSE;
     struct st_parse * m;
-    struct st_parse * m1;
     int qtt = 0;
     while(qtt<qtt_tk){
         m=tk_val(line_parsed, qtt_tk, pos);        
         if(m->size!=6 || strncasecmp(m->token,"static", 6)!=0){ break;}
         m=tk_val(line_parsed, qtt_tk, pos+1);        
-        strcmp(mm[idx],"");
+        strcpy(mm[idx],""); // TODO: test
         if(m->size>0) strncpy(mm[idx],m->token,m->size);
         mm[idx][m->size]='\0';
         idx++;
@@ -608,7 +611,7 @@ boolean dataStorageRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[]
                 if(m->size==1 && strncmp(m->token,"]", 1)==0) {idx++;break;}
             }
         }else{
-            strcmp(mm[idx++],"");
+            strcpy(mm[idx++],"");
         }
         while(p1<qtt_tk){
             m=tk_val(line_parsed, qtt_tk, p1);
@@ -637,7 +640,6 @@ boolean fieldRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_M
     int idx=0;
     boolean ret = FALSE;
     struct st_parse * m;
-    struct st_parse * m1;
     int qtt = 0;
     while(qtt<qtt_tk){
         m=tk_val(line_parsed, qtt_tk, pos);        
@@ -645,7 +647,7 @@ boolean fieldRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX_M
         m=tk_val(line_parsed, qtt_tk, pos+1);        
         if(m->size!=9 || strncasecmp(m->token,"cob_field", 9)!=0){ break;}
         m=tk_val(line_parsed, qtt_tk, pos+2);        
-        strcmp(mm[idx],"");
+        strcpy(mm[idx],"");
         if(m->size>0) strncpy(mm[idx],m->token,m->size);
         mm[idx++][m->size]='\0';
         m=tk_val(line_parsed, qtt_tk, pos+3);        
@@ -810,10 +812,8 @@ int parser(char * file_name, int fileN){
     char fileCobol[1024];
     char fileC[512];
     char basename[512];
-    char buffer[512];
     int performLine = -1;
     struct ST_CFILE program_cfile;
-    int qtd = 0;
     boolean isVersion2_2_or_3_1_1=FALSE;
     char *path = NULL;    
     char tmp[300];
@@ -854,7 +854,6 @@ int parser(char * file_name, int fileN){
         if(!bfileCobolRegex){            
             bfileCobolRegex = fileCobolRegex(line_parsed, qtt_tk, &tmp[0]);
             if(bfileCobolRegex){
-                char * test= realpath(tmp, buffer);
                 if(!isAbsolutPath(tmp)){
                     char tmp1[512];
                     strcpy(tmp1,getFileNameFromPath(tmp));
@@ -1006,6 +1005,7 @@ int parser(char * file_name, int fileN){
         if(lines->line_after!=NULL) lines=lines->line_after;
     }
     freeST_CFILE(&program_cfile);
+    return TRUE;
 }
 
 int hasCobolLine(int lineCobol){
@@ -1131,7 +1131,7 @@ ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVa
     return search;
 }
 
-ST_DebuggerVariable * getShowVariableByC(char * functionName, char * cVar){
+ST_DebuggerVariable * getShowVariableByC(char * cVar){
     ST_DebuggerVariable * search = DebuggerVariable;
     while(search!=NULL){        
         if(search->variablesByCobol!=NULL && strcmp(search->variablesByC, cVar)==0)
