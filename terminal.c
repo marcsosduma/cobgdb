@@ -480,7 +480,7 @@ void get_terminal_size(int *width, int *height) {
 }
 
 #if defined(_WIN32)
-int win_size_verify(int showFile){
+int win_size_verify(int showFile, int *check_size){
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     BOOL isMaximized = IsZoomed(hConsole);

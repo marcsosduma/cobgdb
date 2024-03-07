@@ -313,7 +313,7 @@ void print_color(int textcolor);
 void print_colorBK(const int textcolor, const int backgroundcolor);
 int readchar(char * str, int size);
 int updateStr(char * value, int size, int x, int y);
-int win_size_verify(int showFile);
+int win_size_verify(int showFile, int *check_size);
 int draw_box_first(int posx, int posy, int width, char *text);
 int draw_box_last(int posx, int posy, int width);
 int draw_box_border(int posx, int posy);

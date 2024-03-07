@@ -440,7 +440,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 double end_time = getCurrentTime();
                 double elapsed_time = end_time - check_start;
                 if(elapsed_time>1){
-                    cob.showFile=win_size_verify(cob.showFile);
+                    cob.showFile=win_size_verify(cob.showFile, &check_size);
                     check_start = getCurrentTime();
                 }
             }
