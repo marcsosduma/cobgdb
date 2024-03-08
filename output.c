@@ -190,6 +190,9 @@ int isTerminalInstalled(const char *terminalCommand) {
 
 int copyToClipboard(const char *text) {
     // Check if xclip is available
+    if (getenv("DISPLAY") == NULL) {
+        return 0;
+    }
     if (system("which xclip > /dev/null 2> /dev/null") == 0) {
         FILE *clipboard = popen("xclip -selection clipboard", "w");
         if (clipboard) {
