@@ -9,7 +9,8 @@
 #include <windows.h>
 #endif
 #include "cobgdb.h"
-#define __WITH_TESTS_ 
+#define __WITH_TESTS_
+#define COBGDB_VERSION "1.0" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -85,6 +86,20 @@ void freeBKList()
         free(current);
     }
     BPList = NULL;
+}
+
+void show_version(){
+    printf("COBGDB - GnuCobol GDB Interpreter - version %s\n", COBGDB_VERSION);
+    printf("Copyright (C) 2013 Free Software Foundation, Inc.\n");
+    printf("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n");
+    printf("This is free software: you are free to change and redistribute it.\n");
+    #ifdef __MINGW32__
+    printf("This COBGDB was configured as \"MinGW32\".\n");
+    #else
+    printf("Compiler information not available.\n");
+    #endif
+    printf("For bug reporting instructions, please see:\n");
+    printf("<https://github.com/marcsosduma/cobgdb>.\n");
 }
 
 double getCurrentTime() {
@@ -765,6 +780,8 @@ int main(int argc, char **argv) {
         #else
             printf("Tests not included.\n");
         #endif
+    }else if(argc>1 && strncmp(argv[1],"--version",6)==0){
+        show_version();
     }else{
         // Iterate through the arguments
         boolean withHigh=TRUE;

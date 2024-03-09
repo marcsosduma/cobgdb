@@ -64,3 +64,5 @@ Debugging application output:
 
 ![Screenshot](customer_run.png)
 
+
+The command ```cobgdb --version``` will display the application's version.
