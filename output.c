@@ -190,9 +190,6 @@ int isTerminalInstalled(const char *terminalCommand) {
 
 int copyToClipboard(const char *text) {
     // Check if xclip is available
-    if (getenv("DISPLAY") == NULL) {
-        return 0;
-    }
     if (system("which xclip > /dev/null 2> /dev/null") == 0) {
         FILE *clipboard = popen("xclip -selection clipboard", "w");
         if (clipboard) {
@@ -237,22 +234,27 @@ void message_output(char * sleepVal){
     draw_box_border(10,lin+7);
     draw_box_border(70,lin+7);
     gotoxy(11,lin+7);
-    if(copyToClipboard(alert1)){
-        printBK("(this value is in the clipboard)                           \r",color_green, bkg);
-        print_colorBK(color_yellow, bkg);
-        draw_box_border(10,lin+8);
-        draw_box_border(70,lin+8);
-        gotoxy(11,lin+8);
+    int vsum = 9;
+    if (getenv("DISPLAY") != NULL) {
+        if(copyToClipboard(alert1)){
+            printBK("(this value is in the clipboard)                           \r",color_green, bkg);
+            print_colorBK(color_yellow, bkg);
+            draw_box_border(10,lin+8);
+            draw_box_border(70,lin+8);
+            gotoxy(11,lin+8);
+        }else{
+            printBK("(install xclip to copy this information to the clipboard)  \r",color_green, bkg);
+            print_colorBK(color_yellow, bkg);
+            draw_box_border(10,lin+8);
+            draw_box_border(70,lin+8);
+            gotoxy(11,lin+8);
+        }
     }else{
-        printBK("(install xclip to copy this information to the clipboard)  \r",color_green, bkg);
-        print_colorBK(color_yellow, bkg);
-        draw_box_border(10,lin+8);
-        draw_box_border(70,lin+8);
-        gotoxy(11,lin+8);
+        vsum=8;
     }
     printBK("After that, press a key in this window.                    \r",color_green, bkg);
     print_colorBK(color_yellow, bkg);
-    draw_box_last(10,lin+9,59);
+    draw_box_last(10,lin+vsum,59);
     print_color_reset();
     fflush(stdout);
 }

@@ -483,6 +483,7 @@ int win_size_verify(int showFile, int *check_size){
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     BOOL isMaximized = IsZoomed(hConsole);
+    *check_size=FALSE;
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     //GetLargestConsoleWindowSize(hConsole);
     if (isMaximized==TRUE || csbi.dwSize.X != TERM_WIDTH || csbi.dwSize.Y != TERM_HEIGHT) {
