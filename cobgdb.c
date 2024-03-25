@@ -10,7 +10,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.0" 
+#define COBGDB_VERSION "1.0.1" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -95,6 +95,8 @@ void show_version(){
     printf("This is free software: you are free to change and redistribute it.\n");
     #ifdef __MINGW32__
     printf("This COBGDB was configured as \"MinGW32\".\n");
+    #elif defined(__GNUC__)
+    printf("This COBGDB was compiled with GCC.\n");
     #else
     printf("Compiler information not available.\n");
     #endif
@@ -632,17 +634,14 @@ int debug(int (*sendCommandGdb)(char *)){
                 if(!cob.waitAnswer){ 
                     lb = lines;           
                     for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
-                    int check=hasCobolLine(lb->file_line);
-                    if(check>0){
-                        cob.ctlVar=(cob.ctlVar>10000)?1:cob.ctlVar+1;
-                        cob.waitAnswer = TRUE;
-                        int aux1=cob.debug_line;
-                        int aux2=cob.running;
-                        MI2hoverVariable(sendCommandGdb, lb);
-                        cob.debug_line=aux1;
-                        cob.running=aux2;      
-                        cob.showFile=TRUE;
-                    } 
+                    cob.ctlVar=(cob.ctlVar>10000)?1:cob.ctlVar+1;
+                    cob.waitAnswer = TRUE;
+                    int aux1=cob.debug_line;
+                    int aux2=cob.running;
+                    MI2hoverVariable(sendCommandGdb, lb);
+                    cob.debug_line=aux1;
+                    cob.running=aux2;      
+                    cob.showFile=TRUE;
                 }
                 break;
             case 'v':
