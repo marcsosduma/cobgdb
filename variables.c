@@ -177,6 +177,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
     char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
     if(functionName==NULL) return 0;
     while(input_character!='r'){
+        disableEcho();
         notShow=start_window_line;
         if(var!=NULL){
             gotoxy(1,1);
@@ -205,6 +206,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
             fflush(stdout);
         }
         gotoxy(1,1);
+        enableEcho();
         expand = FALSE;
         var = NULL;
         input_character =  key_press(MOUSE_NORMAL);
@@ -376,6 +378,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     int st=0;
     int lin=line_start;
     while(input_character!='R' && input_character!='r' ){
+        disableEcho();
         while(h!=NULL){
             if(h->type==TP_ALPHA){
                 wcsncpy(wcBuffer, &h->token[st], h->size);
@@ -407,6 +410,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
             h=h->next;
         }
         fflush(stdout);
+        enableEcho();
         if(qtd==0) break;
         input_character =  key_press(MOUSE_NORMAL);
         switch (input_character)
@@ -726,9 +730,16 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
         draw_box_border(wt->posx, posy);
         int to_move=wcslen(wcharString);
         if(to_move>wt->size) to_move=wt->size;
+        #if defined(_WIN32)
         wcsncpy(wcBuffer, wcharString, to_move);
         wcBuffer[to_move]='\0';
         printf("%*ls",wt->size,wcBuffer);
+        #else
+        swprintf(wcBuffer, sizeof(wcBuffer) / sizeof(wcBuffer[0]), L"%*lc", wt->size, L' ');
+        wcsncpy(wcBuffer, wcharString, to_move);
+        wcBuffer[wt->size]='\0';
+        printf("%*ls",wt->size,wcBuffer);
+        #endif
         draw_box_border(wt->posx+wt->size+1, posy++);
         draw_box_last(wt->posx, posy, wt->size);
         wt=wt->next;
@@ -752,6 +763,7 @@ void show_sources(int (*sendCommandGdb)(char *)){
 
     qtd_files = MI2sourceFiles(sendCommandGdb,files);
     while(input_character!=-100){
+        disableEcho();
         gotoxy(1,1);
         int lin = 7;
         int col = 9;
@@ -790,6 +802,7 @@ void show_sources(int (*sendCommandGdb)(char *)){
         print_color_reset();
         fflush(stdout);
         gotoxy(1,1);
+        enableEcho();
         input_character =  key_press(MOUSE_NORMAL);
         switch (input_character)
         {
@@ -886,18 +899,18 @@ void show_help(){
         "    (right-click also functions).",
         "F - File: allows selecting the source file for debugging.",
         "Q - Quite: quits the program.",
-        " ",
+        "  ",
         "COBGDB takes one or more programs with COB/CBL extension as parameters",
         "and runs the GnuCOBOL compiler with the following format:",
         "cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...",
-        " ",
+        "  ",
         "Example:",
         "cobgdb prog.cob subprog1.cob subprog2.cob",
-        " ",
+        "  ",
         "You can run GDB/GDBSERVER remotely using the 'A' key. COBGDD will",
         "prompt you to provide the server and port in the format",
         "server:port  or the PID of the application.",
-        " ",
+        "  ",
         "Example:",
         "localhost:5555",
         "or",
@@ -919,6 +932,7 @@ void show_help(){
 
     qtt_lines=sizeof(text) / sizeof(text[0]);
     while(input_character!=-100){
+        disableEcho();
         gotoxy(1,1);
         int lin = 7;
         int col = 5;
@@ -951,6 +965,7 @@ void show_help(){
         print_color_reset();
         fflush(stdout);
         gotoxy(1,1);
+        enableEcho();
         input_character =  key_press(MOUSE_NORMAL);
         switch (input_character)
         {

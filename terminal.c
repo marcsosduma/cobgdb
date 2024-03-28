@@ -456,7 +456,6 @@ int updateStr(char *value, int size, int x, int y) {
     cursorOFF();
     #if defined(_WIN32)
     WideCharToMultiByte(CP_UTF8, 0, str, -1, value, len_char+1, NULL, NULL);
-    //wcsrtombs(value, (const wchar_t **) &str, len_char+1, NULL);
     #else
     wcsrtombs(value, (const wchar_t **) &str, len_char+1, NULL);
     #endif
