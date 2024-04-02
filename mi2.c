@@ -709,7 +709,7 @@ char* cleanRawValue(const char* rawValue) {
     return cleanedRawValue;
 }
 
-int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue){
+int MI2editVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue){
     int status, tk=0;
     char aux[256];
     char command[512];

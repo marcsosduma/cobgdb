@@ -124,7 +124,7 @@ ST_DebuggerVariable * firstVar(ST_DebuggerVariable * var){
     return var;
 }
 
-int change_var(int (*sendCommandGdb)(char *),int lin){
+int edit_variable(int (*sendCommandGdb)(char *),int lin){
     char aux[500];
     int bkg= color_dark_red;
 
@@ -152,7 +152,7 @@ int change_var(int (*sendCommandGdb)(char *),int lin){
         new_value[0]='\0';
     }
     if(updateStr(new_value,60-strlen(aux), 12+strlen(aux),lin+2)==TRUE){
-        MI2changeVariable(sendCommandGdb, currentVar, new_value);
+        MI2editVariable(sendCommandGdb, currentVar, new_value);
     }
     free(new_value);
     MI2variablesRequest(sendCommandGdb);
@@ -269,7 +269,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
             case 'e':
             case 'E':
                 if(currentVar!=NULL){
-                    change_var(sendCommandGdb, line_pos);
+                    edit_variable(sendCommandGdb, line_pos);
                     var=firstVar(var);
                     lin=0;
                 }
@@ -400,6 +400,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     int qtd = 0;
     int st=0;
     int lin=line_start;
+    fflush(stdin);
     while(input_character!='R' && input_character!='r' ){
         disableEcho();
         while(h!=NULL){
@@ -437,6 +438,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
         enableEcho();
         if(qtd==0) break;
         input_character =  key_press(MOUSE_NORMAL);
+        if(cob.mouseButton==2) input_character='e';
         switch (input_character)
         {
             case VK_UP:
@@ -497,7 +499,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
             case 'E':
                 if(currentVar!=NULL){
                     show_help_var(FALSE);
-                    change_var(sendCommandGdb, line_start);
+                    edit_variable(sendCommandGdb, line_start);
                     h = high;
                     qtd = 0; st=0; lin=line_start;
                 }

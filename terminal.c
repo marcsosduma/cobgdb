@@ -186,6 +186,7 @@ void mouseCobHover(int col, int line){
 
 int mouseCobAction(int col, int line, int type){
     int action=-1;
+    cob.mouseButton = 1;
     switch (cob.mouse){
             case 1:
                 action = VK_PGUP;
@@ -231,6 +232,7 @@ int mouseCobAction(int col, int line, int type){
 
 int mouseCobRigthAction(int col, int line){
     int action= 'H';
+    cob.mouseButton=2;
     if(line>0 && line<22){
         cob.line_pos = line-1;
         cob.showFile = TRUE;
@@ -274,6 +276,7 @@ int key_press(int type){
     DWORD mode = ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT;
     MOUSE_EVENT_RECORD mer;
     int virtualKeyCode = 0;
+    cob.mouseButton=0;
 
     SetConsoleMode(hIn, mode);
     if (PeekConsoleInput(hIn, &inp, 1, &numEvents) && numEvents > 0) {
@@ -302,15 +305,13 @@ int key_press(int type){
                     WCHAR key = inp.Event.KeyEvent.uChar.UnicodeChar;
                     FlushConsoleInputBuffer(hIn);
                     return (int)key;
-            } else if((virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode)!=0){
+            } else if (inp.Event.KeyEvent.bKeyDown) { 
+                virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
                 if(virtualKeyCode==VK_PGUP || virtualKeyCode==VK_PGDOWN || virtualKeyCode==VK_UP ||
                    virtualKeyCode==VK_DOWN || virtualKeyCode==VK_RIGHT || virtualKeyCode==VK_LEFT){
-                    ReadConsoleInputW( hIn, &inp, 1, &numEvents); 
-                    //FlushConsoleInputBuffer(hIn);
                     return virtualKeyCode;
                 }
                 if (virtualKeyCode == VK_DELETE) {
-                    ReadConsoleInput( hIn, &inp, 1, &numEvents); 
                     return VK_DEL;
                 }
                 FlushConsoleInputBuffer(hIn);
@@ -322,6 +323,7 @@ int key_press(int type){
     return 0;      
 #elif defined(__linux__)
   enableRawMode();
+  cob.mouseButton=0;
   int ch_lin= readKeyLinux(type);
   disableRawMode();
   return ch_lin;

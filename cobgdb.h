@@ -110,7 +110,8 @@ struct st_cobgdb {
     double isStepOver;
     int mouse;
     int mouseX;
-    int mouseY;	
+    int mouseY;
+    int mouseButton;	
     int line_pos;
     int input_character;
     int entry;
@@ -355,7 +356,7 @@ int MI2stepOut(int (*sendCommandGdb)(char *));
 int MI2variablesRequest(int (*sendCommandGdb)(char *));
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame);
 int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * lines );
-int MI2changeVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue);
+int MI2editVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue);
 char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *));
 int MI2getStack(int (*sendCommandGdb)(char *), int thread);
 int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]);
