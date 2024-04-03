@@ -400,6 +400,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     int qtd = 0;
     int st=0;
     int lin=line_start;
+    disableEcho();
     fflush(stdin);
     while(input_character!='R' && input_character!='r' ){
         disableEcho();

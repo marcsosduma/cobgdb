@@ -10,7 +10,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.1.1" 
+#define COBGDB_VERSION "1.1.2" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -427,6 +427,17 @@ int set_first_break(int (*sendCommandGdb)(char *)){
     return ret;
 }
 
+void check_screen_size(double * check_start, int * check_size){
+    if(*check_size<3){
+        double end_time = getCurrentTime();
+        double elapsed_time = end_time - *check_start;
+        if(elapsed_time>1){
+            cob.showFile=win_size_verify(cob.showFile, check_size);
+            *check_start = getCurrentTime();
+        }
+    }
+}    
+
 int debug(int (*sendCommandGdb)(char *)){
     int qtd_page = 0;
     int dblAux = -1;
@@ -447,22 +458,7 @@ int debug(int (*sendCommandGdb)(char *)){
     #endif
     lines = set_window_pos(&cob.line_pos);
     Lines * line_debug=NULL;
-    while(cob.lines!=NULL && !bstop){
-        
-        cob.input_character = -1;
-        if(cob.waitAnswer && cob.isStepOver<0){
-            cob.input_character = key_press(MOUSE_EXT);
-        }else{
-            if(check_size<3){
-                double end_time = getCurrentTime();
-                double elapsed_time = end_time - check_start;
-                if(elapsed_time>1){
-                    cob.showFile=win_size_verify(cob.showFile, &check_size);
-                    check_start = getCurrentTime();
-                }
-            }
-            if(cob.isStepOver<0) cob.input_character = key_press(MOUSE_EXT);
-        }
+    while(cob.lines!=NULL && !bstop){       
         if(cob.showFile){
             line_debug=NULL;
             disableEcho();
@@ -476,7 +472,14 @@ int debug(int (*sendCommandGdb)(char *)){
             print_color_reset();
             fflush(stdout);
             cob.showFile=FALSE;
+            show_info();
             enableEcho();
+            continue;
+        }
+        cob.input_character = -1;
+        if(cob.isStepOver<0){
+            cob.input_character = key_press(MOUSE_EXT);
+            if(!cob.waitAnswer) check_screen_size(&check_start, &check_size);
         }
         switch (cob.input_character)
         {
@@ -562,6 +565,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 break;
             case 'd':
+            case 'D':
                 if(!cob.waitAnswer){ 
                     lb = lines;           
                     for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
@@ -817,7 +821,6 @@ int main(int argc, char **argv) {
                 snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
                 strcpy(fileCGroup[nfile],nameCFile);
                 // Cobol File
-                //strcpy(fileCobGroup[nfile],argv[i]); 
                 realpath(argv[i], fileCobGroup[nfile]);
                 normalizePath(fileCobGroup[nfile]);
                 nfile++;

@@ -382,6 +382,8 @@ int MI2getStack(int (*sendCommandGdb)(char *), int thread){
 }
 
 int MI2stepOver(int (*sendCommandGdb)(char *)){
+    int status;
+
     strcpy(lastComand,"exec-next\n"); 
     char command[200];
     if(subroutine>0){
@@ -389,6 +391,10 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
         sendCommandGdb(command);
     }else{
         sendCommandGdb(lastComand);
+        do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, -1, &status);
+        }while(status==GDB_RUNNING);
     }
     cob.waitAnswer = TRUE;
     cob.showFile = TRUE;
