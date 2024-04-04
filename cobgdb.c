@@ -469,10 +469,10 @@ int debug(int (*sendCommandGdb)(char *)){
             if(line_debug!=NULL) var_watching(line_debug, sendCommandGdb, cob.waitAnswer, cob.line_pos);
             cob.debug_line=aux1;
             cob.running=aux2;
-            print_color_reset();
-            fflush(stdout);
             cob.showFile=FALSE;
             show_info();
+            print_color_reset();
+            fflush(stdout);
             enableEcho();
             continue;
         }
