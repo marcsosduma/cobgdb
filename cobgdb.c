@@ -469,10 +469,10 @@ int debug(int (*sendCommandGdb)(char *)){
             if(line_debug!=NULL) var_watching(line_debug, sendCommandGdb, cob.waitAnswer, cob.line_pos);
             cob.debug_line=aux1;
             cob.running=aux2;
-            cob.showFile=FALSE;
-            show_info();
             print_color_reset();
             fflush(stdout);
+            cob.showFile=FALSE;
+            show_info();
             enableEcho();
             continue;
         }
@@ -602,9 +602,11 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 'n':
             case 'N':
+                dblAux= cob.debug_line;
                 if(!cob.waitAnswer){
                     MI2stepOver(sendCommandGdb);
                 }
+                cob.debug_line = dblAux;
                 break;
             case 'g':
             case 'G':

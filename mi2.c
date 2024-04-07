@@ -389,16 +389,19 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
     if(subroutine>0){
         sprintf(command,"exec-until %d\n", subroutine); 
         sendCommandGdb(command);
+        cob.waitAnswer = TRUE;
+        cob.showFile = TRUE;
+        cob.running = TRUE;
     }else{
         sendCommandGdb(lastComand);
+        cob.waitAnswer = TRUE;
+        cob.showFile = TRUE;
+        cob.running = TRUE;
         do{
             sendCommandGdb("");
             MI2onOuput(sendCommandGdb, -1, &status);
         }while(status==GDB_RUNNING);
     }
-    cob.waitAnswer = TRUE;
-    cob.showFile = TRUE;
-    cob.running = TRUE;
     return TRUE;
 }
 

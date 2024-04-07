@@ -965,8 +965,8 @@ void show_help(){
     };
 
     qtt_lines=sizeof(text) / sizeof(text[0]);
+    disableEcho();
     while(input_character!=-100){
-        disableEcho();
         gotoxy(1,1);
         int lin = 7;
         int col = 5;
@@ -999,7 +999,6 @@ void show_help(){
         print_color_reset();
         fflush(stdout);
         gotoxy(1,1);
-        enableEcho();
         input_character =  key_press(MOUSE_NORMAL);
         switch (input_character)
         {
@@ -1054,4 +1053,5 @@ void show_help(){
         }
         //gotoxy(1,23); if(input_character>0) printf("%d\n", input_character);
     }
+    enableEcho();
 }
