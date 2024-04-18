@@ -13,6 +13,8 @@
 #include "cobgdb.h"
 //#define DEBUG 0
 
+extern int VIEW_LINES;
+extern int VIEW_COLS;
 extern struct st_cobgdb cob;
 extern ST_Line * LineDebug;
 extern char * gdbOutput;

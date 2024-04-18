@@ -8,6 +8,8 @@
 
 #define BUFFER 512
 extern char * gdbOutput;
+extern int VIEW_LINES;
+extern int VIEW_COLS;
 
 // run system command and read output
 char *execCommand(const char *cmd) {
@@ -205,56 +207,58 @@ int copyToClipboard(const char *text) {
 void message_output(char * sleepVal){
     char alert1[80];
     char aux[100];
-    int lin=8;
+    int lin=(VIEW_LINES/2-6);
+    int col=(VIEW_COLS-60)/2;
     int bkg= color_dark_red;
+    
     print_colorBK(color_yellow, bkg);
-    draw_box_first(10,lin+2,59,"COBGDB OUTPUT");
-    draw_box_border(10,lin+3);
-    draw_box_border(70,lin+3);
-    gotoxy(11,lin+3);
+    draw_box_first(col,lin+2,59,"COBGDB OUTPUT");
+    draw_box_border(col,lin+3);
+    draw_box_border(col+60,lin+3);
+    gotoxy(col+1,lin+3);
     printBK("COBGDB will open a terminal to  perform  the  application's\r",color_green, bkg);
     print_colorBK(color_yellow, bkg);
-    draw_box_border(10,lin+4);
-    draw_box_border(70,lin+4);
-    gotoxy(11,lin+4);
+    draw_box_border(col,lin+4);
+    draw_box_border(col+60,lin+4);
+    gotoxy(col+1,lin+4);
     printBK("output. If you want  to  use  another  terminal,  open  the\r",color_green, bkg);
     print_colorBK(color_yellow, bkg);
-    draw_box_border(10,lin+5);
-    draw_box_border(70,lin+5);
-    gotoxy(11,lin+5);
+    draw_box_border(col,lin+5);
+    draw_box_border(col+60,lin+5);
+    gotoxy(col+1,lin+5);
     printBK("terminal  and type the following command:                  \r",color_green, bkg);
     sprintf(alert1,"sleep %s;", sleepVal);
     sprintf(aux,"%-59s\r",alert1);
     print_colorBK(color_yellow, bkg);
-    draw_box_border(10,lin+6);
-    draw_box_border(70,lin+6);
-    gotoxy(11,lin+6);
+    draw_box_border(col,lin+6);
+    draw_box_border(col+60,lin+6);
+    gotoxy(col+1,lin+6);
     printBK(aux,color_white, bkg);
     print_colorBK(color_yellow, bkg);
-    draw_box_border(10,lin+7);
-    draw_box_border(70,lin+7);
-    gotoxy(11,lin+7);
+    draw_box_border(col,lin+7);
+    draw_box_border(col+60,lin+7);
+    gotoxy(col+1,lin+7);
     int vsum = 9;
     if (getenv("DISPLAY") != NULL) {
         if(copyToClipboard(alert1)){
             printBK("(this value is in the clipboard)                           \r",color_green, bkg);
             print_colorBK(color_yellow, bkg);
-            draw_box_border(10,lin+8);
-            draw_box_border(70,lin+8);
-            gotoxy(11,lin+8);
+            draw_box_border(col,lin+8);
+            draw_box_border(col+60, lin+8);
+            gotoxy(col+1,lin+8);
         }else{
             printBK("(install xclip to copy this information to the clipboard)  \r",color_green, bkg);
             print_colorBK(color_yellow, bkg);
-            draw_box_border(10,lin+8);
-            draw_box_border(70,lin+8);
-            gotoxy(11,lin+8);
+            draw_box_border(col,lin+8);
+            draw_box_border(col+60,lin+8);
+            gotoxy(col+1,lin+8);
         }
     }else{
         vsum=8;
     }
     printBK("After that, press a key in this window.                    \r",color_green, bkg);
     print_colorBK(color_yellow, bkg);
-    draw_box_last(10,lin+vsum,59);
+    draw_box_last(col,lin+vsum,59);
     print_color_reset();
     fflush(stdout);
 }

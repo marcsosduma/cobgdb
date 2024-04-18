@@ -55,8 +55,12 @@ int mouseCobAction(int col, int line, int type);
 int mouseCobRigthAction(int col, int line);
 void mouseCobHover(int col, int line);
 
-int TERM_WIDTH = VIEW_COLS;
-int TERM_HEIGHT= VIEW_LINES;
+extern int VIEW_LINES;
+extern int VIEW_COLS;
+
+
+int TERM_WIDTH = 132;
+int TERM_HEIGHT= 48;
 
 #if defined(__linux__)
 #define TM_ESCAPE '\x1b'
@@ -173,15 +177,15 @@ int readKeyLinux(int type) {
 
 void mouseCobHover(int col, int line){
     cob.mouse = 0;
-    if(col==79 && line<11) cob.mouse=1;
-    if(col==79 && line>=11) cob.mouse=2;
-    if(col<cob.num_dig+2 && line>0 && line<22) cob.mouse=3;
-    if(col==67 && line==0) cob.mouse=10;
-    if(col==69 && line==0) cob.mouse=20;
-    if(col==71 && line==0) cob.mouse=30;
-    if(col==73 && line==0) cob.mouse=40;
-    if(col==75 && line==0) cob.mouse=50;    
-    if(col==77 && line==0) cob.mouse=60;    
+    if(col==VIEW_COLS-1  && line<VIEW_LINES/2-1) cob.mouse=1;
+    if(col==VIEW_COLS-1  && line>=VIEW_LINES/2-1) cob.mouse=2;
+    if(col<cob.num_dig+2 && line>0 && line<VIEW_LINES-2) cob.mouse=3;
+    if(col==VIEW_COLS-13 && line==0) cob.mouse=10;
+    if(col==VIEW_COLS-11 && line==0) cob.mouse=20;
+    if(col==VIEW_COLS-9  && line==0) cob.mouse=30;
+    if(col==VIEW_COLS-7  && line==0) cob.mouse=40;
+    if(col==VIEW_COLS-5  && line==0) cob.mouse=50;    
+    if(col==VIEW_COLS-3  && line==0) cob.mouse=60;    
 }
 
 int mouseCobAction(int col, int line, int type){
@@ -216,7 +220,7 @@ int mouseCobAction(int col, int line, int type){
                 action = -1;
                 break;
     }
-    if(action == -1 && line>0 && line<22){
+    if(action == -1 && line>0 && line<VIEW_LINES-2){
         if(type>1){
             cob.line_pos = line-1;
             cob.showFile = TRUE;
@@ -233,10 +237,10 @@ int mouseCobAction(int col, int line, int type){
 int mouseCobRigthAction(int col, int line){
     int action= 'H';
     cob.mouseButton=2;
-    if(line>0 && line<22){
+    if(line>0 && line<VIEW_LINES-2){
         cob.line_pos = line-1;
         cob.showFile = TRUE;
-        if(col>1 && col<80){
+        if(col>1 && col<VIEW_COLS){
             action = 'H';
         }
     }
@@ -535,19 +539,34 @@ void set_terminal_size(int width, int height){
     TERM_WIDTH = width;
     TERM_HEIGHT = height;
 #if defined(_WIN32)
-    HANDLE hConsole = GetStdHandle( STD_OUTPUT_HANDLE );
-    SetForegroundWindow(hConsole);
-    SetConsoleSize(hConsole, width, height);
-    SMALL_RECT sr = {0,0,TERM_WIDTH,TERM_HEIGHT};
-    SetConsoleWindowInfo(hConsole, TRUE, &sr);
-    SetForegroundWindow(GetConsoleWindow());
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(hConsole, &csbi);
-    COORD bufferSize = { csbi.dwSize.X, csbi.srWindow.Bottom + 1 };
-    SetConsoleScreenBufferSize(hConsole, bufferSize);
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    BOOL isMaximized = IsZoomed(hConsole);
+    if (hConsole != INVALID_HANDLE_VALUE) {
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        if (GetConsoleScreenBufferInfo(hConsole, &csbi)) {
+            if (isMaximized) {
+                ShowWindow(hConsole, SW_RESTORE); 
+            }
+            SetConsoleSize(hConsole, TERM_WIDTH, TERM_HEIGHT);
+            COORD bufferSize = { width, height };
+            if (SetConsoleScreenBufferSize(hConsole, bufferSize)) {
+                SMALL_RECT sr;
+                sr.Left = 0;
+                sr.Top = 0;
+                sr.Right = width - 1;
+                sr.Bottom = height - 1;
+                SetConsoleWindowInfo(hConsole, TRUE, &sr);
+                GetConsoleScreenBufferInfo(hConsole, &csbi);
+                COORD bufferSize = { csbi.dwSize.X, csbi.srWindow.Bottom + 1 };
+                SetConsoleScreenBufferSize(hConsole, bufferSize);
+            }
+        }
+    }
 #elif defined(__linux__)
     struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
+        return;
+    }
     if (w.ws_col != width || w.ws_row != height) {
         w.ws_col = width;
         w.ws_row = height;
@@ -557,6 +576,9 @@ void set_terminal_size(int width, int height){
         printf("\033[0;0r");
         fflush(stdout);
         tcflush(STDIN_FILENO, TCIFLUSH);
+        //char resize_cmd[50];
+        //snprintf(resize_cmd, sizeof(resize_cmd), "resize -s %dx%d > /dev/null 2>&1", height, width);
+        //system(resize_cmd);
     }
 #endif // Windows/Linux
 }

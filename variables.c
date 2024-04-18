@@ -15,6 +15,8 @@
 extern struct st_cobgdb cob;
 extern ST_DebuggerVariable * DebuggerVariable;
 
+extern int VIEW_LINES;
+extern int VIEW_COLS;
 extern int color_frame;
 extern ST_Watch * Watching;
 int showOne = FALSE;
@@ -24,12 +26,12 @@ ST_DebuggerVariable * currentVar;
 
 int show_opt_var(){
     char * opt = " COBGDB - (R)return (ENTER)expand/contract (E)edit var";
-    char aux[100];
-    sprintf(aux,"%-80s\r", opt);
+    char aux[150];
+    sprintf(aux,"%-*s\r",VIEW_COLS, opt);
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
     gotoxy(1,VIEW_LINES-1);
-    sprintf(aux,"%80s\r"," ");
+    sprintf(aux,"%*s\r",VIEW_COLS," ");
     printBK(aux, color_frame, color_frame);
     return TRUE;
 }
@@ -47,7 +49,7 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
             var->ctlVar=cob.ctlVar;
         }
         char varcobol[100];
-        int linW=78;
+        int linW=VIEW_COLS-2;
         showOne=TRUE;
         if(expand && line_pos==lin){
             if(var->show=='+')
@@ -199,7 +201,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 print_colorBK(color_black, color_frame); printf(" ");
                 bkg=(line_pos==lin)?color_gray:color_black;
                 print_colorBK(color_black, bkg);
-                printf("%78s"," ");
+                printf("%*s",VIEW_COLS-2," ");
                 print_colorBK(color_black, color_frame); printf(" ");
                 lin++;
             }
@@ -370,9 +372,9 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
 
 int show_help_var(int show){
     #if defined(_WIN32)
-    int len = 79;
+    int len = VIEW_COLS-1;
     #else
-    int len=80;
+    int len=VIEW_COLS;
     #endif
     gotoxy(1,VIEW_LINES);
     print_colorBK(color_green, color_black);
@@ -909,6 +911,7 @@ void show_help(){
     int line_pos=0;
     int qtt_lines=0;
     int start_file=0;
+    int lmax=VIEW_LINES/2-2;
     //int file_sel = -1;
     boolean show = TRUE;
 
@@ -932,6 +935,7 @@ void show_help(){
         "H - Show: shows the values of variables for the selected line",
         "    (right-click also functions).",
         "F - File: allows selecting the source file for debugging.",
+        "W - Window Size: switches between window sizes: 80x24 and 132x34.",
         "Q - Quite: quits the program.",
         "  ",
         "COBGDB takes one or more programs with COB/CBL extension as parameters",
@@ -956,7 +960,7 @@ void show_help(){
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white, 
-        color_white, color_white, color_white, color_white, 
+        color_white, color_white, color_white, color_white, color_white,
         color_yellow,
         color_white, color_white, 
         color_yellow,
@@ -969,7 +973,7 @@ void show_help(){
     while(input_character!=-100){
         gotoxy(1,1);
         int lin = 7;
-        int col = 5;
+        int col = (VIEW_COLS-70)/2;
         int size = 70;
         if(show){
             gotoxy(col,lin);
@@ -977,7 +981,7 @@ void show_help(){
             draw_box_first(col,lin++,size,"COBGDB HELP");
             int f = start_file;
             int pos=0;
-            while(pos<10){
+            while(pos<lmax){
                 print_colorBK(frg, bkgr);
                 draw_box_border(col, lin);
                 if(f<qtt_lines){
@@ -1011,7 +1015,7 @@ void show_help(){
                 show = TRUE;
                 break;
             case VK_DOWN: 
-                if(line_pos<9){
+                if(line_pos<(lmax-1)){
                     line_pos++;
                 }else{
                     start_file=(start_file<qtt_lines)?start_file+1:qtt_lines; 
@@ -1022,20 +1026,20 @@ void show_help(){
                 if(line_pos>0){
                     line_pos= 0;
                 }else{
-                    line_pos-= 9;
+                    line_pos-= (lmax-1);
                     line_pos=(line_pos<0)?0:line_pos;
-                    start_file-=10;
+                    start_file-=lmax;
                     start_file = (start_file>0)?start_file:0;
                 }
                 show = TRUE;
                 break;
             case VK_PGDOWN: 
-                if(line_pos<9){
-                    line_pos=9;
+                if(line_pos<(lmax-1)){
+                    line_pos=(lmax-1);
                 }else{
-                    line_pos+=9;
-                    if(line_pos>9) line_pos=9;
-                    start_file+=10;
+                    line_pos+=(lmax-1);
+                    if(line_pos>(lmax-1)) line_pos=(lmax-1);
+                    start_file+=lmax;
                     start_file = (start_file>qtt_lines)?qtt_lines:start_file;
                 }
                 show = TRUE;

@@ -49,8 +49,6 @@
 #define color_white     15
 #include <wchar.h>
 #include <time.h>
-#define VIEW_LINES 24
-#define VIEW_COLS  80
 #define MAX_MATCH_LENGTH 512
 
 struct st_highlt {

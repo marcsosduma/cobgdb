@@ -25,8 +25,11 @@ struct st_cobgdb cob ={
     .entry = -1
 };
 
+int VIEW_COLS=  80;
+int VIEW_LINES= 24;
+
 int start_window_line = 0;
-int qtd_window_line = VIEW_LINES-2;
+int qtd_window_line = 22;
 int start_line_x = 0;
 
 char * gdbOutput = NULL;
@@ -216,7 +219,7 @@ Lines * set_window_pos(int * line_pos){
 
 int show_button(){
     print_colorBK(color_blue, color_cyan);
-    gotoxy(66,1);
+    gotoxy(VIEW_COLS-14,1);
     draw_utf8_text("\u2592 ");
     print_colorBK((cob.mouse==10)?color_red:color_blue, color_cyan);
     draw_utf8_text("\u25BA ");
@@ -236,18 +239,18 @@ int show_button(){
 
 int show_opt(){
     char * opt = " COBGDB                  GnuCOBOL GDB Interpreter";
-    char aux[100];
-    snprintf(aux,82,"%-65.65s\r", opt);
+    char aux[200];
+    snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-15, VIEW_COLS-15, opt);
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
     if(cob.mouse>9) show_button();
-    gotoxy(80,1);
+    gotoxy(VIEW_COLS,1);
     print_colorBK(color_light_gray, color_frame);
     draw_utf8_text("\u2191");
     gotoxy(1,VIEW_LINES-1);
-    snprintf(aux,82,"%-79.79s\r",cob.file_cobol);
+    snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-1,VIEW_COLS-1,cob.file_cobol);
     printBK(aux, color_light_gray, color_frame);
-    gotoxy(80,VIEW_LINES-1);
+    gotoxy(VIEW_COLS,VIEW_LINES-1);
     print_colorBK(color_light_gray, color_frame);
     draw_utf8_text("\u2193");
     return TRUE;
@@ -255,9 +258,9 @@ int show_opt(){
 
 int show_info(){
     #if defined(_WIN32)
-    int len = 79;
+    int len = VIEW_COLS-1;
     #else
-    int len=80;
+    int len=VIEW_COLS;
     #endif
     gotoxy(1,VIEW_LINES);
     if(cob.mouse==0){
@@ -309,14 +312,14 @@ int show_info(){
     }
     gotoxy(1,VIEW_LINES);
     show_button();        
-    gotoxy(1,24);
+    gotoxy(1,VIEW_LINES);
     if(cob.showFile==FALSE) fflush(stdout);
     return TRUE;
 }
 
 int show_file(Lines * lines, int line_pos, Lines ** line_debug){
     Lines * show_line=lines;
-    int NUM_TXT=76-cob.num_dig;
+    int NUM_TXT=VIEW_COLS-4-cob.num_dig;
     
     gotoxy(1,1);
     show_opt();
@@ -363,7 +366,7 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
                     nm=NUM_TXT-qtdMove;
                     if(nm>0) printf("%*s", nm, " ");
                 }else{
-                    printf("%73s", " ");
+                    printf("%*s", VIEW_COLS-7, " ");
                 }
                 free(wcharString);
             }else{
@@ -379,7 +382,7 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
             gotoxy(1,i+2);
             print_no_resetBK(" ",color_white, color_frame);
             print_colorBK(color_white,color_black);
-            printf("%78s"," ");
+            printf("%*s",VIEW_COLS-2," ");
             print_no_resetBK(" \r",color_white, color_frame);
         }        
     }
@@ -398,6 +401,7 @@ int initTerminal(){
     get_terminal_size(&width, &height);
     printf("width= %d", width);
     printf(", height= %d\n", height);
+    qtd_window_line = height-2;
     return TRUE;
 }
 
@@ -688,6 +692,20 @@ int debug(int (*sendCommandGdb)(char *)){
                     cob.showFile=TRUE;
                     MI2getStack(sendCommandGdb,1);
                 }
+                break;
+            case 'W':
+            case 'w':
+                if(VIEW_COLS==80){
+                    VIEW_COLS=132;
+                    VIEW_LINES=34;
+                }else{
+                    VIEW_COLS=80;
+                    VIEW_LINES=24;
+                }
+                freeWatchingList();
+                clearScreen();
+                set_terminal_size(VIEW_COLS, VIEW_LINES);
+                cob.showFile = TRUE;
                 break;
             default: 
                 if(cob.waitAnswer){
