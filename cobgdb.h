@@ -82,6 +82,7 @@ struct ST_Line {
     int lineC;
     int endPerformLine;
     int isCall;
+    int isEntry;
     int lineProgramExit;
     struct ST_Line * next;
     struct ST_Line * before;
@@ -112,7 +113,6 @@ struct st_cobgdb {
     int mouseButton;	
     int line_pos;
     int input_character;
-    int entry;
 };
 
 // ATTRIBUTTES -- START

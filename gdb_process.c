@@ -99,7 +99,6 @@ int start_gdb(char * name, char * cwd)
    while(strlen(gdbSet[idx])>=1){
         sendCommandGdb(gdbSet[idx++]);
    }
-   cob.waitAnswer=1;
    debug(&sendCommandGdb );
    printf("\n->End of parent execution.\n");
    return 0;
@@ -174,7 +173,6 @@ int sendCommandGdb(char * command)
          strstr(command,"-file-exec-and-symbols")!=NULL){
          strcpy(chBuf,command);
          mustReturn=0;
-         cob.waitAnswer = 1;
       }else{
          sprintf(chBuf,"%d-%s", token++, command);
       }
@@ -249,7 +247,6 @@ int sendCommandGdb(char * command)
          strstr(command,"-file-exec-and-symbols")!=NULL){
          mustReturn=0;
          strcpy(chBuf,command);
-         cob.waitAnswer = 1;
       }else{
          sprintf(chBuf,"%d-%s", token++, command);
       }
@@ -359,7 +356,6 @@ int start_gdb(char * name, char * cwd){
         while(strlen(gdbSet[idx])>=1){
            sendCommandGdb(gdbSet[idx++]);
         }        
-        cob.waitAnswer=1;
         debug(&sendCommandGdb );
         printf("\n->End of parent execution.\n");
         waitpid(pid, NULL, 1);

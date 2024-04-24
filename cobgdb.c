@@ -13,7 +13,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.1.3" 
+#define COBGDB_VERSION "1.2" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -25,7 +25,6 @@ struct st_cobgdb cob ={
     .isStepOver = -1,
     .mouse = 0,
     .num_dig = 4,
-    .entry = -1
 };
 
 int VIEW_COLS=  80;
@@ -421,10 +420,10 @@ int initTerminal(){
 
 int set_first_break(int (*sendCommandGdb)(char *)){
     ST_Line * debug = LineDebug;
-    int ret = 0;
+    int ret = 1;
     
     while(debug!=NULL){
-        if(debug->lineCobol>=cob.entry) break;
+        if(debug->isEntry==TRUE && strcasecmp(debug->fileCobol,cob.file_cobol)==0) break;
         debug=debug->next;
     }
     if(debug!=NULL){

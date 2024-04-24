@@ -34,7 +34,6 @@ static char cleanedFile[256];
 static char version[100]="";
 char functionName[512];
 
-
 // File C structure
 struct st_clines{
 	char * line;
@@ -279,7 +278,7 @@ ST_DebuggerVariable * GetVariableByC(char * key){
 }
 // DebuggerVariable - END
 
-int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, int lineProgramExit, int isCall){
+int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, int lineProgramExit, int isCall, int varEntry){
     ST_Line* new_line = (ST_Line*) malloc(sizeof(ST_Line));
     new_line->next=NULL;
     new_line->before=NULL;
@@ -292,6 +291,10 @@ int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, i
     new_line->lineC = lineC;
     new_line->endPerformLine = -1;
     new_line->isCall = isCall;
+    if(lineCobol==varEntry && varEntry>=0)
+        new_line->isEntry = TRUE;
+    else
+        new_line->isEntry = FALSE;
     new_line->lineProgramExit=lineProgramExit;
     if(LineDebug==NULL){
          LineDebug=new_line;
@@ -450,7 +453,7 @@ boolean fileCobolRegex(struct st_parse line_parsed[100], int qtt_tk, char * file
 }
 
 //char procedureRegex[] = "/\\*\\sLine:\\s([0-9]+)(\\s+:\\sEntry\\s)?";
-boolean procedureRegex(struct st_parse line_parsed[100], int qtt_tk, char * numberLine, boolean * isPerform){
+boolean procedureRegex(struct st_parse line_parsed[100], int qtt_tk, char * numberLine, boolean * isPerform, int * varEntry){
     int pos=0;
     boolean ret = FALSE;
     struct st_parse * m;
@@ -468,13 +471,13 @@ boolean procedureRegex(struct st_parse line_parsed[100], int qtt_tk, char * numb
         m=tk_val(line_parsed, qtt_tk, pos+4);        
         if(m->size!=1 || strncmp(m->token,":", 1)!=0){ break;}
         m=tk_val(line_parsed, qtt_tk, pos+5);        
-        if(m->size==5 && strncasecmp(m->token,"Entry", 5)==0){ 
-            if(cob.entry<0){
+        if(m->size==5 && strncasecmp(m->token,"Entry", 5)==0){
+            if(*varEntry<0){
                 char temp[50];
                 strncpy(temp, m1->token, m1->size);
                 temp[m1->size]='\0';
-                cob.entry = atoi(temp);
-            }
+                *varEntry = atoi(temp);
+            } 
             break;
         }
         strncpy(numberLine, m1->token, m1->size);
@@ -818,6 +821,7 @@ int parser(char * file_name, int fileN){
     char *path = NULL;    
     char tmp[300];
     int lineProgramExit = 1;
+    int varEntry=-1;
 
     normalizePath(file_name);
 
@@ -890,7 +894,7 @@ int parser(char * file_name, int fileN){
         }
 
         boolean isPerform=FALSE;
-        boolean bprocedureRegex = procedureRegex(line_parsed, qtt_tk, &tmp[0], &isPerform);
+        boolean bprocedureRegex = procedureRegex(line_parsed, qtt_tk, &tmp[0], &isPerform, &varEntry);
         if(bprocedureRegex){
                 int lineCobol = atoi(tmp);
                 if(LineAtu!=NULL && fileNameCompare(LineAtu->fileCobol, fileCobol)==0 && performLine==-2 && LineAtu->lineCobol == lineCobol) {
@@ -901,7 +905,7 @@ int parser(char * file_name, int fileN){
                 else
                     performLine = -1;
                 boolean isCall= call_FindRegex(lines->line);
-                PushLine(fileCobol, lineCobol, fileC, lineNumber + 2, lineProgramExit, isCall);
+                PushLine(fileCobol, lineCobol, fileC, lineNumber + 2, lineProgramExit, isCall, varEntry);
         }
 
         // fix new codegen - new

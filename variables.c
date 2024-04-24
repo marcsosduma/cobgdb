@@ -906,6 +906,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
                 if(file_sel<0) break;
                 freeFile();
                 strcpy(cob.file_cobol, files[file_sel]);
+                strcpy(cob.first_file, cob.file_cobol);            
                 loadfile(files[file_sel]);
                 highlightParse();
                 input_character=-100;
