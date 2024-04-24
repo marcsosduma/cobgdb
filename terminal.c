@@ -535,6 +535,16 @@ int win_size_verify(int showFile, int *check_size){
 #endif
 
 
+#if defined(_WIN32)
+void DisableMaxWindow(){
+    HWND hwnd = GetConsoleWindow();
+    DWORD style = GetWindowLong(hwnd, GWL_STYLE);
+    style &= ~WS_MAXIMIZEBOX;
+    SetWindowLong(hwnd, GWL_STYLE, style);
+    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOSIZE|SWP_NOMOVE|SWP_FRAMECHANGED);
+}
+#endif
+
 void set_terminal_size(int width, int height){
     TERM_WIDTH = width;
     TERM_HEIGHT = height;
@@ -958,6 +968,7 @@ int showCobMessage(char * message, int type){
     print_colorBK(color_white, bkg);
     draw_box_last(col,lin+1,size+1);
     print_colorBK(color_green, bkg);
+    print_color_reset();
     fflush(stdout);
     if(type==3){
         key = -1;
@@ -973,7 +984,7 @@ int showCobMessage(char * message, int type){
         while (key_press(MOUSE_NORMAL) <= 1) {
             clock_t end_time = clock();
             double elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
-            if (elapsed_time > 1) {
+            if (elapsed_time > 3) {
                 break;
             }
         }

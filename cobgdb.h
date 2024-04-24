@@ -280,6 +280,7 @@ int loadfile(char * nameCobFile);
 int freeFile();
 int isCommandInstalled(const char *command);
 double getCurrentTime();
+int show_opt();
 // read_file.c
 int readCodFile(struct st_cobgdb * program);
 void GetFileParts(char *path, char *path_, char *base_, char *ext_);
@@ -321,6 +322,9 @@ int showCobMessage(char * message, int type);
 void disableEcho();
 void enableEcho();
 void freeInputBuffer();
+#if defined(_WIN32)
+void DisableMaxWindow();
+#endif
 // parser.c
 void SourceMap(char fileGroup[][512]);
 int parser(char * file_name, int fileN);
@@ -367,7 +371,7 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *), int bkg);
 int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));  
 void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line);  
-void show_sources(int (*sendCommandGdb)(char *)); 
+void show_sources(int (*sendCommandGdb)(char *), int mustParse);
 void show_help();
 //debugger.c
 char* debugParse(char* valueStr, int fieldSize, int scale, char* type);

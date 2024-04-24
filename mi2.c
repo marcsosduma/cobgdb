@@ -451,9 +451,13 @@ int MI2start(int (*sendCommandGdb)(char *)){
     strcpy(lastComand,"exec-next\n");
     char command[]="exec-run\n";
     sendCommandGdb(command);
-    //wait_gdb_answer(sendCommandGdb);
-    cob.waitAnswer = TRUE;
-    cob.running=TRUE;
+    int status=0;
+    do{
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, -1, &status);
+    }while(status==GDB_RUNNING);
+    cob.waitAnswer = FALSE;
+    cob.running=FALSE;
     cob.showFile = TRUE;
     return 0;
 }
@@ -471,11 +475,15 @@ int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNu
     ST_Line * line = getLineC(fileCobol, lineNumber);
     if(line!=NULL){
         sprintf(command,"%s%s:%d\n","break-insert -f ",line->fileC,line->lineC);
-        sendCommandGdb(command);
-        do{
+        int tk=sendCommandGdb(command);
+        ST_MIInfo * parsed=NULL;
+        while(TRUE){
             sendCommandGdb("");
-            MI2onOuput(sendCommandGdb, -1, &status);
-        }while(status==GDB_RUNNING);
+            parsed=MI2onOuput(sendCommandGdb, tk, &status);
+            if(parsed==NULL) continue;
+            break;
+        }
+        if(parsed!=NULL) freeParsed(parsed);
         cob.waitAnswer = FALSE;
         ST_bk * search = BPList;
         ST_bk * before = NULL;
@@ -548,15 +556,22 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
         }while(status==GDB_RUNNING);
         if(isRunning){
             strcpy(command,"exec-continue\n"); 
+            sendCommandGdb(command);
+            cob.running=TRUE;
+            cob.waitAnswer = TRUE;
         }else{
             hasCobGetFieldStringFunction=TRUE;
             verify_output(sendCommandGdb);
             strcpy(command,"exec-run\n");
+            sendCommandGdb(command);
+            do{
+                    sendCommandGdb("");
+                    MI2onOuput(sendCommandGdb, -1, &status);
+            }while(status==GDB_RUNNING);
+            cob.running=FALSE;
+            cob.waitAnswer = FALSE;
         }
-        sendCommandGdb(command);
-        cob.waitAnswer = TRUE;
         cob.showFile = TRUE;
-        cob.running=TRUE;
     }
     return TRUE;
 }

@@ -160,10 +160,12 @@ int sendCommandGdb(char * command)
    DWORD dwRead, dwWritten;
    CHAR chBuf[BUFSIZE];
    BOOL bSuccess = FALSE;   
-   //HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
    int qtdAlloc = 0;   
    int mustReturn=1;
    int count0=0;
+   #ifdef DEBUG
+   HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+   #endif
    
    int tk = token;
    if(strlen(command)>0){

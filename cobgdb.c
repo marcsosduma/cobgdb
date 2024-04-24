@@ -7,6 +7,9 @@
 #include <unistd.h>
 #else
 #include <windows.h>
+#include <io.h>
+#define access _access
+#define F_OK 0
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
@@ -211,8 +214,10 @@ Lines * set_window_pos(int * line_pos){
         }
     }
     Lines * line = cob.lines;
-    while(line->file_line<=start_window_line){
-        if(line->line_after!=NULL) line=line->line_after;
+    if(line!=NULL){
+        while(line->file_line<=start_window_line){
+            if(line->line_after!=NULL) line=line->line_after;
+        }
     }
     return line;
 }
@@ -253,6 +258,14 @@ int show_opt(){
     gotoxy(VIEW_COLS,VIEW_LINES-1);
     print_colorBK(color_light_gray, color_frame);
     draw_utf8_text("\u2193");
+    return TRUE;
+}
+
+int show_wait(){
+    gotoxy(1,VIEW_LINES);
+    print_colorBK(color_red, color_black);
+    printf("%-*s\r",VIEW_COLS-1, "Running");
+    fflush(stdout);
     return TRUE;
 }
 
@@ -394,6 +407,7 @@ int initTerminal(){
 
     set_terminal_size(VIEW_COLS, VIEW_LINES);
     #if defined(_WIN32)
+    DisableMaxWindow();
     Sleep(200);
     #elif defined(__linux__)
     sleep(1);
@@ -408,6 +422,7 @@ int initTerminal(){
 int set_first_break(int (*sendCommandGdb)(char *)){
     ST_Line * debug = LineDebug;
     int ret = 0;
+    
     while(debug!=NULL){
         if(debug->lineCobol>=cob.entry) break;
         debug=debug->next;
@@ -450,18 +465,18 @@ int debug(int (*sendCommandGdb)(char *)){
 
     initTerminal();
     cob.line_pos=0;
-    if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
     Lines * lb = NULL;
     int bstop = FALSE;
     //(void)setvbuf(stdout, NULL, _IONBF, 16384);
     cursorOFF();
     clearScreen();
-    cob.line_pos=set_first_break(sendCommandGdb);
-    #if defined(__linux__)
-    cob.waitAnswer=TRUE;
-    #endif
-    lines = set_window_pos(&cob.line_pos);
     Lines * line_debug=NULL;
+    if(lines==NULL){
+        show_sources(sendCommandGdb, TRUE);
+    }
+    if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
+    cob.line_pos=set_first_break(sendCommandGdb);
+    lines = set_window_pos(&cob.line_pos);
     while(cob.lines!=NULL && !bstop){       
         if(cob.showFile){
             line_debug=NULL;
@@ -593,6 +608,7 @@ int debug(int (*sendCommandGdb)(char *)){
                             break;
                         }
                     }
+                    show_wait();
                     MI2start(sendCommandGdb);
                 }
                 break;
@@ -623,6 +639,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
                     int check=hasCobolLine(lb->file_line);
                     if(check>0){
+                        show_wait();
                         MI2goToCursor(sendCommandGdb, cob.name_file, lb->file_line);
                     } 
                     cob.showFile=TRUE;
@@ -631,6 +648,7 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'j':
             case 'J':
                 if(!cob.waitAnswer){ 
+                    show_wait();
                     if(!MI2lineToJump(sendCommandGdb)){
                         line_debug=NULL;
                         show_file(lines, cob.line_pos, &line_debug);
@@ -671,7 +689,7 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'f':
             case 'F':
                 if(!cob.waitAnswer){
-                   show_sources(sendCommandGdb);
+                   show_sources(sendCommandGdb, FALSE);
                    cob.showFile=TRUE;
                    MI2getStack(sendCommandGdb,1);
                 }
@@ -771,6 +789,7 @@ int main(int argc, char **argv) {
     int arg_count = 0;      // Initialize a counter for storing arguments
     char fileCGroup[10][512];
     char fileCobGroup[10][512];
+    boolean withHigh=TRUE;
 
     setlocale(LC_CTYPE, "");
     setlocale(LC_ALL,"");
@@ -803,11 +822,47 @@ int main(int argc, char **argv) {
         #else
             printf("Tests not included.\n");
         #endif
-    }else if(argc>1 && strncmp(argv[1],"--version",6)==0){
+    }else if(argc>1 && strncmp(argv[1],"--version",9)==0){
         show_version();
+    }else if(argc>=3 && strncmp(argv[1],"--exe",5)==0){
+        int test =access(argv[2], F_OK);
+        if( test < 0) {
+            printf("File \"%s\" not found.\n", argv[2]);
+            while(key_press(MOUSE_OFF)<=0);
+            return 0;
+        }
+        char * current_dir = getCurrentDirectory();
+        fileNameWithoutExtension(argv[2], &baseName[0]);
+        normalizePath(baseName);
+        strcpy(nameExecFile,getFileNameFromPath(baseName));
+        strcpy(cob.cwd, current_dir);
+        normalizePath(cob.cwd);
+        #if defined(_WIN32)
+        strcat(nameExecFile,".exe");
+        #endif
+        clearScreen();
+        disableEcho();
+        printf("Name: %s\n",nameExecFile);        
+        print_colorBK(color_white, color_black);
+        draw_box_first(10,10,60,"Utilize the parameters below to compile your COBOL program:");
+        draw_box_border(10,11);
+        draw_box_border(71,11);
+        print_colorBK(color_yellow, color_black);
+        gotoxy(11,11);
+        printf("%-*s\r",60,"cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob");
+        print_colorBK(color_white, color_black);
+        draw_box_last(10,12,60);
+        enableEcho();
+        fflush(stdout);
+        while(key_press(MOUSE_OFF)<=0);  
+        // Utilize the parameters below to compile your COBOL program: 
+        start_gdb(nameExecFile,cob.cwd);
+        freeBKList();
+        freeFile();
+        freeWatchingList();
+        gotoxy(1,(VIEW_LINES-1));
     }else{
         // Iterate through the arguments
-        boolean withHigh=TRUE;
         int nfile=0;
         char * current_dir = getCurrentDirectory(); 
         strcpy(cob.cwd, current_dir);

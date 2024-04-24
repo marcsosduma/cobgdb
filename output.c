@@ -301,10 +301,12 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
     if(xterm_device!=NULL){
         sprintf(aux,"-gdb-set inferior-tty %s\n", xterm_device);
         sendCommandGdb(aux);
-        do{
+        while(TRUE){
             sendCommandGdb("");
+            if(strlen(gdbOutput)<2) continue;
             MI2onOuput(sendCommandGdb, tk, &status);
-        }while(status!=2); 
+            break;
+        }
         setenv("TERM","xterm",1);
         free(xterm_device);
     }

@@ -784,7 +784,7 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
 }
 
 #define MAX_FILES 100
-void show_sources(int (*sendCommandGdb)(char *)){
+void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     char input_character=-1;
     int bkgr = color_dark_red;
     int bkg;
@@ -798,6 +798,28 @@ void show_sources(int (*sendCommandGdb)(char *)){
     boolean show = TRUE;
 
     qtd_files = MI2sourceFiles(sendCommandGdb,files);
+    if(mustParse){
+        char baseName[256];
+        char nameCFile[1024];
+        char fileCGroup[10][512];
+        int nfile=0;
+        for(int a=0;a<qtd_files;a++){
+            fileNameWithoutExtension(files[a], &baseName[0]);
+            normalizePath(baseName);
+            strcpy(baseName,getFileNameFromPath(baseName));
+            // C File
+            snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
+            strcpy(fileCGroup[nfile],nameCFile);
+            nfile++;
+        }
+        strcpy(fileCGroup[nfile], "");
+        printf("Parser starting...\n");
+		SourceMap(fileCGroup);
+        printf("Parser end...\n");
+        clearScreen();
+        show_opt();
+        show_info();
+    }
     while(input_character!=-100){
         disableEcho();
         gotoxy(1,1);
