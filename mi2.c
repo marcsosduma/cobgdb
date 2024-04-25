@@ -221,7 +221,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                 if(strcmp(reason->value,"breakpoint-hit")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
                                     if(hasLine==NULL){
-                                        *status = GDB_BREAKPOINT;
+                                        *status = GDB_RUNNING;
                                         sendCommandGdb("exec-next\n");
                                         lineChange=TRUE;
                                     }else{

@@ -278,7 +278,7 @@ ST_DebuggerVariable * GetVariableByC(char * key){
 }
 // DebuggerVariable - END
 
-int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, int lineProgramExit, int isCall, int varEntry){
+int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, int lineProgramExit, int isCall, int * varEntry){
     ST_Line* new_line = (ST_Line*) malloc(sizeof(ST_Line));
     new_line->next=NULL;
     new_line->before=NULL;
@@ -291,10 +291,12 @@ int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, i
     new_line->lineC = lineC;
     new_line->endPerformLine = -1;
     new_line->isCall = isCall;
-    if(lineCobol==varEntry && varEntry>=0)
+    if(lineCobol>=*varEntry && *varEntry>=0){
         new_line->isEntry = TRUE;
-    else
+        *varEntry=-1;
+    }else{
         new_line->isEntry = FALSE;
+    }
     new_line->lineProgramExit=lineProgramExit;
     if(LineDebug==NULL){
          LineDebug=new_line;
@@ -905,7 +907,7 @@ int parser(char * file_name, int fileN){
                 else
                     performLine = -1;
                 boolean isCall= call_FindRegex(lines->line);
-                PushLine(fileCobol, lineCobol, fileC, lineNumber + 2, lineProgramExit, isCall, varEntry);
+                PushLine(fileCobol, lineCobol, fileC, lineNumber + 2, lineProgramExit, isCall, &varEntry);
         }
 
         // fix new codegen - new

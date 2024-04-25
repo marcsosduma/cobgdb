@@ -63,7 +63,6 @@ struct st_highlt {
 struct st_lines{
 	char * line;
 	int file_line;
-	int lineC;
 	char breakpoint;
     struct st_highlt * high;
 	struct st_lines * line_after;
