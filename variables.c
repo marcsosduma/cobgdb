@@ -976,6 +976,17 @@ void show_help(){
         "localhost:5555",
         "or",
         "9112"
+        "  ",
+        "  ",
+        "                 COBGDB Debugging a Pre-compiled File",
+        "  ",
+        "You can also use COBGDB to debug a previously generated executable ",
+        "file. Compile the program with these options:",
+        "cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...",
+        "  ",
+        "To start debugging, run cobgdb using the --exe directive as follows:",
+        "cobgdb --exe prog",
+        "  "
     };
 
     int ctext[] = {
@@ -983,12 +994,13 @@ void show_help(){
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white, 
-        color_white, color_white, color_white, color_white, color_white,
-        color_yellow,
-        color_white, color_white, 
-        color_yellow,
+        color_white, color_white, color_white, color_white, color_white, color_yellow,
+        color_white, color_white, color_yellow,
         color_white, color_white, color_white, color_white, color_white, color_white, 
-        color_yellow, color_white, color_yellow 
+        color_yellow, color_white, color_yellow,color_white, 
+        color_green, 
+        color_white, color_white, color_white, 
+        color_yellow,color_white, color_white, color_yellow,color_white
     };
 
     qtt_lines=sizeof(text) / sizeof(text[0]);
