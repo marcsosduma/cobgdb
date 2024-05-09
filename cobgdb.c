@@ -839,10 +839,11 @@ int main(int argc, char **argv) {
         #if defined(_WIN32)
         strcat(nameExecFile,".exe");
         #endif
+        gotoxy(1,1);
+        print_no_resetBK("",color_white, color_black);
         clearScreen();
         disableEcho();
         printf("Name: %s\n",nameExecFile);        
-        print_colorBK(color_white, color_black);
         draw_box_first(10,10,60,"Utilize the parameters below to compile your COBOL program:");
         draw_box_border(10,11);
         draw_box_border(71,11);
@@ -854,7 +855,6 @@ int main(int argc, char **argv) {
         enableEcho();
         fflush(stdout);
         while(key_press(MOUSE_OFF)<=0);  
-        // Utilize the parameters below to compile your COBOL program: 
         start_gdb(nameExecFile,cob.cwd);
         freeBKList();
         freeFile();
