@@ -122,7 +122,7 @@ struct ST_Attribute {
     int digits;
     int scale;
     char * flagStr;
-    int flags[10];
+    unsigned int flags;
     struct ST_Attribute * next;
     struct ST_Attribute * before;
     struct ST_Attribute * last;
@@ -373,7 +373,7 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
 void show_sources(int (*sendCommandGdb)(char *), int mustParse);
 void show_help();
 //debugger.c
-char* debugParse(char* valueStr, int fieldSize, int scale, char* type);
+char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);
 char* parseUsage(char* valueStr);
 // output.c

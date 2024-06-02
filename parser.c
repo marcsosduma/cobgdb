@@ -76,35 +76,14 @@ int strpos(char *str1, char *str2)
     return -1;
 }
 
-int searchflagMatchers(char * flagStr){
-    // 0xNNN1 0xNNN2 0xNNN4 0xNNN8 0xNN1N 0xNN2N 0xNN4N 0xNN8N 0xN1NN 0xN2NN 0xN4NN 0xN8NN 0x1NNN   
-    if(flagStr==NULL || strlen(flagStr)<6) return -1;
-    char dig[10];
-    int s = 0;
-    int ret=-1;
-    for(int x=5;x>1;x--){
-        subString(flagStr, x, 1, dig );
-        int qtd=strpos("1248", dig);
-        if(qtd>=0){
-            ret = qtd+s;
-            break;
-        }
-        s+=4;
-    }
-    return ret;
-}
+void buildFlags(ST_Attribute * attribute, char * flagStr){  
 
-void buildFlags(ST_Attribute * attribute){  
-        if (attribute->flagStr==NULL) {
-            attribute->flags[0]=-1;
-            return;
+        // 0xNNN1 0xNNN2 0xNNN4 0xNNN8 0xNN1N 0xNN2N 0xNN4N 0xNN8N 0xN1NN 0xN2NN 0xN4NN 0xN8NN 0x1NNN   
+        if(flagStr==NULL || strlen(flagStr)<6){
+            attribute->flags = 0;
+        } else{
+            sscanf(flagStr, "%x", &attribute->flags);
         }
-        int a=0;
-        int qtd = searchflagMatchers(attribute->flagStr);
-        if(qtd>=0){
-            attribute->flags[a++]=qtd;
-        }
-        attribute->flags[a++]=-1;
 }
 
 int PushAttribute(char * key, char * cName, char * type, int digits, int scale, char * flagStr){
@@ -121,7 +100,7 @@ int PushAttribute(char * key, char * cName, char * type, int digits, int scale, 
     new_attrib->scale = scale;
     new_attrib->flagStr = (char *) malloc(strlen(flagStr)+1);
     strcpy(new_attrib->flagStr, flagStr);
-    buildFlags(new_attrib);
+    buildFlags(new_attrib, flagStr);
     if(Attributes==NULL){
          Attributes=new_attrib;
          Attributes->next = NULL;
@@ -163,11 +142,13 @@ char * VariableType(char * type_org){
                 "0x18","0x19","0x1A","0x1B","0x24","0x20","0x21","0x22","0x23","0x40","0x41",
                 "int" ,"cob_u8_t",""};
     char *ret[]={"unknown","group","boolean","numeric","numeric binary","numeric packed","numeric float","numeric double",
-                "numeric l double","numeric FP DEC64","numeric FP DEC128","numeric FP BIN32","numeric FP BIN64","numeric FP BIN128","numeric COMP5","numeric edited","alphanumeric","alphanumeric","alphanumeric","alphanumeric edited",
+                "numeric l double","numeric FP DEC64","numeric FP DEC128","numeric FP BIN32",
+                "numeric FP BIN64","numeric FP BIN128","numeric COMP5","numeric edited",
+                "alphanumeric","alphanumeric","alphanumeric","alphanumeric edited",
                 "national","national edited","integer","group",""};
     int idx=0;  
     while(strlen(org[idx])>0){
-        if(strcmp(org[idx],type_org)==0) 
+        if(strcasecmp(org[idx],type_org)==0) 
             return ret[idx];
         idx++;
     }

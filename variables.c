@@ -279,6 +279,8 @@ int show_variables(int (*sendCommandGdb)(char *)){
             case VK_ESCAPE:
             case 'r':
             case 'R':
+            case 'q':
+            case 'Q':
                 input_character='r';
                 break;
             default: 
@@ -643,7 +645,11 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
 
     ST_Line * debug = getLineC(cob.file_cobol, exe_line->file_line);
     struct st_show_var* show_var = debug->show_var;
-
+    if(show_var!=NULL && strstr(show_var->var->cName,"b_")!=NULL){
+        if(show_var->var->first_children!=NULL && strcmp(show_var->var->cobolName,show_var->var->first_children->cobolName)==0){
+            show_var->var = show_var->var->first_children;
+        }
+    }
     ST_Watch * wt = Watching;
     ST_Watch * wt_before = NULL;
     boolean insert=TRUE;

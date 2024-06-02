@@ -143,6 +143,7 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
     // Initialize the first elements with the initial values.
     char *initial_params[] = {
         "-g ",
+        "-static ",
         "-fsource-location ",
         "-ftraceall ",
         "-v ",
@@ -608,7 +609,9 @@ int debug(int (*sendCommandGdb)(char *)){
                         }
                     }
                     show_wait();
+                    disableEcho();
                     MI2start(sendCommandGdb);
+                    enableEcho();
                 }
                 break;
             case 's':
@@ -639,7 +642,9 @@ int debug(int (*sendCommandGdb)(char *)){
                     int check=hasCobolLine(lb->file_line);
                     if(check>0){
                         show_wait();
+                        disableEcho();
                         MI2goToCursor(sendCommandGdb, cob.name_file, lb->file_line);
+                        enableEcho();
                     } 
                     cob.showFile=TRUE;
                 }

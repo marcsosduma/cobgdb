@@ -452,11 +452,13 @@ int MI2start(int (*sendCommandGdb)(char *)){
     char command[]="exec-run\n";
     sendCommandGdb(command);
     int status=0;
+    int count=50;
     do{
             sendCommandGdb("");
             MI2onOuput(sendCommandGdb, -1, &status);
-    }while(status==GDB_RUNNING);
-    cob.waitAnswer = FALSE;
+            if(count--<=0) break;
+    }while(status==GDB_RUNNING);    
+    cob.waitAnswer = (count<0);
     cob.running=FALSE;
     cob.showFile = TRUE;
     return 0;
@@ -564,12 +566,15 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
             verify_output(sendCommandGdb);
             strcpy(command,"exec-run\n");
             sendCommandGdb(command);
+            int count=50;
             do{
-                    sendCommandGdb("");
-                    MI2onOuput(sendCommandGdb, -1, &status);
+                sendCommandGdb("");
+                MI2onOuput(sendCommandGdb, -1, &status);
+                if(count--<0) break;
+
             }while(status==GDB_RUNNING);
             cob.running=FALSE;
-            cob.waitAnswer = FALSE;
+            cob.waitAnswer = (count<0);
         }
         cob.showFile = TRUE;
     }
@@ -580,21 +585,27 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
     int status;
     char command[512];
     char st[100];
-    strcpy(command,"data-evaluate-expression ");
-    if (thread != 0) {
-        sprintf(st,"--thread %d --frame %d ",thread, frame);
-        strcat(command,st);
-    }
+    int type = 1;
+    
+    //hasCobGetFieldStringFunction = FALSE;    
     if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
-        sprintf(st,"\"(char *)cob_get_field_str_buffered(&%s)\"", var->cName);
+        strcpy(command,"data-evaluate-expression ");
+        if (thread != 0) {
+            sprintf(st,"--thread %d --frame %d ",thread, frame);
+            strcat(command,st);
+        }
+        sprintf(st,"\"(char *)cob_get_field_str_buffered(&%s)\"\n", var->cName);
         strcat(command,st);
     } else if (strncmp(var->cName,"f_",2)==0) {
         sprintf(st,"%s.data", var->cName);
-        strcat(command,st);
+        //sprintf(command,"interpreter-exec console \"x/%dub %s\"\n", 8, st); 
+        sprintf(command,"data-read-memory %s u 1 1 %d\n", st, var->size);
     } else {
-            strcat(command,var->cName);
+        if (var->size<=0) var->size=500;
+        sprintf(command,"data-read-memory %s u 1 1 %d\n", var->cName, var->size);
+            //strcat(command,var->cName);
+        type = 2;
     }
-    strcat(command,"\n");
     int tk=sendCommandGdb(command);
     ST_MIInfo * parsed=NULL;
     do{
@@ -602,7 +613,7 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
         parsed=MI2onOuput(sendCommandGdb, tk, &status);
     }while(status==GDB_RUNNING);
     //ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk, &status);
-    if (hasCobGetFieldStringFunction){
+    if (hasCobGetFieldStringFunction && type!=2){
         if(parsed!=NULL){
                 if(parsed->resultRecords!=NULL && strcmp(parsed->resultRecords->resultClass,"error")==0){
                     hasCobGetFieldStringFunction=FALSE;
@@ -620,9 +631,31 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, in
     }else{
         if(parsed!=NULL){
             int find=FALSE;
-            ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "value", NULL, &find);
-            if(search!=NULL && search->value!=NULL){
-                var->value=debugParse(search->value, var->size, var->attribute->scale, var->attribute->type);
+            ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "data", NULL, &find);
+            if(search!=NULL && search->key!=NULL){
+                ST_TableValues * data = search->array;
+                char * temp=malloc(var->size+500);
+                int pos=0;
+                while (data != NULL) {
+                    int num = strtol(data->value, NULL, 10);
+                    if (num < 0 || num > 255) {
+                        data = data->next;
+                        continue;
+                    }
+                    if (strcmp(var->attribute->type,"group")==0 && (num < 32 || num == 92 || (num > 126 && num < 256))) { 
+                        temp[pos++] = '\\';
+                        // Escape octal to temp
+                        temp[pos++] = (char)('0' + ((num >> 6) & 7));
+                        temp[pos++] = (char)('0' + ((num >> 3) & 7));
+                        temp[pos++] = (char)('0' + (num & 7));
+                    } else {
+                        temp[pos++] = (char)num;
+                    }
+                    data = data->next;
+                }
+                temp[pos]='\0';
+                var->value=debugParseBuilIn(temp, var->size, var->attribute->scale, var->attribute->type, var->attribute->flags);
+                free(temp);
             }
             freeParsed(parsed);
         }

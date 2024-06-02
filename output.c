@@ -269,7 +269,7 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
     char * sleepVal=hashCode(target);
     char *xterm_device = findTtyName(target);
 
-    disableEcho();
+    //disableEcho();
     if(xterm_device == NULL){
         message_output(sleepVal);
         gotoxy(12,15);
@@ -311,6 +311,6 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
         free(xterm_device);
     }
     free(sleepVal);
-    enableEcho();
+    //enableEcho();
 }
 #endif

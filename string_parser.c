@@ -82,7 +82,10 @@ int psAlpha(char * ch){
 
 int psNumber(char * ch){
     int count=0;
-    while(isdigit(*ch) || *ch=='.' || *ch=='x'){
+    int hex = 0;
+    while(isdigit(*ch) || *ch=='.' || *ch=='x' || 
+            ((*ch=='a' || *ch=='b' || *ch=='c' || *ch=='d' || *ch=='e' || *ch=='f') && hex==1)){
+        if(*ch=='x') hex = 1;
         ch = ch + 1;
         count++;
     }
