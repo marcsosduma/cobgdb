@@ -373,8 +373,8 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
 void show_sources(int (*sendCommandGdb)(char *), int mustParse);
 void show_help();
 //debugger.c
-char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags);
-char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type);
+char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags, int digits);
+char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags);
 char* parseUsage(char* valueStr);
 // output.c
 void openOuput(int (*sendCommandGdb)(char *), char *target);

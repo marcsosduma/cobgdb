@@ -1,3 +1,11 @@
+/*
+ * COBGDB GnuCOBOL Debugger:
+ *
+ * License:
+ * This code is provided without any warranty, express or implied.
+ * You may modify and distribute it at your own risk.
+ */
+
 #if defined(_WIN32)
 #include <windows.h>
 #include <tchar.h>
@@ -18,7 +26,7 @@
 #define clrscr() printf("\e[1;1H\e[2J")
 #endif // Windows/Linux
 #include "cobgdb.h"
-#define BUFSIZE 1024
+#define BUFSIZE 2048
 #define BUFFER_OUTPUT_SIZE 1024
 //#define DEBUG 1
 

@@ -1,9 +1,13 @@
-/* 
-   This code is based on the GnuCOBOL Debugger extension available at: 
-   https://github.com/OlegKunitsyn/gnucobol-debug
-   It is provided without any warranty, express or implied. 
-   You may modify and distribute it at your own risk.
-*/
+/*
+ * COBGDB GnuCOBOL Debugger:
+ * This code is based on the GnuCOBOL Debugger extension available at:
+ * https://github.com/OlegKunitsyn/gnucobol-debug
+ *
+ * License:
+ * This code is provided without any warranty, express or implied.
+ * You may modify and distribute it at your own risk.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -146,12 +150,20 @@ int edit_variable(int (*sendCommandGdb)(char *),int lin){
     print_colorBK(color_green, bkg);
     fflush(stdout);
     //gotoxy(12+strlen(aux),lin+2);
-    char * new_value=NULL;
+    char * new_value=malloc(1024);
+    new_value[0]='\0';
     if(currentVar->value!=NULL){
-        new_value = strdup(currentVar->value);
-    }else{
-        new_value = malloc(500);
-        new_value[0]='\0';
+        //new_value = malloc(currentVar->size+3);
+        if (currentVar->value[0] == L'"'){
+            memset(new_value,' ',currentVar->size);
+            new_value[currentVar->size]='\0';
+            int q = strlen(currentVar->value)-2;
+            strncpy(new_value, &currentVar->value[1], q);
+            new_value[q]='\0';
+        }else{
+            sprintf(new_value,"%*s", currentVar->size, currentVar->value);
+        }
+        //new_value = strdup(currentVar->value);
     }
     if(updateStr(new_value,60-strlen(aux), 12+strlen(aux),lin+2)==TRUE){
         MI2editVariable(sendCommandGdb, currentVar, new_value);

@@ -1,13 +1,23 @@
-/* 
-   The functions related to colorization were obtained from the following site: 
-   https://stackoverflow.com/questions/4053837/colorizing-text-in-the-console-with-c
-   The information on how to use the rawmode function on Linux was obtained 
-   from this website: https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
-   Much of the information about the Windows Console interface was obtained from this
-   website: https://learn.microsoft.com/en-us/windows/console/
-   This program is provided without any warranty, express or implied.
-   You may modify and distribute it at your own risk.
-*/
+/*
+ * COBGDB GnuCOBOL Debugger:
+ *
+ * Colorization functions:
+ * The functions related to colorization were obtained from:
+ * https://stackoverflow.com/questions/4053837/colorizing-text-in-the-console-with-c
+ *
+ * Raw mode on Linux:
+ * The information on how to use the rawmode function on Linux was obtained from:
+ * https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
+ *
+ * Windows Console interface:
+ * Much of the information about the Windows Console interface was obtained from:
+ * https://learn.microsoft.com/en-us/windows/console/
+ *
+ * License:
+ * This program is provided without any warranty, express or implied.
+ * You may modify and distribute it at your own risk.
+ */
+
 #if defined(_WIN32)
 #include <Windows.h>
 #include <stdio.h>
@@ -369,7 +379,7 @@ int readchar(char * str, int size) {
 }
 
 int updateStr(char *value, int size, int x, int y) {
-    int len = strlen(value);
+    int len = strlen(value)+1;
     int len_char = len;
     wchar_t *str = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
     wchar_t *wcBuffer = NULL;
