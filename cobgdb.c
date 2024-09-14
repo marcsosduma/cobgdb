@@ -153,7 +153,7 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
     // Initialize the first elements with the initial values.
     char *initial_params[] = {
         "-g ",
-        "-static ",
+        //"-static ",
         "-fsource-location ",
         "-ftraceall ",
         "-v ",
