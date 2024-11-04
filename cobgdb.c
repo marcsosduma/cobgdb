@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.2.2" 
+#define COBGDB_VERSION "1.2.3" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -472,6 +472,7 @@ int debug(int (*sendCommandGdb)(char *)){
     int dblAux = -1;
     int check_size=0;
     double check_start = getCurrentTime();
+    char key=' ';
 
     initTerminal();
     cob.line_pos=0;
@@ -604,9 +605,12 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 'q':
             case 'Q':
-                sendCommandGdb("gdb-exit\n");
-                bstop = 1;
-                cob.showFile=TRUE;
+                key = showCobMessage("Would you like to exit the program?", 3);
+                if(key=='Y' || key=='y'){
+                    sendCommandGdb("gdb-exit\n");
+                    bstop = 1;
+                }
+                cob.showFile=TRUE; 
                 break;
             case 'r':
             case 'R':
