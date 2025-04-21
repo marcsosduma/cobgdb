@@ -977,7 +977,7 @@ void show_help(){
         "    (right-click also functions).",
         "F - File: allows selecting the source file for debugging.",
         "W - Window Size: switches between window sizes: 80x24 and 132x34.",
-        "T - toggles the display of variables during debugging.",
+        "T - Toggles the display of variables during debugging.",
         "Q - Quite: quits the program.",
         "  ",
         "COBGDB takes one or more programs with COB/CBL extension as parameters",
