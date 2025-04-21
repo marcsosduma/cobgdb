@@ -50,6 +50,7 @@
 #include <wchar.h>
 #include <time.h>
 #define MAX_MATCH_LENGTH 512
+//
 
 struct st_highlt {
     int color;
