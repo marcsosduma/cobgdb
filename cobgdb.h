@@ -112,6 +112,7 @@ struct st_cobgdb {
     int mouseButton;	
     int line_pos;
     int input_character;
+    int showVariables;
 };
 
 // ATTRIBUTTES -- START

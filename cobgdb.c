@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.2.3" 
+#define COBGDB_VERSION "1.3" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -35,6 +35,7 @@ struct st_cobgdb cob ={
     .isStepOver = -1,
     .mouse = 0,
     .num_dig = 4,
+    .showVariables = TRUE
 };
 
 int VIEW_COLS=  80;
@@ -496,7 +497,7 @@ int debug(int (*sendCommandGdb)(char *)){
             cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
             int aux1=cob.debug_line;
             int aux2=cob.running;
-            if(line_debug!=NULL) var_watching(line_debug, sendCommandGdb, cob.waitAnswer, cob.line_pos);
+            if(line_debug!=NULL && cob.showVariables) var_watching(line_debug, sendCommandGdb, cob.waitAnswer, cob.line_pos);
             cob.debug_line=aux1;
             cob.running=aux2;
             print_color_reset();
@@ -742,6 +743,14 @@ int debug(int (*sendCommandGdb)(char *)){
                 clearScreen();
                 set_terminal_size(VIEW_COLS, VIEW_LINES);
                 cob.showFile = TRUE;
+                break;
+            case 'T':
+            case 't':
+                if(!cob.showVariables){
+                    cob.showVariables=TRUE;
+                }else{
+                    cob.showVariables=FALSE;
+                }
                 break;
             default: 
                 if(cob.waitAnswer){
