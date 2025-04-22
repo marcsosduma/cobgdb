@@ -746,11 +746,8 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 'T':
             case 't':
-                if(!cob.showVariables){
-                    cob.showVariables=TRUE;
-                }else{
-                    cob.showVariables=FALSE;
-                }
+                // tooble show variables
+                cob.showVariables ^= 1;
                 break;
             default: 
                 if(cob.waitAnswer){
