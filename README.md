@@ -31,7 +31,7 @@ In the example above, '-lpdcurses' is an instance of an argument that can be ind
 COBGDB takes one or more programs with COB/CBL extension as parameters and runs the GnuCOBOL compiler with the following format:
 ```bash
 
-cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...
+cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ..
 ```
 
 On Linux, it is recommended to use Xterm to view the application.
