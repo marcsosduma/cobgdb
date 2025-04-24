@@ -95,7 +95,7 @@ cobgdb --exe prog
 - `G` - GO: continues the program execution until it encounters a stopping point: breakpoint, end of the program, or the return from a subroutine - PERFORM/CALL.
 - `V` - Variables: displays the set of variables for the running program.
 - `H` - Show: shows the values of variables for the selected line (right-click also functions).
-- `D` - Toggles the display of variables ON or OFF.
+- `D` - Display of variables: toggle the display during debugging/animation ON or OFF. Default is OFF.
 - `F` - File: allows selecting the source file for debugging.
 - `A` - Attach: attach to GDBSERVER or Application PID.
 - `W` - Window Size: switches between window sizes: 80x24 and 132x34.
