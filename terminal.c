@@ -994,10 +994,10 @@ int showCobMessage(char * message, int type){
             }
         }
     }else{
-        clock_t start_time = clock();
+        double check_start = getCurrentTime();
         while (key_press(MOUSE_NORMAL) <= 1) {
-            clock_t end_time = clock();
-            double elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+            double end_time = getCurrentTime();
+            double elapsed_time = end_time - check_start;
             if (elapsed_time > type) {
                 break;
             }

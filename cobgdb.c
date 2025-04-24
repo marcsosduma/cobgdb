@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.3.1" 
+#define COBGDB_VERSION "1.3.2" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
