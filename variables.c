@@ -975,7 +975,7 @@ void show_help(){
         "V - Variables: displays the set of variables for the running program.",
         "H - Show: shows the values of variables for the selected line",
         "    (right-click also functions).",
-        "T - Toggles the display of variables during debugging.",
+        "D - Toggles the display of variables ON or OFF.",
         "F - File: allows selecting the source file for debugging.",
         "W - Window Size: switches between window sizes: 80x24 and 132x34.",
         "Q - Quite: quits the program.",

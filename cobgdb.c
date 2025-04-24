@@ -248,7 +248,7 @@ int show_button(){
     print_colorBK((cob.mouse==50)?color_red:color_blue, color_cyan);
     draw_utf8_text("\u25A0 ");
     print_colorBK((cob.mouse==60)?color_red:color_blue, color_cyan);
-    printf("T ");
+    printf("D ");
     print_colorBK((cob.mouse==70)?color_red:color_blue, color_cyan);
     printf("? ");
     print_color_reset();
@@ -333,9 +333,9 @@ int show_info(){
                 break;
             case 60:
                 if(cob.showVariables)
-                    printf("%-*s\r",len, "Toggles the display of variables: ACTIVE");
+                    printf("%-*s\r",len, "display of variables: ON");
                 else
-                    printf("%-*s\r",len, "Toggles the display of variables: INACTIVE");
+                    printf("%-*s\r",len, "display of variables: OFF");
                 break;
             case 70:
                 printf("%-*s\r",len, "help");
@@ -603,8 +603,8 @@ int debug(int (*sendCommandGdb)(char *)){
                     } 
                 }
                 break;
-            case 'd':
-            case 'D':
+            case 'k':
+            case 'K':
                 if(!cob.waitAnswer){ 
                     lb = lines;           
                     for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
@@ -752,10 +752,17 @@ int debug(int (*sendCommandGdb)(char *)){
                 set_terminal_size(VIEW_COLS, VIEW_LINES);
                 cob.showFile = TRUE;
                 break;
-            case 'T':
-            case 't':
+            case 'D':
+            case 'd':
                 // tooble show variables
                 cob.showVariables ^= 1;
+                if(cob.mouse!=60){
+                    if(cob.showVariables)
+                        showCobMessage("display of variables: ON",1);
+                    else
+                        showCobMessage("display of variables: OFF",1);
+                }
+                cob.showFile = TRUE;
                 break;
             default: 
                 if(cob.waitAnswer){

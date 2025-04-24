@@ -225,7 +225,7 @@ int mouseCobAction(int col, int line, int type){
                 action = 'Q';
                 break;
             case 60:
-                action = 'T';
+                action = 'D';
                 break;
             case 70:
                 action = '?';
@@ -998,7 +998,7 @@ int showCobMessage(char * message, int type){
         while (key_press(MOUSE_NORMAL) <= 1) {
             clock_t end_time = clock();
             double elapsed_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
-            if (elapsed_time > 3) {
+            if (elapsed_time > type) {
                 break;
             }
         }
