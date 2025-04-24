@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.3" 
+#define COBGDB_VERSION "1.3.1" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -35,7 +35,7 @@ struct st_cobgdb cob ={
     .isStepOver = -1,
     .mouse = 0,
     .num_dig = 4,
-    .showVariables = TRUE
+    .showVariables = FALSE
 };
 
 int VIEW_COLS=  80;
@@ -235,7 +235,7 @@ Lines * set_window_pos(int * line_pos){
 
 int show_button(){
     print_colorBK(color_blue, color_cyan);
-    gotoxy(VIEW_COLS-14,1);
+    gotoxy(VIEW_COLS-16,1);
     draw_utf8_text("\u2592 ");
     print_colorBK((cob.mouse==10)?color_red:color_blue, color_cyan);
     draw_utf8_text("\u25BA ");
@@ -248,6 +248,8 @@ int show_button(){
     print_colorBK((cob.mouse==50)?color_red:color_blue, color_cyan);
     draw_utf8_text("\u25A0 ");
     print_colorBK((cob.mouse==60)?color_red:color_blue, color_cyan);
+    printf("T ");
+    print_colorBK((cob.mouse==70)?color_red:color_blue, color_cyan);
     printf("? ");
     print_color_reset();
     return TRUE;
@@ -256,7 +258,7 @@ int show_button(){
 int show_opt(){
     char * opt = " COBGDB                  GnuCOBOL GDB Interpreter";
     char aux[200];
-    snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-15, VIEW_COLS-15, opt);
+    snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-17, VIEW_COLS-17, opt);
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
     if(cob.mouse>9) show_button();
@@ -330,6 +332,12 @@ int show_info(){
                 printf("%-*s\r",len, "quit");
                 break;
             case 60:
+                if(cob.showVariables)
+                    printf("%-*s\r",len, "Toggles the display of variables: ACTIVE");
+                else
+                    printf("%-*s\r",len, "Toggles the display of variables: INACTIVE");
+                break;
+            case 70:
                 printf("%-*s\r",len, "help");
                 break;
         }

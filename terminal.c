@@ -190,12 +190,13 @@ void mouseCobHover(int col, int line){
     if(col==VIEW_COLS-1  && line<VIEW_LINES/2-1) cob.mouse=1;
     if(col==VIEW_COLS-1  && line>=VIEW_LINES/2-1) cob.mouse=2;
     if(col<cob.num_dig+2 && line>0 && line<VIEW_LINES-2) cob.mouse=3;
-    if(col==VIEW_COLS-13 && line==0) cob.mouse=10;
-    if(col==VIEW_COLS-11 && line==0) cob.mouse=20;
-    if(col==VIEW_COLS-9  && line==0) cob.mouse=30;
-    if(col==VIEW_COLS-7  && line==0) cob.mouse=40;
-    if(col==VIEW_COLS-5  && line==0) cob.mouse=50;    
-    if(col==VIEW_COLS-3  && line==0) cob.mouse=60;    
+    if(col==VIEW_COLS-15 && line==0) cob.mouse=10;
+    if(col==VIEW_COLS-13 && line==0) cob.mouse=20;
+    if(col==VIEW_COLS-11  && line==0) cob.mouse=30;
+    if(col==VIEW_COLS-9  && line==0) cob.mouse=40;
+    if(col==VIEW_COLS-7  && line==0) cob.mouse=50;    
+    if(col==VIEW_COLS-5  && line==0) cob.mouse=60;    
+    if(col==VIEW_COLS-3  && line==0) cob.mouse=70;    
 }
 
 int mouseCobAction(int col, int line, int type){
@@ -224,6 +225,9 @@ int mouseCobAction(int col, int line, int type){
                 action = 'Q';
                 break;
             case 60:
+                action = 'T';
+                break;
+            case 70:
                 action = '?';
                 break;
             default:
