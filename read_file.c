@@ -234,6 +234,10 @@ int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp
         if ((*line)[len_used - 1] == '\n') {
             return len_used;
         }
+        //If something was read before EOF, return it even without a \n
+        if (len_used > 0) {
+            return (int64_t)len_used;
+        }
     }
     return -1;
 }
