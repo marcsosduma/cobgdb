@@ -952,7 +952,7 @@ void show_help(){
     int line_pos=0;
     int qtt_lines=0;
     int start_file=0;
-    int lmax=VIEW_LINES/2-2;
+    int lmax=VIEW_LINES/2+3;
     //int file_sel = -1;
     boolean show = TRUE;
 
@@ -1026,7 +1026,7 @@ void show_help(){
     disableEcho();
     while(input_character!=-100){
         gotoxy(1,1);
-        int lin = 7;
+        int lin = 4;
         int col = (VIEW_COLS-70)/2;
         int size = 70;
         if(show){
