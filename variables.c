@@ -978,7 +978,7 @@ void show_help(){
         "D - Toggles the display of variables ON or OFF.",
         "F - File: allows selecting the source file for debugging.",
         "W - Window Size: switches between window sizes: 80x24 and 132x34.",
-        "Q - Quite: quits the program.",
+        "Q - Quit: quits the program.",
         "  ",
         "COBGDB takes one or more programs with COB/CBL extension as parameters",
         "and runs the GnuCOBOL compiler with the following format:",
