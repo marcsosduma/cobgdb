@@ -53,9 +53,11 @@ void MI2log(char * log){
 
 //char nonOutput[] = "(([0-9]*|undefined)[\\*\\+\\-\\=\\~\\@\\&\\^])([^\\*\\+\\-\\=\\~\\@\\&\\^]{1,})";
 int fNonOutput(char * line, char mm[][MAX_MATCH_LENGTH]){
-   if(line==NULL) return 0;
-    int len=strlen(line);
-    if(len<1) return 0;
+    int len = 0;
+    static const char *valid_operators = "*+-=~@&^";
+    static const char *valid_operators_with_comma = "*+-=~@&^,";
+    if (!line || (len=strlen(line)) < 1)
+        return 0;
     char ch = line[0];
     int qtt=0, ret = 0, pos=0, pos1=0, pos2=0, pos3=0, find=0;
     if(qtt<len){
@@ -78,7 +80,7 @@ int fNonOutput(char * line, char mm[][MAX_MATCH_LENGTH]){
         }
         if(qtt<len){
             ch=line[qtt];
-            if(ch=='*' || ch=='+' || ch=='-' || ch=='=' || ch=='~' || ch=='@' || ch=='&' || ch=='^'){
+            if(strchr(valid_operators, ch) != NULL){
                 mm[0][pos++]=ch;
                 mm[2][pos2++]=ch;
                 mm[0][pos]='\0';
@@ -92,9 +94,7 @@ int fNonOutput(char * line, char mm[][MAX_MATCH_LENGTH]){
             qtt++;
             ch=line[qtt];
             int fd = 0;
-            while(ch != '*' && ch != '+' && ch != '-' && ch != '=' &&
-                    ch != '~' && ch != '@' && ch != '&' && ch != '^' && ch != ',' 
-                    && qtt<len) {
+            while( !strchr(valid_operators_with_comma, ch) && qtt<len) {
                 mm[0][pos++]=ch;
                 mm[3][pos3++]=ch;
                 qtt++;
@@ -154,9 +154,8 @@ int fGdbRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    char ch;
    ch = line[0];
    int pos=0;
-   int ret=0;
-   strcpy(mm[0],"");
-   strcpy(mm[1],"");
+   mm[0][0] = '\0';
+   mm[1][0] = '\0';
    if((ch>='0' && ch<='9')){
         while(ch>='0' && ch<='9' && pos<len){
             mm[0][pos]=ch;
@@ -171,12 +170,12 @@ int fGdbRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
         pos+=9;
    }
    len = strlen(&line[pos]);
-   if(len>=5 && strncmp(&line[pos],"(gdb)",5)){
-    strcat(m[0],"(gdb)");
-    strcat(m[1],"(gdb)");
-    ret=1;
+   if(len>=5 && strncmp(&line[pos],"(gdb)",5)==0){
+    strcat(mm[0],"(gdb)");
+    strcat(mm[1],"(gdb)");
+    return 1;
    }
-   return ret;
+   return 0;
 }
 
 ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){

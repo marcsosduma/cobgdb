@@ -68,6 +68,21 @@ void fileNameWithoutExtension(char * file, char * onlyName){
     }
 }
 
+void fileExtension(char * file, char * onlyExtension){
+    int offset=strlen(file);
+    int qtt=1;
+    if(strchr(file,'.')!=NULL){
+        while(file[offset]!='.'){offset--; qtt++;}
+        if(qtt>100) {
+            strcpy(onlyExtension, "");
+            return;    
+        }
+        memcpy (onlyExtension, file + offset, qtt);
+    }else{
+        strcpy(onlyExtension, "");
+    }
+}
+
 char *istrstr(const char *haystack, const char *needle) {
     while (*haystack) {
         const char *h = haystack;

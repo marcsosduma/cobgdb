@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.3.4" 
+#define COBGDB_VERSION "1.3.5" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -919,25 +919,31 @@ int main(int argc, char **argv) {
                         arg_count++;
                 }
             }else{
-                fileNameWithoutExtension(argv[i], &baseName[0]);
-                normalizePath(baseName);
-                strcpy(baseName,getFileNameFromPath(baseName));
-                // Exe File
-                if(nfile==0){
-                    strcpy(cob.name_file,argv[i]);
-                    strcpy(nameExecFile,baseName);
-                    #if defined(_WIN32)
-                    strcat(nameExecFile,".exe");
-                    #endif
-                    printf("Name: %s\n",nameExecFile);
+                char ext[100];
+                fileExtension(argv[i], ext);
+                // verify .cob or .cbl files
+                printf("Extension=%s\n",ext);
+                if(strcasecmp(ext,".cob")==0 || strcasecmp(ext,".cbl")==0 ){
+                    fileNameWithoutExtension(argv[i], &baseName[0]);
+                    normalizePath(baseName);
+                    strcpy(baseName,getFileNameFromPath(baseName));
+                    // Exe File
+                    if(nfile==0){
+                        strcpy(cob.name_file,argv[i]);
+                        strcpy(nameExecFile,baseName);
+                        #if defined(_WIN32)
+                        strcat(nameExecFile,".exe");
+                        #endif
+                        printf("Name: %s\n",nameExecFile);
+                    }
+                    // C File
+                    snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
+                    strcpy(fileCGroup[nfile],nameCFile);
+                    // Cobol File
+                    realpath(argv[i], fileCobGroup[nfile]);
+                    normalizePath(fileCobGroup[nfile]);
+                    nfile++;
                 }
-                // C File
-                snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
-                strcpy(fileCGroup[nfile],nameCFile);
-                // Cobol File
-                realpath(argv[i], fileCobGroup[nfile]);
-                normalizePath(fileCobGroup[nfile]);
-                nfile++;
             }
         }
 		strcpy(fileCobGroup[nfile], "");

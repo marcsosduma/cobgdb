@@ -674,10 +674,23 @@ char *stringToPacked(char *valueStr, size_t fieldSize, int scale, const char *ty
     return (char *) packed_data;
 }
 
+char* convertDoubleValueToBytes(char* ptr){
+        char * bytes = malloc(50);
+        for(size_t i=0;i<strlen(ptr);i++){
+            if(ptr[i]==',') ptr[i]='.';
+        }
+        double dbl = atof(ptr);
+        memcpy(bytes, &dbl, sizeof(double));
+        bytes[sizeof(double)]='\0';    
+        return bytes;
+}
+
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags) {
     if (!valueStr) return NULL;
     if (strcmp(type, "numeric") == 0) {
         return convertStrToCobField(valueStr);
+    }else if(strcmp(type, "numeric double") == 0) {
+        return convertDoubleValueToBytes(valueStr); 
     } else if(strcmp(type, "numeric packed") == 0) {
         return stringToPacked(valueStr, fieldSize, scale, type);
     } else if(strcmp(type, "numeric binary") == 0 || strcmp(type, "numeric COMP5") == 0) {

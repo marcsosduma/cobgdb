@@ -52,7 +52,6 @@ void ErrorExit(char *);
 
 int start_gdb(char * name, char * cwd)
 {
-
    char fixCommand[] = "gdb -nx --quiet --interpreter=mi2 ";
    sprintf(command, "%s", fixCommand);
    SECURITY_ATTRIBUTES saAttr;
@@ -62,99 +61,92 @@ int start_gdb(char * name, char * cwd)
    saAttr.lpSecurityDescriptor = NULL;
 
    // Create a pipe for the child process's STDOUT.
-   if ( ! CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &saAttr, 0) )
+   if (!CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &saAttr, 0))
       ErrorExit("StdoutRd CreatePipe");
 
-   // Ensure the read handle to the pipe for STDOUT is not inherited.
-   if ( ! SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
-       ErrorExit("Stdout SetHandleInformation");
-   // Non blocking mode
+   if (!SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0))
+      ErrorExit("Stdout SetHandleInformation");
+
    DWORD dwMode = PIPE_NOWAIT;
-   SetNamedPipeHandleState( 
-      g_hChildStd_OUT_Rd,    // pipe handle 
-      &dwMode,  // new pipe mode 
-      NULL,     // don't set maximum bytes 
-      NULL);    // don't set maximum time 
+   SetNamedPipeHandleState(
+      g_hChildStd_OUT_Rd,
+      &dwMode,
+      NULL,
+      NULL);
 
    // Create a pipe for the child process's STDIN.
-   if (! CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &saAttr, 0))
+   if (!CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &saAttr, 0))
+      ErrorExit("Stdin CreatePipe");
 
-   // Ensure the write handle to the pipe for STDIN is not inherited.
-   if ( ! SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
+   if (!SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0))
       ErrorExit("Stdin SetHandleInformation");
+
    // Create the child process.
    CreateChildProcess();
 
    char env_dir[512];
    char f_symb[512];
-   sprintf(env_dir,"-environment-directory \"%s\"\n", cwd);
-   sprintf(f_symb,"-file-exec-and-symbols \"%s/%s\"\n", cwd, name);
+   sprintf(env_dir, "-environment-directory \"%s\"\n", cwd);
+   sprintf(f_symb, "-file-exec-and-symbols \"%s/%s\"\n", cwd, name);
 
-   char * gdbSet[]={ "-gdb-set target-async on\n", //old format
-                     "-gdb-set mi-async on\n",
-                     "-gdb-set print repeats 1000\n",
-                     "-gdb-set charset UTF-8\n",
-                     "-gdb-set mi-notify-stdio on\n",
-                     "-gdb-set print sevenbit-strings off\n",
-                     "-gdb-set print static-members off\n",
-                     "-gdb-set print pretty on\n",
-                     "-gdb-set new-console on\n",
-                     env_dir,
-                     f_symb,
-                     ""
-                  };
-   int idx=0;
-   while(strlen(gdbSet[idx])>=1){
-        sendCommandGdb(gdbSet[idx++]);
+   char * gdbSet[] = {
+      "-gdb-set target-async on\n",
+      "-gdb-set mi-async on\n",
+      "-gdb-set print repeats 1000\n",
+      "-gdb-set charset UTF-8\n",
+      "-gdb-set mi-notify-stdio on\n",
+      "-gdb-set print sevenbit-strings off\n",
+      "-gdb-set print static-members off\n",
+      "-gdb-set print pretty on\n",
+      "-gdb-set new-console on\n",
+      env_dir,
+      f_symb,
+      ""
+   };
+
+   int idx = 0;
+   while (strlen(gdbSet[idx]) >= 1) {
+      sendCommandGdb(gdbSet[idx++]);
    }
-   cob.waitAnswer=1;
-   debug(&sendCommandGdb );
+
+   cob.waitAnswer = 1;
+   debug(&sendCommandGdb);
+
    printf("\n->End of parent execution.\n");
    return 0;
 }
 
 void CreateChildProcess()
-// Create a child process that uses the previously created pipes for STDIN and STDOUT.
 {
    PROCESS_INFORMATION piProcInfo;
    STARTUPINFO siStartInfo;
    BOOL bSuccess = FALSE;
 
-// Set up members of the PROCESS_INFORMATION structure.
-
-   ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
-
-// Set up members of the STARTUPINFO structure.
-// This structure specifies the STDIN and STDOUT handles for redirection.
-
-   ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
+   ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+   ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
    siStartInfo.cb = sizeof(STARTUPINFO);
    siStartInfo.hStdError = g_hChildStd_OUT_Wr;
    siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
    siStartInfo.hStdInput = g_hChildStd_IN_Rd;
    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-// Create the child process.
-
    bSuccess = CreateProcess(NULL,
-      command,     // command line
-      NULL,          // process security attributes
-      NULL,          // primary thread security attributes
-      TRUE,          // handles are inherited
-      0,             // creation flags
-      NULL,          // use parent's environment
-      NULL,          // use parent's current directory
-      &siStartInfo,  // STARTUPINFO pointer
-      &piProcInfo);  // receives PROCESS_INFORMATION
+      command,
+      NULL,
+      NULL,
+      TRUE,
+      0,
+      NULL,
+      NULL,
+      &siStartInfo,
+      &piProcInfo);
 
-   // If an error occurs, exit the application.
-   if ( ! bSuccess )
+   if (!bSuccess)
       ErrorExit(TEXT("CreateProcess"));
-   else
-   {
+   else {
       CloseHandle(piProcInfo.hProcess);
       CloseHandle(piProcInfo.hThread);
-      //
+
       WaitForSingleObject(piProcInfo.hProcess, INFINITE);
 
       CloseHandle(g_hChildStd_OUT_Wr);
@@ -162,78 +154,81 @@ void CreateChildProcess()
    }
 }
 
-// Read output from the child process's pipe
 int sendCommandGdb(char * command)
 {
    DWORD dwRead, dwWritten;
    CHAR chBuf[BUFSIZE];
-   BOOL bSuccess = FALSE;   
-   int qtdAlloc = 0;   
-   int mustReturn=1;
-   int count0=0;
+   BOOL bSuccess = FALSE;
+   int qtdAlloc = 0;
+   int mustReturn = 1;
+   int count0 = 0;
+
    #ifdef DEBUG
    HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
    #endif
-   
+
    int tk = token;
-   if(strlen(command)>0){
-      if(strstr(command,"-gdb-exit\n")!=NULL || strstr(command,"-gdb-set")!=NULL ||
-         strstr(command,"-environment-directory")!=NULL || 
-         strstr(command,"-file-exec-and-symbols")!=NULL){
-         strcpy(chBuf,command);
-         mustReturn=0;
+   if (strlen(command) > 0) {
+      if (strstr(command, "-gdb-exit\n") != NULL || strstr(command, "-gdb-set") != NULL ||
+          strstr(command, "-environment-directory") != NULL ||
+          strstr(command, "-file-exec-and-symbols") != NULL) {
+         strcpy(chBuf, command);
+         mustReturn = 0;
          cob.waitAnswer = 1;
-      }else{
-         sprintf(chBuf,"%d-%s", token++, command);
+      } else {
+         sprintf(chBuf, "%d-%s", token++, command);
       }
+
       bSuccess = WriteFile(g_hChildStd_IN_Wr, chBuf, strlen(chBuf), &dwWritten, NULL);
-      if( ! bSuccess ) return 0;
-      if(mustReturn) return tk;
+      if (!bSuccess) return 0;
+      if (mustReturn) return tk;
    }
-   if(gdbOutput!=NULL){
-      strcat(gdbOutput,"\n");
-      if(strcmp(gdbOutput,"\n")==0) strcpy(gdbOutput,"");
-      qtdAlloc=strlen(gdbOutput);
-   }else{
-      qtdAlloc=0;
-      gdbOutput=malloc(BUFFER_OUTPUT_SIZE);
-      strcpy(gdbOutput,"");
+
+   if (gdbOutput != NULL) {
+      strcat(gdbOutput, "\n");
+      if (strcmp(gdbOutput, "\n") == 0) strcpy(gdbOutput, "");
+      qtdAlloc = strlen(gdbOutput);
+   } else {
+      qtdAlloc = 0;
+      gdbOutput = malloc(BUFFER_OUTPUT_SIZE);
+      strcpy(gdbOutput, "");
    }
-   strcpy(chBuf,"");
-   for (;;)
-   {
-      bSuccess = ReadFile( g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
+
+   strcpy(chBuf, "");
+   for (;;) {
+      bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
       #ifdef DEBUG
       bSuccess = WriteFile(hParentStdOut, chBuf, dwRead, &dwWritten, NULL);
       #endif
-      //if (! bSuccess ) break;
-      qtdAlloc = (gdbOutput!=NULL)?strlen(gdbOutput)+1:0;
-      if(dwRead>0){
-         chBuf[dwRead]='\0';
-         qtdAlloc+=dwRead+1;
-         if(qtdAlloc>BUFFER_OUTPUT_SIZE){
-           gdbOutput = realloc(gdbOutput, qtdAlloc);
+
+      qtdAlloc = (gdbOutput != NULL) ? strlen(gdbOutput) + 1 : 0;
+      if (dwRead > 0) {
+         chBuf[dwRead] = '\0';
+         qtdAlloc += dwRead + 1;
+         if (qtdAlloc > BUFFER_OUTPUT_SIZE) {
+            gdbOutput = realloc(gdbOutput, qtdAlloc);
          }
          strcat(gdbOutput, chBuf);
-         count0=0;
-      }else{
-         Sleep(1);
+         count0 = 0;
+      } else {
+         if (count0 > 0)
+            Sleep(1);
          count0++;
       }
-      if(dwRead>5)
-         if(strncmp(chBuf,"^exit\n",6)==0)
-             return 0;
-      if((strstr(chBuf,"(gdb) ")!=NULL  && dwRead==0) || (count0>5)){
-        return -1;
+
+      if (strncmp(chBuf, "^exit\n", 6) == 0) return 0;
+      if ((strstr(chBuf, "(gdb) ") != NULL && dwRead == 0) || (count0 > 2)) {
+         return -1;
       }
    }
 }
 
 void ErrorExit(char *msg)
 {
-    printf("%s\n", msg);
-    exit(1);
+   printf("%s\n", msg);
+   exit(1);
 }
+
 
 #elif defined(__linux__)
 
