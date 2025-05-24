@@ -99,6 +99,7 @@ cobgdb --exe prog
 - `F` - File: allows selecting the source file for debugging.
 - `A` - Attach: attach to GDBSERVER or Application PID.
 - `W` - Window Size: switches between window sizes: 80x24 and 132x34.
+- `O` - Changes the focus to the window where the debugging code is being displayed (Windows only).
 - `Q` - Quit: quits the program.
 
 ## Linux

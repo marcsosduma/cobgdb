@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.3.5" 
+#define COBGDB_VERSION "1.4" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -154,11 +154,9 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
     // Initialize the first elements with the initial values.
     char *initial_params[] = {
         "-g ",
-        //"-static ",
         "-fsource-location ",
         "-ftraceall ",
         "-v ",
-        //"-free ",
         "-O0 ",
         "-x "
     };
@@ -367,6 +365,7 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
             }
             if(cob.debug_line==show_line->file_line && !cob.running){
                 print(">", color_green); //print_color(color_green); draw_utf8_text("\u25BA");
+                focusOnCobgdb();
                 *line_debug=show_line;
             }else{
                 chExec = (cob.debug_line==show_line->file_line)?'!': ' ';
@@ -764,6 +763,10 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 cob.showFile = TRUE;
                 break;
+            case 'O':
+            case 'o':
+                focus_window_by_title(cob.title);
+                break;
             default: 
                 if(cob.waitAnswer){
                     MI2verifyGdb(sendCommandGdb);
@@ -905,8 +908,13 @@ int main(int argc, char **argv) {
         int nfile=0;
         char * current_dir = getCurrentDirectory(); 
         strcpy(cob.cwd, current_dir);
-        normalizePath(cob.cwd);
+        #if defined(_WIN32)
+        sprintf(cob.title, "%s\\", current_dir);          
+        #else
+        sprintf(cob.title, "%s/", current_dir);          
+        #endif
         free(current_dir);
+        normalizePath(cob.cwd);
         for (int i = 1; i < argc; i++) {
             if (argv[i][0] == '-') {
                 // Check if the argument starts with "-"
@@ -963,7 +971,8 @@ int main(int argc, char **argv) {
         loadfile(cob.file_cobol);
         if(withHigh) highlightParse(); 
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
-        //while(key_press(MOUSE_OFF)<=0);           
+        //while(key_press(MOUSE_OFF)<=0); 
+        strcat(cob.title, nameExecFile);          
         start_gdb(nameExecFile,cob.cwd);
         freeBKList();
         freeFile();

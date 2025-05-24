@@ -607,6 +607,44 @@ void set_terminal_size(int width, int height){
 #endif // Windows/Linux
 }
 
+void focusOnCobgdb() {
+    #if defined(_WIN32)
+    HWND hwndConsole = GetConsoleWindow();
+    if (hwndConsole == NULL) return;
+    // Simulate ALT key pressed to allow SetForegroundWindow
+    INPUT input[2] = {};
+    // Press Alt
+    input[0].type = INPUT_KEYBOARD;
+    input[0].ki.wVk = VK_MENU;
+    // Release Alt
+    input[1].type = INPUT_KEYBOARD;
+    input[1].ki.wVk = VK_MENU;
+    input[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    // Send the simulated inputs
+    SendInput(2, input, sizeof(INPUT));
+    // Bring to front and set focus
+    ShowWindow(hwndConsole, SW_RESTORE);
+    SetForegroundWindow(hwndConsole);
+    SetFocus(hwndConsole);
+    SetActiveWindow(hwndConsole);
+    #endif
+}
+
+
+void focus_window_by_title(const char *window_title) {
+    #if defined(_WIN32)
+    HWND hwnd = FindWindowA(NULL, window_title);
+    if (hwnd != NULL) {
+        ShowWindow(hwnd, SW_SHOW); 
+        ShowWindow(hwnd, SW_RESTORE);
+        SetForegroundWindow(hwnd);
+        SetFocus(hwnd);
+        SetActiveWindow(hwnd);
+    }
+    #else
+     (void)window_title; 
+    #endif
+}
 
 void gotoxy(int x, int y){
     #if defined(_WIN32)

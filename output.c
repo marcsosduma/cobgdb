@@ -84,7 +84,7 @@ char *findTtyName(const char *target) {
         if (strstr(line, findValue)) {
             char *pts = strtok_r(line, " ", &saveptr2);
             while (pts != NULL) {
-                if (strstr(pts, "pts")) {
+                if (strstr(pts, "pts") || strstr(pts, "tty")) {
                     char buffer[512];
                     sprintf(buffer, "/dev/%s", pts);
                     xterm_device = strdup(buffer);

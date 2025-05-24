@@ -93,6 +93,7 @@ typedef struct ST_Line ST_Line;
 struct st_cobgdb {
 	char name_file[256];
     char file_cobol[512];
+    char title[512];
     char cfile[1048];
     char cwd[512];
     char first_file[512];
@@ -323,6 +324,8 @@ int showCobMessage(char * message, int type);
 void disableEcho();
 void enableEcho();
 void freeInputBuffer();
+void focusOnCobgdb();
+void focus_window_by_title(const char *window_title);
 #if defined(_WIN32)
 void DisableMaxWindow();
 #endif
