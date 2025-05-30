@@ -29,17 +29,32 @@ CP       = copy
 else
 #
 # Linux
-# 
-CC       = gcc
-RES      = 
-OBJ      = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
-LINKOBJ  = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
-LIBS     = 
-INCS     = 
+#
+
+# Verifica se o arquivo Xlib.h existe em /usr/include/X11/Xlib.h ou /usr/include/X11/Xlib.h (pode ajustar o caminho)
+X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
+
+ifeq ($(X11_HEADER_EXISTS),yes)
+    CC       = gcc
+    RES      =
+    OBJ      = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
+    LINKOBJ  = $(OBJ)
+    LIBS     = -lX11
+    INCS     = -I/usr/include/X11
+    CFLAGS   = $(INCS) -DHAVE_X11 -fdiagnostics-color=always -g -Wall -Wextra
+else
+    CC       = gcc
+    RES      =
+    OBJ      = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
+    LINKOBJ  = $(OBJ)
+    LIBS     =
+    INCS     =
+    CFLAGS   = -fdiagnostics-color=always -g -Wall -Wextra
+endif
+
 BIN      = cobgdb
-CFLAGS   = $(INCS) -fdiagnostics-color=always -g -Wall -Wextra
 RM       = rm -f
-CP		 = cp
+CP       = cp
 endif
 
 .PHONY: all all-before all-after clean clean-custom copy

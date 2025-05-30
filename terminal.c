@@ -46,6 +46,12 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #include <errno.h>
 #include <stdlib.h>
 #include <wchar.h>
+#if __has_include(<X11/Xlib.h>)
+#ifndef HAVE_X11
+#define HAVE_X11
+#endif
+#include <X11/Xlib.h>
+#endif
 #endif // Windows/Linux
 #include <time.h>
 #include "cobgdb.h"
@@ -494,6 +500,8 @@ void get_terminal_size(int *width, int *height) {
     ioctl(STDIN_FILENO, TIOCGWINSZ, &ws);
     *width = (int)(ws.ws_col);
     *height = (int)(ws.ws_row);
+    printf("\033]0;%s\007", "CobGDB Debug");
+    fflush(stdout);
 #endif // Windows/Linux
 }
 
@@ -607,6 +615,70 @@ void set_terminal_size(int width, int height){
 #endif // Windows/Linux
 }
 
+#if  defined(__linux__)
+#ifdef HAVE_X11
+int is_x11_environment() {
+    const char *display = getenv("DISPLAY");
+    return display != NULL && display[0] != '\0';
+}
+
+Window find_window_by_title(Display *display, Window root, const char *title) {
+    Window root_return, parent_return;
+    Window *children;
+    unsigned int nchildren;
+
+    if (!XQueryTree(display, root, &root_return, &parent_return, &children, &nchildren)) {
+        return 0;
+    }
+
+    for (unsigned int i = 0; i < nchildren; i++) {
+        char *window_name = NULL;
+        if (XFetchName(display, children[i], &window_name)) {
+            if (window_name && strstr(window_name, title)) {
+                Window found = children[i];
+                XFree(window_name);
+                return found;
+            }
+            XFree(window_name);
+        }
+
+        // Recurse
+        Window child = find_window_by_title(display, children[i], title);
+        if (child) return child;
+    }
+
+    if (children) XFree(children);
+    return 0;
+}
+
+void focus_window_by_title_linux(const char *title_to_find) {
+    if (!is_x11_environment()) {
+        return;
+    }
+
+    Display *display = XOpenDisplay(NULL);
+    if (!display) {
+        return;
+    }
+
+    Window root = DefaultRootWindow(display);
+    Window win = find_window_by_title(display, root, title_to_find);
+
+    if (win != 0) {
+        //printf("Janela encontrada: 0x%lx\n", win);
+        XRaiseWindow(display, win); // Traz para frente
+        XSetInputFocus(display, win, RevertToParent, CurrentTime); // Foca
+    }
+
+    XCloseDisplay(display);
+}
+#else
+void focus_window_by_title_linux(const char *title_to_find) {
+    (void)title_to_find; 
+}
+#endif
+#endif  
+
 void focusOnCobgdb() {
     #if defined(_WIN32)
     HWND hwndConsole = GetConsoleWindow();
@@ -627,6 +699,10 @@ void focusOnCobgdb() {
     SetForegroundWindow(hwndConsole);
     SetFocus(hwndConsole);
     SetActiveWindow(hwndConsole);
+    #else
+    #ifdef HAVE_X11
+    focus_window_by_title_linux("CobGDB Debug");
+    #endif
     #endif
 }
 
@@ -642,7 +718,12 @@ void focus_window_by_title(const char *window_title) {
         SetActiveWindow(hwnd);
     }
     #else
-     (void)window_title; 
+    (void)window_title; 
+    #ifdef HAVE_X11
+    char linux_title[300];
+    snprintf(linux_title, sizeof(linux_title) - 1, "GnuCOBOL Debug - %s", cob.name_file);
+    focus_window_by_title_linux(linux_title);
+    #endif
     #endif
 }
 

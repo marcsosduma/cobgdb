@@ -44,6 +44,7 @@ int VIEW_LINES= 24;
 int start_window_line = 0;
 int qtd_window_line = 22;
 int start_line_x = 0;
+int WAIT_GDB=100;
 
 char * gdbOutput = NULL;
 int color_frame=color_light_blue;
@@ -154,9 +155,11 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
     // Initialize the first elements with the initial values.
     char *initial_params[] = {
         "-g ",
+        //"-static ",
         "-fsource-location ",
         "-ftraceall ",
         "-v ",
+        //"-free ",
         "-O0 ",
         "-x "
     };
@@ -365,7 +368,9 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
             }
             if(cob.debug_line==show_line->file_line && !cob.running){
                 print(">", color_green); //print_color(color_green); draw_utf8_text("\u25BA");
-                focusOnCobgdb();
+                if(WAIT_GDB>10)
+                    focusOnCobgdb();
+                WAIT_GDB = 0;
                 *line_debug=show_line;
             }else{
                 chExec = (cob.debug_line==show_line->file_line)?'!': ' ';
@@ -769,6 +774,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             default: 
                 if(cob.waitAnswer){
+                    WAIT_GDB++;
                     MI2verifyGdb(sendCommandGdb);
                     if(cob.showFile && cob.changeLine){
                         lines = set_window_pos(&cob.line_pos);
