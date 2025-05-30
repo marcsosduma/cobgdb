@@ -99,7 +99,7 @@ cobgdb --exe prog
 - `F` - File: allows selecting the source file for debugging.
 - `A` - Attach: attach to GDBSERVER or Application PID.
 - `W` - Window Size: switches between window sizes: 80x24 and 132x34.
-- `O` - Changes the focus to the window where the debugging code is being displayed (Windows only).
+- `O` - Changes the focus to the window where the debugging code is being displayed (Windows or X11 only).
 - `Q` - Quit: quits the program.
 
 ## Linux
@@ -118,3 +118,10 @@ COBGDB has been tested with versions 3.1.2 and 3.2 of GnuCOBOL; however, it shou
 
 In terms of Linux, it has been tested on GNOME, XFCE and XTerm terminals.
 
+On Linux, to allow the application to change windows, you need to compile ```COBGDB``` with the ```X11``` libraries.
+
+Linux Ubuntu:
+```bash
+
+sudo apt install libx11-dev
+```
