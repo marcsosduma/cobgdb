@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.4.1" 
+#define COBGDB_VERSION "1.4.2" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -106,14 +106,14 @@ void freeBKList()
 }
 
 void show_version(){
-    printf("COBGDB - GnuCobol GDB Interpreter - version %s\n", COBGDB_VERSION);
+    printf("CobGDB - GnuCobol GDB Interpreter - version %s\n", COBGDB_VERSION);
     printf("Copyright (C) 2013 Free Software Foundation, Inc.\n");
     printf("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n");
     printf("This is free software: you are free to change and redistribute it.\n");
     #ifdef __MINGW32__
-    printf("This COBGDB was configured as \"MinGW32\".\n");
+    printf("This CobGDB was configured as \"MinGW32\".\n");
     #elif defined(__GNUC__)
-    printf("This COBGDB was compiled with GCC.\n");
+    printf("This CobGDB was compiled with GCC.\n");
     #else
     printf("Compiler information not available.\n");
     #endif
@@ -257,7 +257,7 @@ int show_button(){
 }
 
 int show_opt(){
-    char * opt = " COBGDB                  GnuCOBOL GDB Interpreter";
+    char * opt = " CobGDB                  GnuCOBOL GDB Interpreter";
     char aux[200];
     snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-17, VIEW_COLS-17, opt);
     gotoxy(1,1);
@@ -638,6 +638,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     show_wait();
                     disableEcho();
                     MI2start(sendCommandGdb);
+                    WAIT_GDB=100;
                     enableEcho();
                 }
                 break;
@@ -672,6 +673,7 @@ int debug(int (*sendCommandGdb)(char *)){
                         disableEcho();
                         MI2goToCursor(sendCommandGdb, cob.name_file, lb->file_line);
                         enableEcho();
+                        WAIT_GDB=100;
                     } 
                     cob.showFile=TRUE;
                 }
@@ -684,6 +686,8 @@ int debug(int (*sendCommandGdb)(char *)){
                         line_debug=NULL;
                         show_file(lines, cob.line_pos, &line_debug);
                         showCobMessage("Not a debuggable line.",2);
+                    }else{
+                        WAIT_GDB=100;
                     }
                     cob.showFile=TRUE;
                 }
@@ -740,6 +744,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     MI2attach(sendCommandGdb);
                     cob.showFile=TRUE;
                     MI2getStack(sendCommandGdb,1);
+                    WAIT_GDB=100;
                 }
                 break;
             case 'W':
@@ -884,6 +889,11 @@ int main(int argc, char **argv) {
         normalizePath(baseName);
         strcpy(nameExecFile,getFileNameFromPath(baseName));
         strcpy(cob.cwd, current_dir);
+        #if defined(_WIN32)
+        sprintf(cob.title, "%s\\", current_dir);          
+        #else
+        sprintf(cob.title, "%s/", current_dir);          
+        #endif
         normalizePath(cob.cwd);
         #if defined(_WIN32)
         strcat(nameExecFile,".exe");
@@ -904,6 +914,7 @@ int main(int argc, char **argv) {
         enableEcho();
         fflush(stdout);
         while(key_press(MOUSE_OFF)<=0);  
+        strcat(cob.title, nameExecFile);  
         start_gdb(nameExecFile,cob.cwd);
         freeBKList();
         freeFile();
@@ -965,7 +976,7 @@ int main(int argc, char **argv) {
         int ret = cobc_compile(fileCobGroup, values, arg_count);
         if (ret) {
             // TODO: use wait.h macros to output signal/status/...
-            printf("COBGDB: Issue in cobc, code %d\n", ret);
+            printf("CobGDB: Issue in cobc, code %d\n", ret);
             fflush(stdout);
             return 1;
         }
@@ -989,7 +1000,7 @@ int main(int argc, char **argv) {
     }
     print_color_reset();
     cursorON();
-    printf("The end of the COBGDB execution.\n");
+    printf("The end of the CobGDB execution.\n");
     fflush(stdout);
     return 0;
 }

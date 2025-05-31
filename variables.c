@@ -29,7 +29,7 @@ wchar_t wcBuffer[512];
 ST_DebuggerVariable * currentVar;
 
 int show_opt_var(){
-    char * opt = " COBGDB - (R)return (ENTER)expand/contract (E)edit var";
+    char * opt = " CobGDB - (R)return (ENTER)expand/contract (E)edit var";
     char aux[150];
     sprintf(aux,"%-*s\r",VIEW_COLS, opt);
     gotoxy(1,1);
@@ -957,7 +957,7 @@ void show_help(){
     boolean show = TRUE;
 
     char *text[] = {
-        "                     COBGDB - Commands",
+        "                     CobGDB - Commands",
         " ",
         "B - Breakpoint: toggles the breakpoint at the current selected line",
         "    (can also be done with the mouse).",
@@ -982,7 +982,7 @@ void show_help(){
         "    displayed (Windows or X11 only).",
         "Q - Quit: quits the program.",
         "  ",
-        "COBGDB takes one or more programs with COB/CBL extension as parameters",
+        "CobGDB takes one or more programs with COB/CBL extension as parameters",
         "and runs the GnuCOBOL compiler with the following format:",
         "cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...",
         "  ",
@@ -999,9 +999,9 @@ void show_help(){
         "9112"
         "  ",
         "  ",
-        "                 COBGDB Debugging a Pre-compiled File",
+        "                 CobGDB Debugging a Pre-compiled File",
         "  ",
-        "You can also use COBGDB to debug a previously generated executable ",
+        "You can also use CobGDB to debug a previously generated executable ",
         "file. Compile the program with these options:",
         "cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...",
         "  ",
@@ -1034,7 +1034,7 @@ void show_help(){
         if(show){
             gotoxy(col,lin);
             print_colorBK(frg, bkgr);
-            draw_box_first(col,lin++,size,"COBGDB HELP");
+            draw_box_first(col,lin++,size,"CobGDB HELP");
             int f = start_file;
             int pos=0;
             while(pos<lmax){
