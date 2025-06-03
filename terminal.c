@@ -196,13 +196,14 @@ void mouseCobHover(int col, int line){
     if(col==VIEW_COLS-1  && line<VIEW_LINES/2-1) cob.mouse=1;
     if(col==VIEW_COLS-1  && line>=VIEW_LINES/2-1) cob.mouse=2;
     if(col<cob.num_dig+2 && line>0 && line<VIEW_LINES-2) cob.mouse=3;
-    if(col==VIEW_COLS-15 && line==0) cob.mouse=10;
-    if(col==VIEW_COLS-13 && line==0) cob.mouse=20;
-    if(col==VIEW_COLS-11  && line==0) cob.mouse=30;
-    if(col==VIEW_COLS-9  && line==0) cob.mouse=40;
-    if(col==VIEW_COLS-7  && line==0) cob.mouse=50;    
-    if(col==VIEW_COLS-5  && line==0) cob.mouse=60;    
-    if(col==VIEW_COLS-3  && line==0) cob.mouse=70;    
+    if(col==VIEW_COLS-17 && line==0) cob.mouse=10;
+    if(col==VIEW_COLS-15 && line==0) cob.mouse=20;
+    if(col==VIEW_COLS-13  && line==0) cob.mouse=30;
+    if(col==VIEW_COLS-11  && line==0) cob.mouse=40;
+    if(col==VIEW_COLS-9  && line==0) cob.mouse=50;    
+    if(col==VIEW_COLS-7  && line==0) cob.mouse=60;    
+    if(col==VIEW_COLS-5  && line==0) cob.mouse=70;    
+    if(col==VIEW_COLS-3  && line==0) cob.mouse=80;    
 }
 
 int mouseCobAction(int col, int line, int type){
@@ -231,9 +232,12 @@ int mouseCobAction(int col, int line, int type){
                 action = 'Q';
                 break;
             case 60:
-                action = 'D';
+                action = 'O';
                 break;
             case 70:
+                action = 'D';
+                break;
+            case 80:
                 action = '?';
                 break;
             default:
@@ -500,6 +504,7 @@ void get_terminal_size(int *width, int *height) {
     ioctl(STDIN_FILENO, TIOCGWINSZ, &ws);
     *width = (int)(ws.ws_col);
     *height = (int)(ws.ws_row);
+    system("echo -ne \"\\033]0;CobGDB Debug\\007\"");
     printf("\033]0;%s\007", "CobGDB Debug");
     fflush(stdout);
 #endif // Windows/Linux
@@ -608,9 +613,6 @@ void set_terminal_size(int width, int height){
         printf("\033[0;0r");
         fflush(stdout);
         tcflush(STDIN_FILENO, TCIFLUSH);
-        //char resize_cmd[50];
-        //snprintf(resize_cmd, sizeof(resize_cmd), "resize -s %dx%d > /dev/null 2>&1", height, width);
-        //system(resize_cmd);
     }
 #endif // Windows/Linux
 }
@@ -722,7 +724,11 @@ void focus_window_by_title(const char *window_title) {
     #ifdef HAVE_X11
     char linux_title[300];
     snprintf(linux_title, sizeof(linux_title) - 1, "GnuCOBOL Debug - %s", cob.name_file);
-    focus_window_by_title_linux(linux_title);
+    if (!is_x11_environment()) {
+        showCobMessage("Works only in X11 environments",1);
+    }else{
+        focus_window_by_title_linux(linux_title);
+    }
     #endif
     #endif
 }
@@ -1118,6 +1124,7 @@ int showCobMessage(char * message, int type){
             double end_time = getCurrentTime();
             double elapsed_time = end_time - check_start;
             if (elapsed_time > type) {
+                cob.showFile=TRUE;
                 break;
             }
         }

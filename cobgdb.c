@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.4.2" 
+#define COBGDB_VERSION "1.4.3" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -236,7 +236,7 @@ Lines * set_window_pos(int * line_pos){
 
 int show_button(){
     print_colorBK(color_blue, color_cyan);
-    gotoxy(VIEW_COLS-16,1);
+    gotoxy(VIEW_COLS-18,1);
     draw_utf8_text("\u2592 ");
     print_colorBK((cob.mouse==10)?color_red:color_blue, color_cyan);
     draw_utf8_text("\u25BA ");
@@ -249,8 +249,10 @@ int show_button(){
     print_colorBK((cob.mouse==50)?color_red:color_blue, color_cyan);
     draw_utf8_text("\u25A0 ");
     print_colorBK((cob.mouse==60)?color_red:color_blue, color_cyan);
-    printf("D ");
+    draw_utf8_text("\u2194 ");
     print_colorBK((cob.mouse==70)?color_red:color_blue, color_cyan);
+    printf("D ");
+    print_colorBK((cob.mouse==80)?color_red:color_blue, color_cyan);
     printf("? ");
     print_color_reset();
     return TRUE;
@@ -333,12 +335,15 @@ int show_info(){
                 printf("%-*s\r",len, "quit");
                 break;
             case 60:
+                printf("%-*s\r",len, "switch to the debug output");
+                break;
+            case 70:
                 if(cob.showVariables)
                     printf("%-*s\r",len, "display of variables: ON");
                 else
                     printf("%-*s\r",len, "display of variables: OFF");
                 break;
-            case 70:
+            case 80:
                 printf("%-*s\r",len, "help");
                 break;
         }
