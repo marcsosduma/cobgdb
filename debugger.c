@@ -64,7 +64,7 @@ void formatNumberParser(char *valueStr, int fieldSize, int sc) {
     char *decimals = malloc(scale + fieldSize + 3);
     wholeNumber[0] = '\0';
     decimals[0] = '\0';
-    if (strlen(value) >= abs(scale)) {
+    if (strlen(value) >= (size_t)abs(scale)) {
         strcpy(wholeNumber, value);
         if (sc > 0) {
             wholeNumber[strlen(wholeNumber) - abs(scale)] = '\0';
