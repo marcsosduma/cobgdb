@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.4.3" 
+#define COBGDB_VERSION "1.4.4" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -261,7 +261,7 @@ int show_button(){
 int show_opt(){
     char * opt = " CobGDB                  GnuCOBOL GDB Interpreter";
     char aux[200];
-    snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-17, VIEW_COLS-17, opt);
+    snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-19, VIEW_COLS-19, opt);
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
     if(cob.mouse>9) show_button();
