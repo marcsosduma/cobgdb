@@ -4,13 +4,13 @@ It is a full screen animator application, programmed in C, designed to assist in
 
 CDBGDB is still under development; however, it can already be used and can help you debug your applications.
 
-## Requirements
+## 🛠️ Requirements
 
 * GnuCOBOL cobc 3.1.2 or later.
 * GNU Compiler gcc.
 * GNU Debugger gdb.
 
-## Getting Started
+## 🚀 Getting Started
 
 In the Windows subdirectory, the executable program for this operating system is available.
 
@@ -62,7 +62,7 @@ Example:
 - `9112`
 
 
-## COBGDB Debugging a Pre-compiled File
+## ⚙️ COBGDB Debugging a Pre-compiled File
 
 You can also use COBGDB to debug a previously generated executable file. To do this, you must compile the program with these options:
 ```bash
@@ -84,7 +84,7 @@ Linux:
 cobgdb --exe prog
 ```
 
-## Main Commands
+## ❓ Main Commands
 
 - `B` - Breakpoint: toggles the breakpoint at the current selected line (can also be done with the mouse).
 - `R` - Run: runs the program from the first statement until a breakpoint is encountered.
@@ -102,13 +102,13 @@ cobgdb --exe prog
 - `O` - Changes the focus to the window where the debugging code is being displayed (Windows or X11 only).
 - `Q` - Quit: quits the program.
 
-## Linux
+## 🐧 Linux
 
 Debugging application on Linux:
 
 ![Screenshot](cobgdb_linux.png)
 
-## Extra Information
+## 📝 Extra Information
 
 The command ```cobgdb --version``` will display the application's version.
 
