@@ -31,6 +31,7 @@ const wchar_t COBOL_SPECIAL_VAR[] =  L" COB-CRT-STATUS JSON-STATUS VALIDATE-STAT
 extern struct st_cobgdb cob;
 extern int color_frame;
 boolean isProcedure = FALSE;
+boolean isPicture = FALSE;
 int isProc=0;
 
 wchar_t * toWUpper(wchar_t* str) {
@@ -99,10 +100,22 @@ int parseAlpha(wchar_t * ch){
     return count;
 }
 
+int parsePicture(wchar_t * ch){
+    int count=0;
+    while(*ch!=L' ' && *ch!='\0'){
+        if(*ch==L'.' && !iswdigit(*(ch+1))) break;
+        ch = ch + 1;
+        count++;
+    }
+    return count;
+}
+
 int parseDigitOrAlpha(wchar_t * ch,struct st_highlt * h){
     int count=0;
     int alpha=0;
-    while(iswdigit(*ch)){
+    while(iswdigit(*ch) || *ch=='.' || *ch=='e'){
+        if(*ch=='.' && !iswdigit(*(ch+1))) break;
+        if(*ch=='e' && *(ch+1)!='+') break;
         ch = ch + 1;
         count++;
     }
@@ -122,7 +135,6 @@ int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
     int tot=total;
     int qtdMove=0;
 
-    //setlocale(LC_ALL,"");
     wchar_t *wcBuffer = (wchar_t *)malloc(512);
 
     int st = start;
@@ -179,6 +191,8 @@ void isReserved(struct st_highlt * h){
             h->color=color_blue;
             if(isProc==0 && wcsstr(L" PROCEDURE ",test)) isProc++;
             if(isProc==1 && wcsstr(L" DIVISION ",test)) isProcedure=TRUE;
+            if(isProc==0 && wcsstr(L" PIC ",test)) isPicture=TRUE;
+            if(isProc==1 && wcsstr(L" PICTURE ",test)) isPicture=TRUE;
             h->type=TP_RESERVED;
         }
         if(isProcedure && wcsstr(COBOL_SPECIAL_WORDS, test)){
@@ -243,6 +257,7 @@ int highlightParse(){
         #endif
         struct st_highlt * tk_before = NULL;
         struct st_highlt * high = NULL;
+        pos=0;
         do{
             struct st_highlt * h = malloc(sizeof(struct st_highlt));
             if(high==NULL) high=h;
@@ -254,6 +269,13 @@ int highlightParse(){
                 h->type=TP_SPACES;
                 h->size = parseSpaces(wcharString);
                 h->color = color_black;
+                wcharString+=h->size;
+            }else if(isPicture){
+                h->token=wcharString;
+                h->type=TP_STRING1;
+                h->size = parsePicture(wcharString);
+                h->color = color_cyan;
+                isPicture=FALSE;
                 wcharString+=h->size;
             }else if(*wcharString==L'\''){
                 h->token=wcharString;
@@ -267,7 +289,7 @@ int highlightParse(){
                 h->size = parseStringHigh(wcharString);
                 h->color = color_yellow;
                 wcharString+=h->size;
-            }else if(iswdigit(*wcharString)){
+            }else if(iswdigit(*wcharString) || (*wcharString==L'.' && iswdigit(*(wcharString+1)))){
                 h->token=wcharString;
                 h->color = color_green;
                 h->type=TP_NUMBER;
@@ -287,7 +309,7 @@ int highlightParse(){
                 h->color = color_white;
                 isReserved(h);
                 wcharString+=h->size;
-            }else if(*wcharString==L'*' && tp_before==TP_SPACES && pos==7){
+            }else if(*wcharString==L'*' && tp_before==TP_SPACES && pos==6){
                 h->token=wcharString;
                 h->type=TP_COMMENT;
                 h->size = wcslen(h->token);
@@ -323,7 +345,7 @@ int highlightParse(){
             }
             tk_before=h;
             tp_before=h->type;
-            pos++;
+            pos+= h->size;
         }while(*wcharString!=L'\0');
         if(high!=NULL){
             lines->high=high;

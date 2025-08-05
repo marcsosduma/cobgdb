@@ -121,6 +121,12 @@ void show_version(){
     printf("<https://github.com/marcsosduma/cobgdb>.\n");
 }
 
+#if defined(__linux__)
+#if !defined(CLOCK_MONOTONIC)
+#define CLOCK_MONOTONIC		1
+#endif
+#endif
+
 double getCurrentTime() {
 #ifdef _WIN32
     LARGE_INTEGER frequency, start;
