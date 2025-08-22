@@ -102,6 +102,14 @@ cobgdb --exe prog
 - `O` - Changes the focus to the window where the debugging code is being displayed (Windows or X11 only).
 - `Q` - Quit: quits the program.
 
+## 💡 Tip for Windows 11
+
+- Open Windows Terminal.
+- Go to Settings (click the down arrow and select "Settings").
+- In the left-hand menu, go to the Startup section.
+- Under "Default terminal application," select Windows Console Host.
+- Click Save.
+
 ## 🐧 Linux
 
 Debugging application on Linux:

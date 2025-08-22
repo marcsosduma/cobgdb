@@ -115,7 +115,7 @@ int parseDigitOrAlpha(wchar_t * ch,struct st_highlt * h){
     int alpha=0;
     while(iswdigit(*ch) || *ch=='.' || *ch=='e'){
         if(*ch=='.' && !iswdigit(*(ch+1))) break;
-        if(*ch=='e' && *(ch+1)!='+') break;
+        if(*ch=='e' && *(ch+1)!='+' && *(ch+1)!='-') break;
         ch = ch + 1;
         count++;
     }
@@ -274,7 +274,7 @@ int highlightParse(){
                 h->token=wcharString;
                 h->type=TP_STRING1;
                 h->size = parsePicture(wcharString);
-                h->color = color_cyan;
+                h->color = color_green;
                 isPicture=FALSE;
                 wcharString+=h->size;
             }else if(*wcharString==L'\''){
