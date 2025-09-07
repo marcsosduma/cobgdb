@@ -743,7 +743,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case '?':
                 if(!cob.waitAnswer){
-                    show_help(sendCommandGdb);
+                    show_help();
                     cob.showFile=TRUE;
                 }
                 break;
