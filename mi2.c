@@ -948,10 +948,10 @@ int MI2attach(int (*sendCommandGdb)(char *)){
         strcpy(aux,cob.connect);
     }
     strcpy(lastComand,"exec-continue\n"); 
-    char command[250];
+    char command[300];
     boolean tocontinue=FALSE;
     if(strstr(aux,":")!=NULL){
-        snprintf(command, 250, "target-select remote %s\n", aux);
+        snprintf(command, 300, "target-select remote %s\n", aux);
         sendCommandGdb(command);
         #if defined(_WIN32)
         Sleep(2000);
@@ -965,7 +965,7 @@ int MI2attach(int (*sendCommandGdb)(char *)){
         }while(status!=GDB_CONNECTED && total++<3); 
         tocontinue=(status==GDB_CONNECTED)?TRUE:FALSE;
     }else{
-        snprintf(command, 250, "target-attach %s\n", aux);
+        snprintf(command, 300, "target-attach %s\n", aux);
         sendCommandGdb(command);
         do{
             sendCommandGdb("");
