@@ -457,9 +457,9 @@ int MI2start(int (*sendCommandGdb)(char *)){
     int status=0;
     int count=50;
     do{
-            sendCommandGdb("");
-            MI2onOuput(sendCommandGdb, -1, &status);
-            if(count--<=0) break;
+        sendCommandGdb("");
+        MI2onOuput(sendCommandGdb, -1, &status);
+        if(count--<=0) break;
     }while(status==GDB_RUNNING);    
     cob.waitAnswer = (count<0);
     cob.running=FALSE;
