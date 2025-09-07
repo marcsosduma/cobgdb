@@ -925,34 +925,44 @@ int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
 int MI2attach(int (*sendCommandGdb)(char *)){
     int status, tk=0;
     int lin=10;
-    char aux[100];
-    int bkg= color_dark_red;
-    gotoxy(10,lin+2);
-    print_colorBK(color_white, bkg);
-    draw_box_first(10,lin+2,61,"Attach - server:port or pid");
-    draw_box_border(10,lin+3);
-    draw_box_border(72,lin+3);
-    print_colorBK(color_yellow, bkg);
-    gotoxy(11,lin+3);
-    sprintf(aux,"%s:","Enter");
-    printf("%-61s",aux);
-    lin++;
-    print_colorBK(color_white, bkg);
-    draw_box_last(10,lin+3,61);
-    print_colorBK(color_green, bkg);
-    fflush(stdout);
-    gotoxy(12+strlen(aux),lin+2);
-    readchar(aux,55);  
+    char aux[256];
+    if(strlen(cob.connect)==0){
+        int bkg= color_dark_red;
+        gotoxy(10,lin+2);
+        print_colorBK(color_white, bkg);
+        draw_box_first(10,lin+2,61,"Attach - server:port or pid");
+        draw_box_border(10,lin+3);
+        draw_box_border(72,lin+3);
+        print_colorBK(color_yellow, bkg);
+        gotoxy(11,lin+3);
+        sprintf(aux,"%s:","Enter");
+        printf("%-61s",aux);
+        lin++;
+        print_colorBK(color_white, bkg);
+        draw_box_last(10,lin+3,61);
+        print_colorBK(color_green, bkg);
+        fflush(stdout);
+        gotoxy(12+strlen(aux),lin+2);
+        readchar(aux,55);  
+    }else{
+        strcpy(aux,cob.connect);
+    }
     strcpy(lastComand,"exec-continue\n"); 
     char command[250];
     boolean tocontinue=FALSE;
     if(strstr(aux,":")!=NULL){
         snprintf(command, 250, "target-select remote %s\n", aux);
         sendCommandGdb(command);
+        #if defined(_WIN32)
+        Sleep(2000);
+        #else
+        usleep(4000000);
+        #endif
+        int total=0;
         do{
             sendCommandGdb("");
             MI2onOuput(sendCommandGdb, tk, &status);
-        }while(status!=GDB_CONNECTED && status==0); 
+        }while(status!=GDB_CONNECTED && total++<3); 
         tocontinue=(status==GDB_CONNECTED)?TRUE:FALSE;
     }else{
         snprintf(command, 250, "target-attach %s\n", aux);
@@ -963,6 +973,7 @@ int MI2attach(int (*sendCommandGdb)(char *)){
         }while(strcmp(gdbOutput,"")!=0); 
         tocontinue=TRUE;
     }
+    strcpy(cob.connect,"");
     if(gdbOutput!=NULL){
         free(gdbOutput);
         gdbOutput=NULL;

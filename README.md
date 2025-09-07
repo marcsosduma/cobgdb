@@ -61,6 +61,8 @@ Example:
 - `localhost:5555`
 - `9112`
 
+Command line:
+- `cobgdb --connect localhost:5555 prog.cob`
 
 ## ⚙️ COBGDB Debugging a Pre-compiled File
 

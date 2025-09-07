@@ -997,8 +997,10 @@ void show_help(){
         "Example:",
         "localhost:5555",
         "or",
-        "9112"
+        "9112",
         "  ",
+        "Command line:",
+        "cobgdb --connect localhost:5555 prog.cob",
         "  ",
         "                 CobGDB Debugging a Pre-compiled File",
         "  ",
@@ -1017,11 +1019,11 @@ void show_help(){
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white, 
         color_white, color_white, color_white, color_white, color_white, color_white,
-        color_white,
-        color_yellow, color_white, color_white, color_white, color_white, color_yellow,
+        color_white, color_white, color_white,
+        color_yellow, color_white, color_white, color_yellow,
         color_white, color_white, color_white, color_white, color_white, color_white, 
-        color_yellow, color_white, color_yellow,color_white, 
-        color_green, 
+        color_yellow, color_white, color_yellow,color_white,color_white, color_yellow,
+        color_white, color_green, 
         color_white, color_white, color_white, 
         color_yellow,color_white, color_white, color_yellow,color_white
     };

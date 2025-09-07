@@ -535,6 +535,7 @@ int debug(int (*sendCommandGdb)(char *)){
             cob.input_character = key_press(MOUSE_EXT);
             if(!cob.waitAnswer) check_screen_size(&check_start, &check_size);
         }
+        if(strlen(cob.connect)>0) cob.input_character='a';
         switch (cob.input_character)
         {
             case VK_UP:
@@ -756,6 +757,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     cob.showFile=TRUE;
                     MI2getStack(sendCommandGdb,1);
                     WAIT_GDB=100;
+                    cob.input_character=' ';
                 }
                 break;
             case 'W':
@@ -862,6 +864,7 @@ int main(int argc, char **argv) {
     SetConsoleOutputCP(CP_UTF8);
     #endif    
     strcpy(cob.file_cobol,"");
+    strcpy(cob.connect,"");
     if(!isCommandInstalled("cobc")){
         printf("The GnuCOBOL cobc command is not available!\n");
         fflush(stdout);
@@ -949,8 +952,18 @@ int main(int argc, char **argv) {
                 if (arg_count < 10) {
                     strncpy(values[arg_count], argv[i], sizeof(values[0]) - 1);
                     values[arg_count][sizeof(values[0]) - 1] = '\0';
-                    if(strcmp(values[arg_count],"-nh")==0)
+                    if(strcmp(values[arg_count],"-nh")==0){
                         withHigh=FALSE;
+                        continue;
+                    }if(strcasecmp(values[arg_count],"--connect")==0){
+                        if(i>(argc-2)){
+                            printf("Please provide the parameters.\n");
+                            return 0;
+                        }
+                        i++;
+                        strcpy(cob.connect,argv[i]);
+                        continue;
+                    }
                     else
                         arg_count++;
                 }

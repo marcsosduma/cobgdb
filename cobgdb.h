@@ -97,6 +97,7 @@ struct st_cobgdb {
     char cfile[1048];
     char cwd[512];
     char first_file[512];
+    char connect[256];
     int num_dig;
     int debug_line;
     int running;
