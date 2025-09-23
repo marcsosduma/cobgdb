@@ -377,7 +377,7 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
 int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *));  
 void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line);  
 void show_sources(int (*sendCommandGdb)(char *), int mustParse);
-void show_help();
+void show_help(int is_popup);
 //debugger.c
 char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags, int digits);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags);

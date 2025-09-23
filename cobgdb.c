@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.4.6" 
+#define COBGDB_VERSION "1.4.7" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -158,6 +158,13 @@ int isCommandInstalled(const char *command) {
 int cobc_compile(char file[][512], char values[10][256], int arg_count){
     char *param[20]; 
 
+    // Check if the cobc command is available
+    if(!isCommandInstalled("cobc")){
+        printf("The GnuCOBOL cobc command is not available!\n");
+        fflush(stdout);
+        while(key_press(MOUSE_OFF)<=0);
+        return 0;
+    }
     // Initialize the first elements with the initial values.
     char *initial_params[] = {
         "-g ",
@@ -363,7 +370,7 @@ int show_info(){
 
 int show_file(Lines * lines, int line_pos, Lines ** line_debug){
     Lines * show_line=lines;
-    int NUM_TXT=VIEW_COLS-4-cob.num_dig;
+    int NUM_TXT=VIEW_COLS-4-cob.num_dig;    
     
     gotoxy(1,1);
     show_opt();
@@ -535,7 +542,7 @@ int debug(int (*sendCommandGdb)(char *)){
             cob.input_character = key_press(MOUSE_EXT);
             if(!cob.waitAnswer) check_screen_size(&check_start, &check_size);
         }
-        if(strlen(cob.connect)>0) cob.input_character='a';
+        if(cob.connect[0]!='\0') cob.input_character='a';
         switch (cob.input_character)
         {
             case VK_UP:
@@ -743,7 +750,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case '?':
                 if(!cob.waitAnswer){
-                    show_help();
+                    show_help(TRUE);
                     cob.showFile=TRUE;
                 }
                 break;
@@ -865,12 +872,6 @@ int main(int argc, char **argv) {
     #endif    
     strcpy(cob.file_cobol,"");
     strcpy(cob.connect,"");
-    if(!isCommandInstalled("cobc")){
-        printf("The GnuCOBOL cobc command is not available!\n");
-        fflush(stdout);
-        while(key_press(MOUSE_OFF)<=0);
-        return 0;
-    }
  
     if(!isCommandInstalled("gdb")){
         printf("GDB is not installed.\n");
@@ -891,6 +892,9 @@ int main(int argc, char **argv) {
         #endif
     }else if(argc>1 && strncmp(argv[1],"--version",9)==0){
         show_version();
+    }else if(argc>1 && strncmp(argv[1],"--help",6)==0){
+        show_help(FALSE);
+        return 0;
     }else if(argc>=3 && strncmp(argv[1],"--exe",5)==0){
         int test =access(argv[2], F_OK);
         if( test < 0) {

@@ -132,10 +132,9 @@ int parseDigitOrAlpha(wchar_t * ch,struct st_highlt * h){
 
 int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
     struct st_highlt * h = hight;
-    int tot=total;
+    wchar_t wcBuffer[512];
     int qtdMove=0;
-
-    wchar_t *wcBuffer = (wchar_t *)malloc(512);
+    int tot=total;
 
     int st = start;
     while (st > 0 && h != NULL) {
@@ -148,11 +147,12 @@ int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
     while(h!=NULL && tot>0){
         qtdMove = (tot < h->size - st)? tot : h->size - st;
         if(qtdMove>0){
+            if(qtdMove>512) qtdMove=512;
             print_colorBK(h->color,bkg);
             wcsncpy(wcBuffer, &h->token[st], qtdMove);
             wcBuffer[qtdMove]='\0';
             printf("%*ls",qtdMove,wcBuffer);
-            //wprintf(L"%.*ls",qtdMove,&h->token[st]);
+            //printf("%*.*ls",qtdMove,qtdMove,&h->token[st]);
         }
         tot-=qtdMove;
         h=h->next;
@@ -163,7 +163,6 @@ int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
         printf("%*ls", tot, L" ");
     }
     print_color_reset();
-    free(wcBuffer);
     return TRUE;
 }
 

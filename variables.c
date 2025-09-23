@@ -943,92 +943,18 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     }
 }
 
-void show_help(){
+void show_help_popup(char *text[], int ctext[], int qtt_lines){
     char input_character=-1;
     int bkgr = color_dark_red;
     int bkg;
     int frg = color_white;
     int csel = color_light_gray;
     int line_pos=0;
-    int qtt_lines=0;
     int start_file=0;
     int lmax=VIEW_LINES/2+3;
     //int file_sel = -1;
     boolean show = TRUE;
 
-    char *text[] = {
-        "                     CobGDB - Commands",
-        " ",
-        "B - Breakpoint: toggles the breakpoint at the current selected line",
-        "    (can also be done with the mouse).",
-        "R - Run: runs the program from the first statement until a breakpoint",
-        "    is encountered.",
-        "C - Cursor or Continue: runs the program until it reaches the",
-        "    selected line.",
-        "J - Jump: runs the program until it reaches the specified line.",
-        "N - Next: runs the program until the next line but does not enter",
-        "    a subroutine executed by CALL or PERFORM.",
-        "S - Step: runs the program until the next line.",
-        "G - GO: continues the program execution until it encounters a ",
-        "    stopping point: breakpoint, end of the program, or the ",
-        "    return from a subroutine - PERFORM/CALL.",
-        "V - Variables: displays the set of variables for the running program.",
-        "H - Show: shows the values of variables for the selected line",
-        "    (right-click also functions).",
-        "D - Display of variables: set the automatic display during ",
-        "    debugging/animation ON or OFF (default is OFF).",
-        "F - File: allows selecting the source file for debugging.",
-        "W - Window Size: switches between window sizes: 80x24 and 132x34.",
-        "O - Changes the focus to the window where the debugging code is being ",
-        "    displayed (Windows or X11 only).",
-        "Q - Quit: quits the program.",
-        "  ",
-        "CobGDB takes one or more programs with COB/CBL extension as parameters",
-        "and runs the GnuCOBOL compiler with the following format:",
-        "cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...",
-        "  ",
-        "Example:",
-        "cobgdb prog.cob subprog1.cob subprog2.cob",
-        "  ",
-        "You can run GDB/GDBSERVER remotely using the 'A' key. COBGDD will",
-        "prompt you to provide the server and port in the format",
-        "server:port  or the PID of the application.",
-        "  ",
-        "Example:",
-        "localhost:5555",
-        "or",
-        "9112",
-        "  ",
-        "Command line:",
-        "cobgdb --connect localhost:5555 prog.cob",
-        "  ",
-        "                 CobGDB Debugging a Pre-compiled File",
-        "  ",
-        "You can also use CobGDB to debug a previously generated executable ",
-        "file. Compile the program with these options:",
-        "cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...",
-        "  ",
-        "To start debugging, run cobgdb using the --exe directive as follows:",
-        "cobgdb --exe prog",
-        "  "
-    };
-
-    int ctext[] = {
-        color_green,
-        color_white, color_white, color_white, color_white, color_white, color_white,
-        color_white, color_white, color_white, color_white, color_white, color_white,
-        color_white, color_white, color_white, color_white, color_white, color_white, 
-        color_white, color_white, color_white, color_white, color_white, color_white,
-        color_white, color_white, color_white,
-        color_yellow, color_white, color_white, color_yellow,
-        color_white, color_white, color_white, color_white, color_white, color_white, 
-        color_yellow, color_white, color_yellow,color_white,color_white, color_yellow,
-        color_white, color_green, 
-        color_white, color_white, color_white, 
-        color_yellow,color_white, color_white, color_yellow,color_white
-    };
-
-    qtt_lines=sizeof(text) / sizeof(text[0]);
     disableEcho();
     while(input_character!=-100){
         gotoxy(1,1);
@@ -1118,4 +1044,90 @@ void show_help(){
         //gotoxy(1,23); if(input_character>0) printf("%d\n", input_character);
     }
     enableEcho();
+}
+
+void show_help(int is_popup){
+    char *text[] = {
+        "                     CobGDB - Commands",
+        " ",
+        "B - Breakpoint: toggles the breakpoint at the current selected line",
+        "    (can also be done with the mouse).",
+        "R - Run: runs the program from the first statement until a breakpoint",
+        "    is encountered.",
+        "C - Cursor or Continue: runs the program until it reaches the",
+        "    selected line.",
+        "J - Jump: runs the program until it reaches the specified line.",
+        "N - Next: runs the program until the next line but does not enter",
+        "    a subroutine executed by CALL or PERFORM.",
+        "S - Step: runs the program until the next line.",
+        "G - GO: continues the program execution until it encounters a ",
+        "    stopping point: breakpoint, end of the program, or the ",
+        "    return from a subroutine - PERFORM/CALL.",
+        "V - Variables: displays the set of variables for the running program.",
+        "H - Show: shows the values of variables for the selected line",
+        "    (right-click also functions).",
+        "D - Display of variables: set the automatic display during ",
+        "    debugging/animation ON or OFF (default is OFF).",
+        "F - File: allows selecting the source file for debugging.",
+        "W - Window Size: switches between window sizes: 80x24 and 132x34.",
+        "O - Changes the focus to the window where the debugging code is being ",
+        "    displayed (Windows or X11 only).",
+        "Q - Quit: quits the program.",
+        "  ",
+        "CobGDB takes one or more programs with COB/CBL extension as parameters",
+        "and runs the GnuCOBOL compiler with the following format:",
+        "cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...",
+        "  ",
+        "Example:",
+        "cobgdb prog.cob subprog1.cob subprog2.cob",
+        "  ",
+        "You can run GDB/GDBSERVER remotely using the 'A' key. COBGDD will",
+        "prompt you to provide the server and port in the format",
+        "server:port  or the PID of the application.",
+        "  ",
+        "Example:",
+        "localhost:5555",
+        "or",
+        "9112",
+        "  ",
+        "Command line:",
+        "cobgdb --connect localhost:5555 prog.cob",
+        "  ",
+        "                 CobGDB Debugging a Pre-compiled File",
+        "  ",
+        "You can also use CobGDB to debug a previously generated executable ",
+        "file. Compile the program with these options:",
+        "cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob prog2.cob ...",
+        "  ",
+        "To start debugging, run cobgdb using the --exe directive as follows:",
+        "cobgdb --exe prog",
+        "  "
+    };
+
+    int ctext[] = {
+        color_green,
+        color_white, color_white, color_white, color_white, color_white, color_white,
+        color_white, color_white, color_white, color_white, color_white, color_white,
+        color_white, color_white, color_white, color_white, color_white, color_white, 
+        color_white, color_white, color_white, color_white, color_white, color_white,
+        color_white, color_white, color_white,
+        color_yellow, color_white, color_white, color_yellow,
+        color_white, color_white, color_white, color_white, color_white, color_white, 
+        color_yellow, color_white, color_yellow,color_white,color_white, color_yellow,
+        color_white, color_green, 
+        color_white, color_white, color_white, 
+        color_yellow,color_white, color_white, color_yellow,color_white
+    };
+
+    int qtt_lines=sizeof(text) / sizeof(text[0]);
+    if(is_popup){
+        show_help_popup(text, ctext, qtt_lines);
+    }else{
+        for(int a=0;a<qtt_lines;a++){
+            //print_colorBK(ctext[a], color_black);
+           printf("%-70s\n",text[a]);
+           fflush(stdout);
+        }
+        //print_color_reset();
+    }
 }
