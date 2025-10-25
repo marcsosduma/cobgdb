@@ -827,6 +827,10 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
             strcpy(baseName,getFileNameFromPath(baseName));
             // C File
             snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
+            if(!file_exists(nameCFile)){
+                showCobMessage("File C not found.",1);
+                return;
+            }
             strcpy(fileCGroup[nfile],nameCFile);
             nfile++;
         }
@@ -924,7 +928,14 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
                 if(file_sel<0) break;
                 freeFile();
                 strcpy(cob.file_cobol, files[file_sel]);
-                strcpy(cob.first_file, cob.file_cobol);            
+                strcpy(cob.first_file, cob.file_cobol);
+                if(!file_exists(cob.file_cobol)){
+                    clearScreen();
+                    showCobMessage("File COB not found.",2);
+                    fflush(stdout);
+                    printf("File COB not found.");
+                    return;
+                }            
                 loadfile(files[file_sel]);
                 highlightParse();
                 input_character=-100;

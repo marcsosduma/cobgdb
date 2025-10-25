@@ -23,7 +23,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "1.4.7" 
+#define COBGDB_VERSION "2.0" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -35,7 +35,8 @@ struct st_cobgdb cob ={
     .isStepOver = -1,
     .mouse = 0,
     .num_dig = 4,
-    .showVariables = FALSE
+    .showVariables = FALSE,
+    .status_bar = 0
 };
 
 int VIEW_COLS=  80;
@@ -55,6 +56,7 @@ ST_DebuggerVariable * DebuggerVariable=NULL;
 ST_bk * BPList=NULL;
 ST_Watch * Watching=NULL;
 Lines * lines = NULL;
+struct st_cfiles * parsed_cfiles = NULL;
 int start_gdb(char * name, char * cwd);
 
 void free_memory()
@@ -77,6 +79,21 @@ void free_memory()
     }
     cob.lines = NULL;
 }
+
+/**
+ * Free c files parsed.
+ */
+void free_cfiles(void) {
+    struct st_cfiles * curr = parsed_cfiles;
+    while (curr) {
+        struct st_cfiles *next = (struct st_cfiles *) curr->next;
+        free(curr->file);
+        free(curr);
+        curr = next;
+    }
+    parsed_cfiles = NULL;
+}
+
 
 void freeWatchingList()
 {
@@ -305,7 +322,20 @@ int show_info(){
     int len=VIEW_COLS;
     #endif
     gotoxy(1,VIEW_LINES);
-    if(cob.mouse==0){
+    if(cob.status_bar>0){
+        switch (cob.status_bar){
+            case 1:
+                print_colorBK(color_pink, color_black);
+                printf("%-*s\r",len, "Parsing file");
+                break;
+            case 2:
+                print_colorBK(color_pink, color_black);
+                printf("%-*s\r",len, "Loading file");
+                break;        
+            default:
+                break;
+        }
+    }else if(cob.mouse==0){
         if(cob.debug_line>0 && !cob.running){
             print_colorBK(color_green, color_black);
             printf("%-*s\r",len, "Debugging");
@@ -819,13 +849,19 @@ int loadfile(char * nameCobFile) {
     start_window_line = 0;
     start_line_x = 0;
     cob.debug_line = -1;
-    char baseName[512];
+    char baseName[500];
+    char temp_name[1024];
 
+    if(!file_exists(nameCobFile))
+        return FALSE;
     strcpy(cob.name_file, nameCobFile);
     fileNameWithoutExtension(nameCobFile, &baseName[0]);
     normalizePath(baseName);
     strcpy(baseName,getFileNameFromPath(baseName));
-    snprintf(cob.cfile, sizeof(cob.cfile), "%s/%s.c", cob.cwd, baseName);
+    snprintf(temp_name, sizeof(temp_name), "%s/%s.c", cob.cwd, baseName);
+    if(!file_exists(temp_name))
+        return FALSE;
+    strcpy(cob.cfile, temp_name);        
     readCodFile(&cob);
     freeWatchingList();
     lines = cob.lines;
@@ -1022,6 +1058,7 @@ int main(int argc, char **argv) {
         freeBKList();
         freeFile();
         freeWatchingList();
+        free_cfiles();
         //TODO: 
         //freeVariables();
         gotoxy(1,(VIEW_LINES-1));

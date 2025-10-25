@@ -24,6 +24,7 @@ extern ST_Line * LineDebug;
 extern ST_Attribute * Attributes;
 extern ST_DebuggerVariable * DebuggerVariable;
 extern struct st_cobgdb cob;
+extern struct st_cfiles * parsed_cfiles;
 //
 ST_Line * LineAtu=NULL;
 ST_Attribute * AtualAttrib;
@@ -792,6 +793,37 @@ boolean showVarRegex(struct st_parse line_parsed[100], int qtt_tk, char mm[][MAX
     return ret;
 }
 
+/**
+ * Adds a new file to the global list if it does not already exist.
+ *
+ */
+int add_cfile(const char *file_name) {
+    if (file_name == NULL || *file_name == '\0')
+        return -1;
+    struct st_cfiles *curr = parsed_cfiles;
+    struct st_cfiles *prev = NULL;
+    while (curr) {
+        if (strcmp(curr->file, file_name) == 0)
+            return 0;  // File already in the list
+        prev = curr;
+        curr = (struct st_cfiles *) curr->next;
+    }
+    struct st_cfiles *node = (struct st_cfiles *) malloc(sizeof(struct st_cfiles));
+    if (!node)
+        return -1;
+    node->file = strdup(file_name);
+    if (!node->file) {
+        free(node);
+        return -1;
+    }
+    node->next = NULL;
+    // Insert node at the end of the list
+    if (prev)
+        prev->next = node;
+    else
+        parsed_cfiles = node;
+    return 1;
+}
 
 int parser(char * file_name, int fileN){
     char m[10][512];
@@ -805,6 +837,9 @@ int parser(char * file_name, int fileN){
     char tmp[300];
     int lineProgramExit = 1;
     int varEntry=-1;
+
+    if(add_cfile(file_name)==0)
+        return TRUE;
 
     normalizePath(file_name);
 

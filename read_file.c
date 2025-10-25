@@ -20,8 +20,9 @@
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #if defined(_WIN32)
-#include <direct.h>
+    #include <direct.h>
 #endif
 #include "cobgdb.h"
 
@@ -295,4 +296,13 @@ int readCodFile(struct st_cobgdb *program) {
     program->lines = lines;
     program->qtd_lines = qtd;
     return TRUE;
+}
+
+int file_exists(const char *filepath) {
+    struct stat fileStat; // Structure to store file information
+    // Attempt to get file status
+    if (stat(filepath, &fileStat) == 0) {
+        return TRUE;
+    }
+    return FALSE;
 }

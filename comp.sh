@@ -1,0 +1,1 @@
+cobc -g -fsource-location -ftraceall -v -O0 $@

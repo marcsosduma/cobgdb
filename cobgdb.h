@@ -60,6 +60,11 @@ struct st_highlt {
 };
 
 
+struct st_cfiles{
+	char * file;
+    struct st_cfiles * next;
+};
+
 struct st_lines{
 	char * line;
 	int file_line;
@@ -115,6 +120,7 @@ struct st_cobgdb {
     int line_pos;
     int input_character;
     int showVariables;
+    int status_bar;
 };
 
 // ATTRIBUTTES -- START
@@ -299,6 +305,7 @@ char *istrstr(const char *haystack, const char *needle);
 void fileNameWithoutExtension(char * file, char * onlyName);
 void fileExtension(char * file, char * onlyExtension);
 char* getCurrentDirectory();
+int file_exists(const char *path);
 //terminal.c
 void get_terminal_size(int *width, int *height);
 void set_terminal_size(int width, int height);

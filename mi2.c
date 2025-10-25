@@ -116,13 +116,35 @@ int couldBeOutput(char * line) {
     return 0;
 }
 
-void loadCobSourceFile(char * atualFile, char * newFile){
+void loadLibrary(char * file){
+    char baseName[256];
+    char nameCFile[1024];
+    fileNameWithoutExtension(file, &baseName[0]);
+    normalizePath(baseName);
+    strcpy(baseName,getFileNameFromPath(baseName));
+    // C File
+    snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
+    if(file_exists(nameCFile)){
+        cob.status_bar = 1;
+        parser(nameCFile, 1);
+    }
+}
+
+int loadCobSourceFile(char * atualFile, char * newFile){
     if(strcasecmp(atualFile, newFile)!=0){
+        if(!file_exists(newFile)){
+            cob.status_bar = 0;
+            return FALSE;
+        }
+        cob.status_bar = 2;
         freeFile();
         strcpy(cob.file_cobol, newFile);
         loadfile(cob.file_cobol);
         highlightParse();
+        cob.status_bar = 0;
+        return TRUE;
     }
+    return TRUE;
 }
 
 ST_Line * hasLineCobol(ST_MIInfo * parsed){
@@ -141,7 +163,8 @@ ST_Line * hasLineCobol(ST_MIInfo * parsed){
         if(hasLine!=NULL){
             subroutine = hasLine->endPerformLine;
             isCall = hasLine->isCall;
-            loadCobSourceFile(cob.file_cobol, hasLine->fileCobol);
+            if(!loadCobSourceFile(cob.file_cobol, hasLine->fileCobol))
+                hasLine = NULL;
         } 
     }
     return hasLine;
@@ -214,6 +237,17 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                     }
                 }
                 if(parsed!=NULL && parsed->outOfBandRecord!=NULL){
+                    if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"library-loaded")==0 && strcmp(lastComand,"exec-step\n")==0){
+                        ST_TableValues * search= NULL;
+                        search=parsed->outOfBandRecord->output;
+                        while(search!=NULL){
+                            if(strcmp(search->key,"host-name")==0) break;
+                            search=search->next;
+                        }
+                        if(search!=NULL){
+                            loadLibrary(search->value);
+                        }
+                    }
                     if(parsed->outOfBandRecord->type!=NULL && strcmp(parsed->outOfBandRecord->type,"exec")==0){
                         if(parsed->outOfBandRecord->asyncClass!=NULL && strcmp(parsed->outOfBandRecord->asyncClass,"running")==0){
                             cob.running=TRUE;

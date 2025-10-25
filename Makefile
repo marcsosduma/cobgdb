@@ -18,6 +18,7 @@ SRCDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 ifeq ($(WINMODE),1)
 CC       = gcc.exe
 RES      = 
+COMP     = comp.bat
 OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o string_parser.o
 LINKOBJ  = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o string_parser.o
 LIBS     = 
@@ -31,6 +32,7 @@ else
 # Linux
 #
 
+# Verifica se o arquivo Xlib.h existe em /usr/include/X11/Xlib.h ou /usr/include/X11/Xlib.h (pode ajustar o caminho)
 X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
 
 ifeq ($(X11_HEADER_EXISTS),yes)
@@ -54,6 +56,7 @@ endif
 BIN      = cobgdb
 RM       = rm -f
 CP       = cp
+COMP     = comp.sh
 endif
 
 .PHONY: all all-before all-after clean clean-custom copy
@@ -63,6 +66,7 @@ all: all-before $(BIN) all-after
 ifeq ($(WINMODE),1)
 copy:
 	$(CP) $(BIN) windows
+	$(CP) $(COMP) windows
 	$(RM) $(BIN)
 endif
 
