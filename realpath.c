@@ -1,3 +1,12 @@
+/*
+ * COBGDB GnuCOBOL Debugger:
+ *
+ * License:
+ * This code is provided without any warranty, express or implied.
+ * You may modify and distribute it at your own risk.
+ * 
+ * Author: Marcos Martins Duma
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>

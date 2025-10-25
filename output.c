@@ -1,4 +1,13 @@
-#if defined(__linux__)
+/*
+ * COBGDB GnuCOBOL Debugger:
+ * License:
+ * This code is provided without any warranty, express or implied.
+ * You may modify and distribute it at your own risk.
+ * 
+ * Author: Marcos Martins Duma
+ */
+
+ #if defined(__linux__)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

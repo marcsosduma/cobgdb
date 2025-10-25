@@ -10,8 +10,6 @@
  *
  * Author: Marcos Martins Duma
  */
-
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

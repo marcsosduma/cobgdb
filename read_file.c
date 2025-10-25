@@ -1,9 +1,13 @@
 /* 
-   This code includes the 'my_getline' function obtained from the following site: 
-   https://solarianprogrammer.com/2019/04/03/c-programming-read-file-lines-fgets-getline-implement-portable-getline/
-   It is provided without any warranty, express or implied. 
-   You may modify and distribute it at your own risk.
-*/
+ * This code includes the 'my_getline' function obtained from the following site: 
+ * https://solarianprogrammer.com/2019/04/03/c-programming-read-file-lines-fgets-getline-implement-portable-getline/
+ * 
+ * It is provided without any warranty, express or implied. 
+ * You may modify and distribute it at your own risk.
+ * 
+ * Author: Marcos Martins Duma
+ */
+
 #ifdef _MSC_VER
     #define _CRT_SECURE_NO_WARNINGS 1
     #define restrict __restrict

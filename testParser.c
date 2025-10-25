@@ -1,9 +1,14 @@
-/* 
-   This code is based on the GnuCOBOL Debugger extension available at: 
-   https://github.com/OlegKunitsyn/gnucobol-debug
-   It is provided without any warranty, express or implied. 
-   You may modify and distribute it at your own risk.
-*/
+/*
+ * COBGDB GnuCOBOL Debugger:
+ * This code is based on the GnuCOBOL Debugger extension available at:
+ * https://github.com/OlegKunitsyn/gnucobol-debug
+ *
+ * License:
+ * This code is provided without any warranty, express or implied.
+ * You may modify and distribute it at your own risk.
+ * 
+ * Author: Marcos Martins Duma
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +16,8 @@
 #include "cobgdb.h"
 
 extern ST_Line * LineDebug;
+
+void free_cfiles(void);
 
 int testParser()
 {
@@ -20,6 +27,7 @@ int testParser()
 		char cobol[] = "/home/developer/projects/gnucobol-debug/test/resources/hello.cbl";
 		char c[512];
 		char version[50];
+		free_cfiles();
 		normalizePath(cobol);
 		normalizePath(cFile);
 		char fileGroup[4][512];
@@ -66,6 +74,7 @@ int testParser()
 	//
 	{
 		printf("------------------------------------------------\n");
+		free_cfiles();
 		char * cFile = realpath("./resources/hello3.c", buffer);
 		char cobol[] = "/home/developer/projects/gnucobol-debug/test/resources/hello3.cbl";
 		char version[50];
@@ -120,6 +129,7 @@ int testParser()
 	{
 		printf("------------------------------------------------\n");
 	    printf("Grupo Files:\n");
+		free_cfiles();
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/sample.c", buffer));
 		char cSubSample[256];
@@ -168,6 +178,7 @@ int testParser()
 	{
 		printf("------------------------------------------------\n");
 		printf("Variables Hierarchy:\n");
+		free_cfiles();
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/petstore.c", buffer));
 		normalizePath(cSample);
@@ -191,6 +202,7 @@ int testParser()
 	{
 		printf("------------------------------------------------\n");
 		printf("Find variables by function and COBOL name:\n");
+		free_cfiles();
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/petstore.c", buffer));
 		normalizePath(cSample);
@@ -214,6 +226,7 @@ int testParser()
 	{
 		printf("------------------------------------------------\n");
 		printf("Attributes:\n");
+		free_cfiles();
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/datatypes.c", buffer));
 		normalizePath(cSample);
@@ -239,6 +252,7 @@ int testParser()
 	{
 		printf("------------------------------------------------\n");
 		printf("Multiple Functions:\n");
+		free_cfiles();
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/func.c", buffer));
 		normalizePath(cSample);
