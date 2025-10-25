@@ -298,6 +298,7 @@ int readCodFile(struct st_cobgdb *program) {
     return TRUE;
 }
 
+//Make sure the file exists
 int file_exists(const char *filepath) {
     struct stat fileStat; // Structure to store file information
     // Attempt to get file status

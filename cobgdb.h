@@ -23,7 +23,7 @@
 #define VK_ENTER 13
 #define VK_ESCAPE 27
 #define VK_DEL 3
-#endif // Windows/Linux
+#endif //Windows/Linux
 #ifndef boolean 
 #define boolean int
 #endif

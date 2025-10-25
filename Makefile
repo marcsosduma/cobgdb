@@ -32,7 +32,7 @@ else
 # Linux
 #
 
-# Verifica se o arquivo Xlib.h existe em /usr/include/X11/Xlib.h ou /usr/include/X11/Xlib.h (pode ajustar o caminho)
+# Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
 X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
 
 ifeq ($(X11_HEADER_EXISTS),yes)

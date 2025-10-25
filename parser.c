@@ -838,6 +838,7 @@ int parser(char * file_name, int fileN){
     int lineProgramExit = 1;
     int varEntry=-1;
 
+    //Check if the file has already been parsed
     if(add_cfile(file_name)==0)
         return TRUE;
 

@@ -6,6 +6,8 @@
  * License:
  * This code is provided without any warranty, express or implied.
  * You may modify and distribute it at your own risk.
+ * 
+ * Author: Marcos Martins Duma
  */
 
 #include <stdio.h>
@@ -539,7 +541,6 @@ int debug(int (*sendCommandGdb)(char *)){
     cob.line_pos=0;
     Lines * lb = NULL;
     int bstop = FALSE;
-    //(void)setvbuf(stdout, NULL, _IONBF, 16384);
     cursorOFF();
     clearScreen();
     Lines * line_debug=NULL;

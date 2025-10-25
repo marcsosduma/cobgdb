@@ -210,7 +210,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
    // loop through the string to extract all lines
    while( line != NULL ) {
       #ifdef DEBUG
-      printf( " %s\n", line ); //printing each token
+      printf( " %s\n", line ); //print token
       #endif
       if(couldBeOutput(line)){
             //int qtd = regex(gdbRegex, line, m);

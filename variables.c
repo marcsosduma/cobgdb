@@ -1,12 +1,16 @@
 /*
- * COBGDB GnuCOBOL Debugger:
+ * COBGDB - GnuCOBOL Debugger
+ *
  * This code is based on the GnuCOBOL Debugger extension available at:
  * https://github.com/OlegKunitsyn/gnucobol-debug
  *
  * License:
  * This code is provided without any warranty, express or implied.
  * You may modify and distribute it at your own risk.
+ *
+ * Author: Marcos Martins Duma
  */
+
 
 #include <stdio.h>
 #include <string.h>
