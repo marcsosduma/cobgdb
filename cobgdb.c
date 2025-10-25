@@ -689,6 +689,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     disableEcho();
                     MI2start(sendCommandGdb);
                     WAIT_GDB=100;
+                    lines = set_window_pos(&cob.line_pos);
                     enableEcho();
                 }
                 break;
@@ -724,6 +725,7 @@ int debug(int (*sendCommandGdb)(char *)){
                         MI2goToCursor(sendCommandGdb, cob.name_file, lb->file_line);
                         enableEcho();
                         WAIT_GDB=100;
+                        lines = set_window_pos(&cob.line_pos);
                     } 
                     cob.showFile=TRUE;
                 }
