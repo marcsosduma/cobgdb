@@ -16,6 +16,7 @@
 #include <wchar.h>
 #include <ctype.h>
 #include <time.h>
+#include <dirent.h> 
 #include "cobgdb.h"
 
 extern struct st_cobgdb cob;
@@ -956,6 +957,163 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     }
 }
 
+void load_file(){
+    char input_character=-1;
+    int bkgr = color_dark_red;
+    int bkg;
+    int frg = color_white;
+    int csel = color_light_gray;
+    int line_pos=0;
+    char files[MAX_FILES][512];
+    char cwd[512];
+    int qtd_files=0;
+    int start_file=0;
+    int file_sel = -1;
+    boolean show = TRUE;
+    DIR *d;
+    struct dirent *dir;
+    char baseName[256];
+    char nameCFile[1024];
+
+    getPathName(cwd, cob.first_file);
+    d = opendir(cwd);
+    if (d) {
+        while ((dir = readdir(d)) != NULL) {
+            if(istrstr(dir->d_name,".cbl")!=NULL || istrstr(dir->d_name,".cob")!=NULL){
+                sprintf(files[qtd_files],"%s/%s",cwd,dir->d_name);
+                normalizePath(files[qtd_files]);
+
+                fileNameWithoutExtension(files[qtd_files], &baseName[0]);
+                strcpy(baseName,getFileNameFromPath(baseName));
+                // C File
+                snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
+                if(!file_exists(nameCFile)){
+                    continue;
+                }
+                qtd_files++;
+            }
+        }
+        closedir(d);
+    }
+    if(qtd_files == 0){
+        showCobMessage("GnuCobol (cob or cbl) file not found.",1);
+        return;
+    }
+    show_info();
+    while(input_character!=-100){
+        disableEcho();
+        gotoxy(1,1);
+        int lin = 7;
+        int col = 9;
+        int size = 60;
+        if(show){
+            gotoxy(col,lin);
+            print_colorBK(frg, bkgr);
+            draw_box_first(col,lin++,size,"Source Files");
+            int f = start_file;
+            int pos=0;
+            file_sel=-1;
+            while(pos<10){
+                print_colorBK(frg, bkgr);
+                draw_box_border(col, lin);
+                bkg=(line_pos==pos)?csel:bkgr;
+                print_colorBK(frg, bkg);
+                if(f<qtd_files){
+                    int len = strlen(files[f]);
+                    if(len>60){
+                        int start=len-56;
+                        printf("...%-60s",&files[f][start]);
+                    }else{
+                        printf("%-60s",files[f]);
+                    }
+                    if(line_pos==pos) file_sel=f;
+                }else{
+                    printf("%-60s"," ");
+                }
+                print_colorBK(frg, bkgr);
+                draw_box_border(col+ size+1, lin);
+                f++; lin++; pos++;
+            }
+            print_colorBK(frg, bkgr);
+            draw_box_last(col, lin, size);
+        }
+        print_color_reset();
+        fflush(stdout);
+        gotoxy(1,1);
+        enableEcho();
+        input_character =  key_press(MOUSE_NORMAL);
+        switch (input_character)
+        {
+            case VK_UP:
+                if(line_pos>0){
+                    line_pos--;
+                }else{
+                    start_file=(start_file>0)?start_file-1:0; 
+                }
+                show = TRUE;
+                break;
+            case VK_DOWN: 
+                if(line_pos<9){
+                    line_pos++;
+                }else{
+                    start_file=(start_file<qtd_files)?start_file+1:qtd_files; 
+                }
+                show = TRUE;
+                break;
+            case VK_PGUP:
+                if(line_pos>0){
+                    line_pos= 0;
+                }else{
+                    line_pos-= 9;
+                    line_pos=(line_pos<0)?0:line_pos;
+                    start_file-=10;
+                    start_file = (start_file>0)?start_file:0;
+                }
+                show = TRUE;
+                break;
+            case VK_PGDOWN: 
+                if(line_pos<9){
+                    line_pos=9;
+                }else{
+                    line_pos+=9;
+                    if(line_pos>9) line_pos=9;
+                    start_file+=10;
+                    start_file = (start_file>qtd_files)?qtd_files:start_file;
+                }
+                show = TRUE;
+                break;
+            case VK_ENTER:       
+                if(file_sel<0) break;
+                freeFile();
+                strcpy(cob.file_cobol, files[file_sel]);
+                fileNameWithoutExtension(files[file_sel], &baseName[0]);
+                normalizePath(baseName);
+                strcpy(baseName,getFileNameFromPath(baseName));
+                // C File
+                snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
+                if(file_exists(nameCFile)){
+                    cob.status_bar = 1;
+                    parser(nameCFile, 1);
+                }
+                cob.status_bar = 0;         
+                loadfile(files[file_sel]);
+                highlightParse();
+                input_character=-100;
+                break;
+            case 'R':
+            case 'r':
+            case 'Q':
+            case 'q':
+            case VK_ESCAPE:
+                input_character=-100;
+                break;
+            default: 
+                break;
+        }
+        //gotoxy(1,23); if(input_character>0) printf("%d\n", input_character);
+    }
+}
+
 void show_help_popup(char *text[], int ctext[], int qtt_lines){
     char input_character=-1;
     int bkgr = color_dark_red;
@@ -1082,8 +1240,10 @@ void show_help(int is_popup){
         "D - Display of variables: set the automatic display during ",
         "    debugging/animation ON or OFF (default is OFF).",
         "F - File: allows selecting the source file for debugging.",
+        "L - Load: loads a COBOL file not included in the executable, from the",
+        "    source directory.",
         "W - Window Size: switches between window sizes: 80x24 and 132x34.",
-        "O - Changes the focus to the window where the debugging code is being ",
+        "O - Changes the focus to the window where the debugging code is being",
         "    displayed (Windows or X11 only).",
         "Q - Quit: quits the program.",
         "  ",
@@ -1123,7 +1283,7 @@ void show_help(int is_popup){
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white, 
         color_white, color_white, color_white, color_white, color_white, color_white,
-        color_white, color_white, color_white,
+        color_white, color_white, color_white, color_white, color_white,
         color_yellow, color_white, color_white, color_yellow,
         color_white, color_white, color_white, color_white, color_white, color_white, 
         color_yellow, color_white, color_yellow,color_white,color_white, color_yellow,

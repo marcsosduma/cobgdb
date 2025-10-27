@@ -88,6 +88,7 @@ int start_gdb(char * name, char * cwd)
 
    char env_dir[512];
    char f_symb[512];
+   
    sprintf(env_dir, "-environment-directory \"%s\"\n", cwd);
    sprintf(f_symb, "-file-exec-and-symbols \"%s/%s\"\n", cwd, name);
 

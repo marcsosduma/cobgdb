@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.0" 
+#define COBGDB_VERSION "2.1" 
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -781,6 +781,14 @@ int debug(int (*sendCommandGdb)(char *)){
                    MI2getStack(sendCommandGdb,1);
                 }
                 break;
+            case 'l':
+            case 'L':
+                if(!cob.waitAnswer){
+                   load_file();
+                   cob.showFile=TRUE;
+                   MI2getStack(sendCommandGdb,1);
+                }
+                break;
             case '?':
                 if(!cob.waitAnswer){
                     show_help(TRUE);
@@ -798,6 +806,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     MI2getStack(sendCommandGdb,1);
                     WAIT_GDB=100;
                     cob.input_character=' ';
+                    lines = set_window_pos(&cob.line_pos);
                 }
                 break;
             case 'W':

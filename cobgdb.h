@@ -23,7 +23,7 @@
 #define VK_ENTER 13
 #define VK_ESCAPE 27
 #define VK_DEL 3
-#endif //Windows/Linux
+#endif // Windows/Linux
 #ifndef boolean 
 #define boolean int
 #endif
@@ -385,6 +385,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
 void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser, int debug_line);  
 void show_sources(int (*sendCommandGdb)(char *), int mustParse);
 void show_help(int is_popup);
+void load_file();
 //debugger.c
 char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags, int digits);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags);
