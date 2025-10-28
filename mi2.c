@@ -728,18 +728,7 @@ char* cleanRawValue(const char* rawValue) {
         free(tmp);
         return NULL;
     }
-    size_t ri = 0;
-    size_t wi = 0;
-    while (ri < len) {
-        if (tmp[ri] == '\"') {
-            out[wi++] = '\\';
-            out[wi++] = '\"';
-        } else {
-            out[wi++] = tmp[ri];
-        }
-        ri++;
-    }
-    out[wi] = '\0';
+    memmove(out,tmp, len + 1);
     free(tmp);
     return out;
 }
