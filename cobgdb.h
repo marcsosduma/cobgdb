@@ -1,28 +1,28 @@
 #if defined(_WIN32)
 #include <windows.h>
-#define VK_DOWN 40
-#define VK_UP 38
-#define VK_PGDOWN 34
-#define VK_PGUP 33
-#define VK_ENTER 13
-#ifndef VK_ESCAPE
-#define VK_ESCAPE 27
+#define VKEY_DOWN 40
+#define VKEY_UP 38
+#define VKEY_PGDOWN 34
+#define VKEY_PGUP 33
+#define VKEY_ENTER 13
+#ifndef VKEY_ESCAPE
+#define VKEY_ESCAPE 27
 #endif
-#define VK_DEL 3
-#define VK_LEFT 37
-#define VK_RIGHT 39
+#define VKEY_DEL 3
+#define VKEY_LEFT 37
+#define VKEY_RIGHT 39
 #elif defined(__linux__)
 #define CTRL_KEY(k) ((k) & 0x1f)
-#define VK_BACKSPACE 127
-#define VK_DOWN 40
-#define VK_UP 38
-#define VK_PGDOWN 34
-#define VK_PGUP 33
-#define VK_RIGHT 39
-#define VK_LEFT 37
-#define VK_ENTER 13
-#define VK_ESCAPE 27
-#define VK_DEL 3
+#define VKEY_BACKSPACE 127
+#define VKEY_DOWN 40
+#define VKEY_UP 38
+#define VKEY_PGDOWN 34
+#define VKEY_PGUP 33
+#define VKEY_RIGHT 39
+#define VKEY_LEFT 37
+#define VKEY_ENTER 13
+#define VKEY_ESCAPE 27
+#define VKEY_DEL 3
 #endif // Windows/Linux
 #ifndef boolean 
 #define boolean int

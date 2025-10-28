@@ -36,7 +36,7 @@
 #define maxViewWidth 200
 #define maxViewHeight 100
 void SetConsoleSize(HANDLE hStdout, int cols, int rows );
-#define VK_BACKSPACE 8
+#define VKEY_BACKSPACE 8
 #elif defined(__linux__)
 #include <sys/ioctl.h>
 #include <stdio.h>
@@ -139,19 +139,19 @@ int readKeyLinux(int type) {
         if (nread >= 3) {
             switch (buf[2]) {
                 case '3':
-                    return VK_DEL;
+                    return VKEY_DEL;
                 case '5':
-                    return VK_PGUP;
+                    return VKEY_PGUP;
                 case '6':
-                    return VK_PGDOWN;
+                    return VKEY_PGDOWN;
                 case 'A':
-                    return VK_UP;
+                    return VKEY_UP;
                 case 'B':
-                    return VK_DOWN;
+                    return VKEY_DOWN;
                 case 'C':
-                    return VK_RIGHT;
+                    return VKEY_RIGHT;
                 case 'D':
-                    return VK_LEFT;
+                    return VKEY_LEFT;
             }
         }
         if (buf[2] == TM_MOUSE) {
@@ -165,10 +165,10 @@ int readKeyLinux(int type) {
             if (type > 0 && nread >= (ssize_t) sizeof(mouseEvent)) {
                 memcpy(&mouseEvent, buf + 3, sizeof(mouseEvent)); 
                 if (mouseEvent.button == 96) {
-                    return VK_UP;
+                    return VKEY_UP;
                 }
                 if (mouseEvent.button == 97) {
-                    return VK_DOWN;
+                    return VKEY_DOWN;
                 }
                 mouseCobHover(mouseEvent.x - 33, mouseEvent.y - 33);
                 cob.mouseX = mouseEvent.x - 33;
@@ -213,10 +213,10 @@ int mouseCobAction(int col, int line, int type){
     cob.mouseButton = 1;
     switch (cob.mouse){
             case 1:
-                action = VK_PGUP;
+                action = VKEY_PGUP;
                 break;
             case 2:
-                action = VK_PGDOWN;
+                action = VKEY_PGDOWN;
                 break;
             case 10:
                 action = 'R';
@@ -254,7 +254,7 @@ int mouseCobAction(int col, int line, int type){
         if(col<cob.num_dig+2){
             action = 'B';
         }else{
-            action=VK_ENTER;
+            action=VKEY_ENTER;
         }
     }
     return action;
@@ -325,9 +325,9 @@ int key_press(int type){
                 if (inp.Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
                     int delta = GET_WHEEL_DELTA_WPARAM(inp.Event.MouseEvent.dwButtonState);
                     if (delta > 0) 
-                        return VK_UP;
+                        return VKEY_UP;
                     else
-                        return VK_DOWN;
+                        return VKEY_DOWN;
                 }                
                 //printf("Mouse X: %d, Y: %d\n", mouseX, mouseY);
             }
@@ -337,12 +337,12 @@ int key_press(int type){
                     return (int)key;
             } else if (inp.Event.KeyEvent.bKeyDown) { 
                 virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
-                if(virtualKeyCode==VK_PGUP || virtualKeyCode==VK_PGDOWN || virtualKeyCode==VK_UP ||
-                   virtualKeyCode==VK_DOWN || virtualKeyCode==VK_RIGHT || virtualKeyCode==VK_LEFT){
+                if(virtualKeyCode==VKEY_PGUP || virtualKeyCode==VKEY_PGDOWN || virtualKeyCode==VKEY_UP ||
+                   virtualKeyCode==VKEY_DOWN || virtualKeyCode==VKEY_RIGHT || virtualKeyCode==VKEY_LEFT){
                     return virtualKeyCode;
                 }
                 if (virtualKeyCode == VK_DELETE) {
-                    return VK_DEL;
+                    return VKEY_DEL;
                 }
                 FlushConsoleInputBuffer(hIn);
                 return 0;
@@ -373,7 +373,7 @@ int readchar(char * str, int size) {
         if (c == 13) {
             break;
         }
-        if ((c == VK_BACKSPACE || c==37) && i > 0) {
+        if ((c == VKEY_BACKSPACE || c==37) && i > 0) {
             putchar(8);
             putchar(' ');
             putchar(8);
@@ -443,22 +443,22 @@ int updateStr(char *value, int size, int x, int y) {
             fflush(stdout);
         } while (c == 0);
         //gotoxy(1, 1); printf("Key = %d    \r", c); fflush(stdout);
-        if (c == VK_ENTER) {
+        if (c == VKEY_ENTER) {
             break;
         }
-        if (c == VK_ESCAPE) {
+        if (c == VKEY_ESCAPE) {
             result = FALSE;
             break;
         }
-        if (c == VK_DEL) c = L' ';
-        if (c == VK_LEFT && i >= 0) {
+        if (c == VKEY_DEL) c = L' ';
+        if (c == VKEY_LEFT && i >= 0) {
             i--;
             if (i < 0) {
                 startChar = (startChar > 0) ? startChar - 1 : startChar;
                 isPrint = TRUE;
                 i = 0;
             }
-        } else if (c == VK_BACKSPACE && i >= 0) {
+        } else if (c == VKEY_BACKSPACE && i >= 0) {
             i--;
             isPrint = TRUE;
             if (i < 0) {
@@ -467,7 +467,7 @@ int updateStr(char *value, int size, int x, int y) {
             } else {
                 str[startChar + i] = L' ';
             }
-        } else if (c == VK_RIGHT) {
+        } else if (c == VKEY_RIGHT) {
             i++;
             if (i >= lt) {
                 startChar = (str[i + startChar] != L'\0') ? startChar + 1 : startChar;
@@ -1115,7 +1115,7 @@ int showCobMessage(char * message, int type){
         key = -1;
         while(key!='Y' && key!='y' && key!='N' && key!='n'){
             key = key_press(MOUSE_NORMAL);
-            if(key==VK_ENTER && cob.mouseY == posLine){
+            if(key==VKEY_ENTER && cob.mouseY == posLine){
                 if(cob.mouseX>=posYes && cob.mouseX<=posYes+4) key='Y';
                 if(cob.mouseX>=posYes+7 && cob.mouseX<=posYes+10) key='N';
             }

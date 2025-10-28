@@ -229,7 +229,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
         input_character =  key_press(MOUSE_NORMAL);
         switch (input_character)
         {
-            case VK_UP:
+            case VKEY_UP:
                 if(line_pos>0){
                     line_pos--;
                 }else{
@@ -238,7 +238,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 var=firstVar(var);
                 lin=0;
                 break;
-            case VK_DOWN: 
+            case VKEY_DOWN: 
                 if(line_pos<=VIEW_LINES-5){
                     line_pos++;
                 }else{
@@ -247,7 +247,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 var=firstVar(var);
                 lin=0;
                 break;
-            case VK_PGUP:
+            case VKEY_PGUP:
                 if(line_pos>0){
                     line_pos-= (VIEW_LINES-3);
                     line_pos=(line_pos<0)?0:line_pos;
@@ -258,7 +258,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 var=firstVar(var);
                 lin=0;
                 break;
-            case VK_PGDOWN: 
+            case VKEY_PGDOWN: 
                 if(line_pos<VIEW_LINES-4){
                     line_pos=VIEW_LINES-4;
                 }else if(showOne){
@@ -268,17 +268,17 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 var=firstVar(var);
                 lin=0;
                 break;
-            case VK_LEFT:
+            case VKEY_LEFT:
                 start_linex_x=(start_linex_x>0)?start_linex_x-1:start_linex_x;
                 var=firstVar(var);
                 lin=0;
                 break;
-            case VK_RIGHT:
+            case VKEY_RIGHT:
                 start_linex_x=(start_linex_x<600)?start_linex_x+1:start_linex_x;
                 var=firstVar(var);
                 lin=0;
                 break;
-            case VK_ENTER:
+            case VKEY_ENTER:
                 expand=TRUE;
                 var=firstVar(var);
                 lin=0;
@@ -291,7 +291,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
                     lin=0;
                 }
                 break;
-            case VK_ESCAPE:
+            case VKEY_ESCAPE:
             case 'r':
             case 'R':
             case 'q':
@@ -461,7 +461,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
         if(cob.mouseButton==2) input_character='e';
         switch (input_character)
         {
-            case VK_UP:
+            case VKEY_UP:
                 if(line_pos>0){
                     line_pos--;
                 }else{
@@ -470,7 +470,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                 h = high;
                 qtd = 0; st=0; lin=line_start;
                 break;
-            case VK_DOWN: 
+            case VKEY_DOWN: 
                 if(line_pos<=VIEW_LINES-5 && (line_pos+line_start+2)<lin){
                     line_pos++;
                 }else{
@@ -479,7 +479,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                 h = high;
                 qtd = 0; st=0; lin=line_start;
                 break;
-            case VK_PGUP:
+            case VKEY_PGUP:
                 if(line_pos>0){
                     line_pos-=(VIEW_LINES-3);
                     line_pos=(line_pos<0)?0:line_pos;
@@ -490,7 +490,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                 h = high;
                 qtd = 0; st=0; lin=line_start;
                 break;
-            case VK_PGDOWN: 
+            case VKEY_PGDOWN: 
                 if(line_pos<VIEW_LINES-4){
                     line_pos=VIEW_LINES-4;
                 }else if(showOne){
@@ -500,17 +500,17 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
                 h = high;
                 qtd = 0; st=0; lin=line_start;
                 break;
-            case VK_LEFT:
+            case VKEY_LEFT:
                 start_linex_x=(start_linex_x>0)?start_linex_x-1:start_linex_x;
                 h = high;
                 qtd = 0; st=0; lin=line_start;
                 break;
-            case VK_RIGHT:
+            case VKEY_RIGHT:
                 start_linex_x=(start_linex_x<600)?start_linex_x+1:start_linex_x;
                 h = high;
                 qtd = 0; st=0; lin=line_start;
                 break;
-            case VK_ENTER:
+            case VKEY_ENTER:
                 expand=TRUE;
                 qtd = 0; st=0; lin=line_start;
                 if(input_character>0) input_character='r';
@@ -528,7 +528,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
             case 'r':
             case 'Q':
             case 'q':
-            case VK_ESCAPE:
+            case VKEY_ESCAPE:
                 if(input_character>0) input_character='r';
                 break;
         }
@@ -889,7 +889,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
         input_character =  key_press(MOUSE_NORMAL);
         switch (input_character)
         {
-            case VK_UP:
+            case VKEY_UP:
                 if(line_pos>0){
                     line_pos--;
                 }else{
@@ -897,7 +897,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
                 }
                 show = TRUE;
                 break;
-            case VK_DOWN: 
+            case VKEY_DOWN: 
                 if(line_pos<9){
                     line_pos++;
                 }else{
@@ -905,7 +905,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
                 }
                 show = TRUE;
                 break;
-            case VK_PGUP:
+            case VKEY_PGUP:
                 if(line_pos>0){
                     line_pos= 0;
                 }else{
@@ -916,7 +916,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
                 }
                 show = TRUE;
                 break;
-            case VK_PGDOWN: 
+            case VKEY_PGDOWN: 
                 if(line_pos<9){
                     line_pos=9;
                 }else{
@@ -927,7 +927,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
                 }
                 show = TRUE;
                 break;
-            case VK_ENTER:       
+            case VKEY_ENTER:       
                 if(file_sel<0) break;
                 freeFile();
                 strcpy(cob.file_cobol, files[file_sel]);
@@ -947,7 +947,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
             case 'r':
             case 'Q':
             case 'q':
-            case VK_ESCAPE:
+            case VKEY_ESCAPE:
                 input_character=-100;
                 break;
             default: 
@@ -1044,7 +1044,7 @@ void load_file(){
         input_character =  key_press(MOUSE_NORMAL);
         switch (input_character)
         {
-            case VK_UP:
+            case VKEY_UP:
                 if(line_pos>0){
                     line_pos--;
                 }else{
@@ -1052,7 +1052,7 @@ void load_file(){
                 }
                 show = TRUE;
                 break;
-            case VK_DOWN: 
+            case VKEY_DOWN: 
                 if(line_pos<9){
                     line_pos++;
                 }else{
@@ -1060,7 +1060,7 @@ void load_file(){
                 }
                 show = TRUE;
                 break;
-            case VK_PGUP:
+            case VKEY_PGUP:
                 if(line_pos>0){
                     line_pos= 0;
                 }else{
@@ -1071,7 +1071,7 @@ void load_file(){
                 }
                 show = TRUE;
                 break;
-            case VK_PGDOWN: 
+            case VKEY_PGDOWN: 
                 if(line_pos<9){
                     line_pos=9;
                 }else{
@@ -1082,7 +1082,7 @@ void load_file(){
                 }
                 show = TRUE;
                 break;
-            case VK_ENTER:       
+            case VKEY_ENTER:       
                 if(file_sel<0) break;
                 freeFile();
                 strcpy(cob.file_cobol, files[file_sel]);
@@ -1104,7 +1104,7 @@ void load_file(){
             case 'r':
             case 'Q':
             case 'q':
-            case VK_ESCAPE:
+            case VKEY_ESCAPE:
                 input_character=-100;
                 break;
             default: 
@@ -1163,7 +1163,7 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
         input_character =  key_press(MOUSE_NORMAL);
         switch (input_character)
         {
-            case VK_UP:
+            case VKEY_UP:
                 if(line_pos>0){
                     line_pos--;
                 }else{
@@ -1171,7 +1171,7 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
                 }
                 show = TRUE;
                 break;
-            case VK_DOWN: 
+            case VKEY_DOWN: 
                 if(line_pos<(lmax-1)){
                     line_pos++;
                 }else{
@@ -1179,7 +1179,7 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
                 }
                 show = TRUE;
                 break;
-            case VK_PGUP:
+            case VKEY_PGUP:
                 if(line_pos>0){
                     line_pos= 0;
                 }else{
@@ -1190,7 +1190,7 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
                 }
                 show = TRUE;
                 break;
-            case VK_PGDOWN: 
+            case VKEY_PGDOWN: 
                 if(line_pos<(lmax-1)){
                     line_pos=(lmax-1);
                 }else{
@@ -1205,8 +1205,8 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
             case 'r':
             case 'Q':
             case 'q':
-            case VK_ENTER:
-            case VK_ESCAPE:
+            case VKEY_ENTER:
+            case VKEY_ESCAPE:
                 input_character=-100;
                 break;
             default: 

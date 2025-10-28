@@ -576,7 +576,7 @@ int debug(int (*sendCommandGdb)(char *)){
         if(cob.connect[0]!='\0') cob.input_character='a';
         switch (cob.input_character)
         {
-            case VK_UP:
+            case VKEY_UP:
                 if(cob.line_pos==0 && start_window_line>0){
                     if(lines->line_before!= NULL){
                         start_window_line--;
@@ -587,7 +587,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 cob.showFile=TRUE;            
                 break;
-            case VK_DOWN: 
+            case VKEY_DOWN: 
                 if(lines->line_after!= NULL){
                     if(cob.line_pos>(VIEW_LINES-5)){
                         start_window_line++;                 
@@ -598,7 +598,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 cob.showFile=TRUE;
                 break;
-            case VK_PGUP:
+            case VKEY_PGUP:
                 if(cob.line_pos>0){
                     cob.line_pos=0;
                 }else{
@@ -611,7 +611,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 cob.showFile=TRUE;
                 break;
-            case VK_PGDOWN: 
+            case VKEY_PGDOWN: 
                 qtd_page = 0;
                 if(cob.line_pos<(VIEW_LINES-4)){
                     cob.line_pos=VIEW_LINES-4;
@@ -627,13 +627,13 @@ int debug(int (*sendCommandGdb)(char *)){
                 while((lines->file_line+cob.line_pos)>cob.qtd_lines) cob.line_pos--;
                 cob.showFile=TRUE;
                 break;
-            case VK_LEFT:
+            case VKEY_LEFT:
                 if(start_line_x>0){
                     start_line_x--;
                     cob.showFile=TRUE;
                 }
                 break;
-            case VK_RIGHT:
+            case VKEY_RIGHT:
                 if(start_line_x<250){
                     start_line_x++;
                     cob.showFile=TRUE;

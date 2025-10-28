@@ -702,27 +702,46 @@ int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * line ){
 }
 
 char* cleanRawValue(const char* rawValue) {
-    const char* containsQuotes = "\"";
-    char* cleanedRawValue = strdup(rawValue);
+    if (!rawValue) return NULL;
 
-    if (cleanedRawValue && cleanedRawValue[0] == '\"') {
-        memmove(cleanedRawValue, cleanedRawValue + 1, strlen(cleanedRawValue));
+    char* tmp = strdup(rawValue);
+    if (!tmp) return NULL;
+    size_t len = strlen(tmp);
+    if (len > 0 && tmp[0] == '\"') {
+        memmove(tmp, tmp + 1, len); 
+        len--;
     }
-    size_t length = strlen(cleanedRawValue);
-    if (length > 0 && cleanedRawValue[length - 1] == '\"') {
-        cleanedRawValue[length - 1] = '\0';
+    if (len > 0 && tmp[len - 1] == '\"') {
+        tmp[len - 1] = '\0';
+        len--;
     }
-    char* currentPos = cleanedRawValue;
-    while (1) {
-        currentPos = strstr(currentPos, containsQuotes);
-        if (!currentPos) {
-            break;
+    size_t quotes = 0;
+    for (size_t i = 0; i < len; ++i) {
+        if (tmp[i] == '\"') quotes++;
+    }
+    if (quotes == 0) {
+        return tmp;
+    }
+    size_t new_len = len + quotes + 1;
+    char* out = malloc(new_len);
+    if (!out) {
+        free(tmp);
+        return NULL;
+    }
+    size_t ri = 0;
+    size_t wi = 0;
+    while (ri < len) {
+        if (tmp[ri] == '\"') {
+            out[wi++] = '\\';
+            out[wi++] = '\"';
+        } else {
+            out[wi++] = tmp[ri];
         }
-        memmove(currentPos + 1, currentPos, strlen(currentPos) + 1);
-        *currentPos = '\\';
-        currentPos += 2;
+        ri++;
     }
-    return cleanedRawValue;
+    out[wi] = '\0';
+    free(tmp);
+    return out;
 }
 
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame){
