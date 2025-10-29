@@ -341,6 +341,21 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.isStepOver=-1;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }
+                            }else if(reason!=NULL && reason->key!=NULL && strcmp(reason->key,"frame")==0){
+                                    ST_Line * hasLine=hasLineCobol(parsed);
+                                    if(hasLine==NULL){
+                                        *status = GDB_RUNNING;
+                                        sendCommandGdb("exec-next\n");
+                                        lineChange=TRUE;
+                                    }else{
+                                        *status = GDB_STEP_END;
+                                        cob.debug_line = hasLine->lineCobol;
+                                        cob.changeLine = TRUE;
+                                        cob.waitAnswer=FALSE;
+                                        cob.running=FALSE;
+                                        cob.showFile=TRUE;
+                                        cob.isStepOver=-1;
+                                    }       
                             }else{
                                 *status = GDB_STEP_END;
                                 ST_Line * hasLine=hasLineCobol(parsed);
@@ -733,6 +748,54 @@ char* cleanRawValue(const char* rawValue) {
     return out;
 }
 
+char* cleanRawValueWithEscape(const char* rawValue) {
+    if (!rawValue) return NULL;
+
+    char* tmp = strdup(rawValue);
+    if (!tmp) return NULL;
+    size_t len = strlen(tmp);
+    if (len > 0 && tmp[0] == '\"') {
+        memmove(tmp, tmp + 1, len); 
+        len--;
+    }
+    if (len > 0 && tmp[len - 1] == '\"') {
+        tmp[len - 1] = '\0';
+        len--;
+    }
+    size_t quotes = 0;
+    for (size_t i = 0; i < len; ++i) {
+        if (tmp[i] == '\"') quotes+=3;
+    }
+    if (quotes == 0) {
+        return tmp;
+    }
+    size_t new_len = len + quotes + 1;
+    char* out = malloc(new_len);
+    if (!out) {
+        free(tmp);
+        return NULL;
+    }
+    // Reconstrói string escapando aspas
+    size_t ri = 0; // índice de leitura em tmp
+    size_t wi = 0; // índice de escrita em out
+    while (ri < len) {
+        if (tmp[ri] == '\"') {
+            out[wi++] = '\\';
+            out[wi++] = '\\';
+            out[wi++] = '\\';
+            out[wi++] = '\"';
+        } else {
+            out[wi++] = tmp[ri];
+        }
+        ri++;
+    }
+    out[wi] = '\0';
+
+    free(tmp);
+    return out;
+}
+
+
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame){
     int status;
     char command[512];
@@ -829,16 +892,18 @@ int MI2editVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, ch
         free(gdbOutput);
         gdbOutput=NULL;
     }
-    char * cleanedRawValue = cleanRawValue(rawValue);
     if (var->attribute!=NULL && strcmp(var->attribute->type,"integer")==0){
         char command[512];
+        char * cleanedRawValue = cleanRawValue(rawValue);
         sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
         sendCommandGdb(command);
         do{
            sendCommandGdb("");
            MI2onOuput(sendCommandGdb, tk, &status);
         }while(status==GDB_RUNNING);
+        free(cleanedRawValue);
     }else if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
+        char * cleanedRawValue = cleanRawValueWithEscape(rawValue);
         int q = 200 + strlen(cleanedRawValue);
         char command[q];
         sprintf(command,"data-evaluate-expression \"(int)cob_put_field_str(&%s,\\\"%s\\\")\"\n", var->cName, cleanedRawValue);
@@ -847,7 +912,9 @@ int MI2editVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, ch
            sendCommandGdb("");
            MI2onOuput(sendCommandGdb, tk, &status);
         }while(status==GDB_RUNNING);
+        free(cleanedRawValue);
     } else{
+        char * cleanedRawValue = cleanRawValue(rawValue);
         strcpy(aux, var->cName);
         if(strncmp(var->cName,"f_",2)==0) strcat(aux, ".data");
         char * finalValue = NULL;
@@ -871,8 +938,8 @@ int MI2editVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, ch
             }while(status==GDB_RUNNING);
             free(finalValue);
         }
+        free(cleanedRawValue);
     }
-    free(cleanedRawValue);
     return TRUE;
 }
 

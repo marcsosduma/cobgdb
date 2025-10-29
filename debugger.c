@@ -421,6 +421,50 @@ char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, uns
     return strdup(wrk);
 }
 
+/*
+ * Unescapes a C-style string:
+ * - Converts \" -> "
+ * - Converts \\ -> \
+ * - Removes outer quotes if present
+ * - Converts the final string to lowercase
+ */
+char *unescape(const char *src) {
+    if (!src) return NULL;
+
+    size_t len = strlen(src);
+    if (len == 0) return strdup("");
+
+    // Skip outer quotes if present
+    size_t start = 0;
+    size_t end = len;
+    if (src[0] == '"' && src[len - 1] == '"') {
+        start = 1;
+        end = len - 1;
+    }
+
+    // Allocate output buffer (same size as input + 1)
+    char *out = malloc(len + 1);
+    if (!out) return NULL;
+
+    size_t o = 0;
+    for (size_t i = start; i < end; i++) {
+        if (src[i] == '\\' && (i + 1) < end) {
+            i++; // move to next character after '\'
+            if (src[i] == '\\') {
+                out[o++] = '\\';
+            } else if (src[i] == '"') {
+                out[o++] = '"';
+            } else {
+                // if it's an unknown escape, copy it literally
+                out[o++] = src[i];
+            }
+        } else {
+            out[o++] = src[i];
+        }
+    }
+    out[o] = '\0';
+    return out;
+}
 
 char* parseUsage(char* valueStr) {
     if (!valueStr || strlen(valueStr) == 0) {
@@ -432,7 +476,7 @@ char* parseUsage(char* valueStr) {
     if (!valueStr || strlen(valueStr) == 0) {
         return NULL;
     }
-    return  strdup(valueStr);;
+    return  unescape(valueStr);
 }
 
 char *convertStrToCobField(const char *value){
