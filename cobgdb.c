@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.2" 
+#define COBGDB_VERSION "2.3"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -187,11 +187,9 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
     // Initialize the first elements with the initial values.
     char *initial_params[] = {
         "-g ",
-        //"-static ",
         "-fsource-location ",
         "-ftraceall ",
         "-v ",
-        //"-free ",
         "-O0 ",
         "-x "
     };
@@ -391,6 +389,8 @@ int show_info(){
             case 80:
                 printf("%-*s\r",len, "help");
                 break;
+            default:
+                break;
         }
     }
     gotoxy(1,VIEW_LINES);
@@ -400,8 +400,8 @@ int show_info(){
     return TRUE;
 }
 
-int show_file(Lines * lines, int line_pos, Lines ** line_debug){
-    Lines * show_line=lines;
+int show_file(Lines * lines_file, int line_pos, Lines ** line_debug){
+    Lines * show_line=lines_file;
     int NUM_TXT=VIEW_COLS-4-cob.num_dig;    
     
     gotoxy(1,1);
@@ -416,6 +416,7 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
             }else{
                 printBK(" ",color_yellow, color_frame);
             }
+            print_colorBK(color_gray, color_black);
             if(cob.debug_line==show_line->file_line && !cob.running){
                 print(">", color_green); //print_color(color_green); draw_utf8_text("\u25BA");
                 if(WAIT_GDB>10)
@@ -427,7 +428,7 @@ int show_file(Lines * lines, int line_pos, Lines ** line_debug){
                 print_color(color_red);
                 printf("%c",chExec);
             }     
-            print_color(color_gray);
+            print_colorBK(color_gray, color_black);
             printf("%-*d ", cob.num_dig, show_line->file_line);
             if(show_line->high==NULL){
                 if(show_line->line !=NULL){
@@ -690,6 +691,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     MI2start(sendCommandGdb);
                     WAIT_GDB=100;
                     lines = set_window_pos(&cob.line_pos);
+                    cob.status_bar = 0;
                     enableEcho();
                 }
                 break;
@@ -698,6 +700,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 dblAux= cob.debug_line;
                 if(!cob.waitAnswer){
                     MI2stepInto(sendCommandGdb);
+                    cob.status_bar = 0;
                 }
                 cob.debug_line = dblAux;
                 break;
@@ -706,6 +709,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 dblAux= cob.debug_line;
                 if(!cob.waitAnswer){
                     MI2stepOver(sendCommandGdb);
+                    cob.status_bar = 0;
                 }
                 cob.debug_line = dblAux;
                 break;
@@ -726,6 +730,7 @@ int debug(int (*sendCommandGdb)(char *)){
                         enableEcho();
                         WAIT_GDB=100;
                         lines = set_window_pos(&cob.line_pos);
+                        cob.status_bar = 0;
                     } 
                     cob.showFile=TRUE;
                 }
@@ -742,6 +747,7 @@ int debug(int (*sendCommandGdb)(char *)){
                         WAIT_GDB=100;
                     }
                     cob.showFile=TRUE;
+                    cob.status_bar = 0;
                 }
                 break;
             case 'h':

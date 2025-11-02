@@ -128,7 +128,7 @@ void loadLibrary(char * file){
     snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
     if(file_exists(nameCFile)){
         cob.status_bar = 1;
-        parser(nameCFile, 1);
+        parser(nameCFile, 0);
     }
 }
 

@@ -859,6 +859,9 @@ int parser(char * file_name, int fileN){
         cleanedCFileName(cleanedFile, basename);
     }else{
         strcpy(basename,getFileNameFromPath(file_name));
+        if(fileN == 0){
+            cleanedCFileName(cleanedFile, basename);
+        }
     }
     char sep = '/';
 
@@ -890,8 +893,8 @@ int parser(char * file_name, int fileN){
                 }else{
                     strcpy(fileCobol, tmp);
                 }            
-                if(fileN==0){
-                    strcpy(cob.name_file, fileCobol);
+                if(fileN==0 && strcmp(cob.name_file,"")==0){
+                    strcpy(cob.name_file, fileCobol); // To assign the initial COBOL file
                 }
             }
         }
@@ -1188,11 +1191,12 @@ void SourceMap(char fileGroup[][512]){
     Attributes = NULL;
     DebuggerVariable = NULL;
 
+    strcpy(cob.name_file,""); // To assign the initial COBOL file
     while(strlen(fileGroup[q])>0){
         strcpy(cwd,"");
    	    //printf("\n\n Arquivo: %s\n",fileGroup[q]);
         //while(key_press(MOUSE_OFF)<=0);
-        parser(fileGroup[q], q);
+        parser(fileGroup[q], 0);
         q++;
 
     }
