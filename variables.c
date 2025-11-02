@@ -1093,7 +1093,7 @@ void load_file(){
                 snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
                 if(file_exists(nameCFile)){
                     cob.status_bar = 1;
-                    parser(nameCFile, 1);
+                    parser(nameCFile, 0);
                 }
                 cob.status_bar = 0;         
                 loadfile(files[file_sel]);
