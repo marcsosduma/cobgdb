@@ -86,6 +86,28 @@ Linux:
 cobgdb --exe prog
 ```
 
+### Debugging Modules
+
+It is possible to debug modules as long as you compile them in the same directory as your source code, using the following command:
+
+``` bash
+cobc -g -fsource-location -ftraceall -v -O0 -m p1.cob
+```
+To make it easier, use comp.bat (Windows) or comp.sh (Linux) as follows:
+
+``` bash
+comp.bat -m p1.cob
+```
+``` bash
+comp.sh -m p1.cob
+```
+
+In this example, p0.cob is the source code of the executable, and p1.cob is the source code of the module (.dll on Windows or .so on Linux).
+
+![Screenshot](cobgdb_library1.png)
+
+![Screenshot](cobgdb_library2.png)
+
 ## ❓ Main Commands
 
 - `B` - Breakpoint: toggles the breakpoint at the current selected line (can also be done with the mouse).
