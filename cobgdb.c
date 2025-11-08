@@ -288,7 +288,7 @@ int search_text() {
     int a=strlen(cob.find_text);
     if(a<61){
         cob.find_text[a]=' ';
-        cob.find_text[61]='\0';
+        cob.find_text[99]='\0';
     }
     updateStr(cob.find_text, 61, 11, lin + 2);
     a=60; 
