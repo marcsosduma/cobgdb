@@ -945,7 +945,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
         }
         show_info();
-        if(cob.input_character!=0) printf("Key = %d", cob.input_character);
+        //if(cob.input_character!=0) printf("Key = %d", cob.input_character);
     }
     return TRUE;
 }
