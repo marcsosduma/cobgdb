@@ -125,6 +125,7 @@ In this example, p0.cob is the source code of the executable, and p1.cob is the 
 - `W` - Window Size: switches between window sizes: 80x24 and 132x34.
 - `O` - Changes the focus to the window where the debugging code is being displayed (Windows or X11 only).
 - `CTRL-F` - Find: search for text in the source code.
+- `CTRL+L` – Go to: Go to Line.
 - `Q` - Quit: quits the program.
 
 ## 💡 Tip for Windows 11

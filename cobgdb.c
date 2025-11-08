@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.4"
+#define COBGDB_VERSION "2.5"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -264,7 +264,7 @@ Lines * set_window_pos(int * line_pos){
     return line;
 }
 
-int search_text() {
+int search_text(Lines ** lines) {
     Lines *line = cob.lines;
     wchar_t buffer[500];
     int lin = 10;
@@ -333,8 +333,15 @@ int search_text() {
 #endif
         const wchar_t *pos = wcsistr(wcharString, buffer);
         if (pos) {
-            start_window_line = (line_pos-4>0)?line_pos-4:0;
-            cob.line_pos = line_pos - start_window_line - 1;
+            start_window_line = line_pos;
+            cob.line_pos = 0;
+            *lines=line;
+            int qtt=3;
+            while((*lines)->line_before!=NULL && qtt-->0){
+                *lines = (*lines)->line_before;
+                 start_window_line--;
+                 cob.line_pos++;
+            }
             found = TRUE;
             break;
         }
@@ -348,6 +355,52 @@ int search_text() {
     free(wcharString);
     return found;
 }
+
+int gotoLine(Lines **lines) {
+    Lines *line = cob.lines;
+    char buffer[500];
+    int lin = 10;
+    int bkg = color_dark_red;
+    int found = FALSE;
+
+    gotoxy(30, lin + 2);
+    print_colorBK(color_white, bkg);
+    draw_box_first(30, lin + 2, 21, "Line");
+    draw_box_border(30, lin + 3);
+    draw_box_border(52, lin + 3);
+    print_colorBK(color_yellow, bkg);
+    gotoxy(31, lin + 3);
+    printf("%21s"," ");
+    lin++;
+    print_colorBK(color_white, bkg);
+    draw_box_last(30, lin + 3, 21);
+    print_colorBK(color_green, bkg);
+    fflush(stdout);
+    gotoxy(31, lin + 2);
+    readchar(buffer,31);
+    int new_line = atoi(buffer);
+    if(new_line==0){
+        return FALSE;
+    }
+    while (line != NULL) {
+        if(new_line==line->file_line){
+            start_window_line = new_line;
+            cob.line_pos = 0;
+            *lines=line;
+            int qtt=3;
+            while((*lines)->line_before!=NULL && qtt-->0){
+                *lines = (*lines)->line_before;
+                 start_window_line--;
+                 cob.line_pos++;
+            }
+            found = TRUE;
+            break;
+        }
+        line = line->line_after;
+    }
+    return found;
+}
+
 
 int show_button(){
     print_colorBK(color_blue, color_cyan);
@@ -924,11 +977,18 @@ int debug(int (*sendCommandGdb)(char *)){
                 focus_window_by_title(cob.title);
                 break;
             case VKEY_CTRLF:
-                if(!search_text()){
+                if(!search_text(&lines)){
                     cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
                     showCobMessage("Text not found.",1);
                 }
-                lines = set_window_pos(&cob.line_pos);
+                cob.showFile = TRUE;
+                cob.status_bar = 0;
+                break;
+            case VKEY_CTRLL:
+                if(!gotoLine(&lines)){
+                    cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
+                    showCobMessage("Line not found.",1);
+                }
                 cob.showFile = TRUE;
                 cob.status_bar = 0;
                 break;

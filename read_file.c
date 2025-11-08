@@ -149,9 +149,9 @@ char * Trim(char * s){
        if(!isSpace(s[ix]))
           buf[jx++] = s[ix];
         buf[jx] = '\0';
-        strncpy(s, buf, jx);  /* always looks as far as the null, but who cares? */
-        free(buf);            /* no good leak goes unpunished */
-        return s;             /* modifies s in place *and* returns it for swank */  
+        strncpy(s, buf, jx);  
+        free(buf);            
+        return s;             
 }
 
 char* subString(const char* input, int offset, int len, char* dest)
@@ -209,8 +209,6 @@ void getPathName(char * path, char * org) {
    subString (org, 0, final_pos, path);
    path[final_pos]='\0';
 }
-
-#include <ctype.h>
 
 int isAbsolutePath(char *path) {
     if (!path || !*path)

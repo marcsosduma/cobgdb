@@ -12,6 +12,7 @@
 #define VKEY_LEFT 37
 #define VKEY_RIGHT 39
 #define VKEY_CTRLF 250
+#define VKEY_CTRLL 251
 #elif defined(__linux__)
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define VKEY_BACKSPACE 127
@@ -25,6 +26,7 @@
 #define VKEY_ESCAPE 27
 #define VKEY_DEL 3
 #define VKEY_CTRLF 250
+#define VKEY_CTRLL 251
 #endif // Windows/Linux
 #ifndef boolean 
 #define boolean int

@@ -187,6 +187,10 @@ int readKeyLinux(int type) {
         if (buf[0] == 6) {
             return VKEY_CTRLF;
         }
+        // Ctrl+L = ASCII 12
+        if (buf[0] == 12) {
+            return VKEY_CTRLL;
+        }
         wchar_t wc;
         if (mbtowc(&wc, (const char *)buf, nread) <= 0) {
             return buf[0];
@@ -342,13 +346,16 @@ int key_press(int type){
                      if(virtualKeyCode == 'F'){
                         FlushConsoleInputBuffer(hIn);                        
                         return VKEY_CTRLF;
+                     }else if(virtualKeyCode == 'L'){
+                        FlushConsoleInputBuffer(hIn);                        
+                        return VKEY_CTRLL;
                      }
             } else if(inp.Event.KeyEvent.bKeyDown && inp.Event.KeyEvent.uChar.UnicodeChar != 0) {
                     WCHAR key = inp.Event.KeyEvent.uChar.UnicodeChar;
                     FlushConsoleInputBuffer(hIn);
                     return (int)key;
             } else if (inp.Event.KeyEvent.bKeyDown) { 
-                virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
+                //virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
                 if(virtualKeyCode==VKEY_PGUP || virtualKeyCode==VKEY_PGDOWN || virtualKeyCode==VKEY_UP ||
                    virtualKeyCode==VKEY_DOWN || virtualKeyCode==VKEY_RIGHT || virtualKeyCode==VKEY_LEFT){
                     return virtualKeyCode;
