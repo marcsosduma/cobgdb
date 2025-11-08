@@ -866,6 +866,8 @@ int parser(char * file_name, int fileN){
     char sep = '/';
 
     sprintf(file_name,"%s%c%s",cwd,sep,basename);
+    if(!file_exists(file_name))
+        return 0;
 
     strcpy(fileC, file_name);
     strcpy(program_cfile.name_cfile, file_name);
@@ -886,8 +888,9 @@ int parser(char * file_name, int fileN){
         if(!bfileCobolRegex){            
             bfileCobolRegex = fileCobolRegex(line_parsed, qtt_tk, &tmp[0]);
             if(bfileCobolRegex){
-                if(!isAbsolutPath(tmp)){
+                if(isAbsolutePath(tmp)==0 || isAbsolutePath(tmp)==2){
                     char tmp1[512];
+                    normalizePath(tmp);
                     strcpy(tmp1,getFileNameFromPath(tmp));
                     sprintf(fileCobol,"%s%c%s",cwd,sep,tmp1);
                 }else{

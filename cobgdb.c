@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.3"
+#define COBGDB_VERSION "2.4"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -262,6 +262,91 @@ Lines * set_window_pos(int * line_pos){
         }
     }
     return line;
+}
+
+int search_text() {
+    Lines *line = cob.lines;
+    wchar_t buffer[500];
+    int lin = 10;
+    int bkg = color_dark_red;
+    int found = FALSE;
+
+    gotoxy(10, lin + 2);
+    print_colorBK(color_white, bkg);
+    draw_box_first(10, lin + 2, 61, "Search");
+    draw_box_border(10, lin + 3);
+    draw_box_border(72, lin + 3);
+    print_colorBK(color_yellow, bkg);
+    gotoxy(11, lin + 3);
+    printf("%61s"," ");
+    lin++;
+    print_colorBK(color_white, bkg);
+    draw_box_last(10, lin + 3, 61);
+    print_colorBK(color_green, bkg);
+    fflush(stdout);
+    gotoxy(71, lin + 2);
+    int a=strlen(cob.find_text);
+    if(a<61){
+        cob.find_text[a]=' ';
+        cob.find_text[61]='\0';
+    }
+    updateStr(cob.find_text, 61, 11, lin + 2);
+    a=60; 
+    while(a>=0){
+        if(cob.find_text[a]!=' '){
+            cob.find_text[a+1]='\0';
+            break;
+        }else if(a==0)
+            cob.find_text[a]='\0';
+        a--;
+    }
+#if defined(_WIN32)
+    MultiByteToWideChar(CP_UTF8, 0, cob.find_text, -1, buffer, 500);
+#else
+    mbstowcs(buffer, cob.find_text, 499);
+#endif
+    buffer[499] = L'\0';
+    wchar_t *wcharString = malloc(501 * sizeof(wchar_t));
+    if (!wcharString) return -1;
+    int init_pos = start_window_line + cob.line_pos;
+    int line_pos = 0;
+    int loop = (cob.line_pos>0)?TRUE:FALSE;
+    while (line != NULL) {
+        if (!line->line) {
+            line = line->line_after;
+            continue;
+        }
+        if(line_pos++<init_pos){
+            line = line->line_after;
+            continue;
+        }
+        int lenLine = strlen(line->line);
+        if (lenLine > 500) {
+            free(wcharString);
+            wcharString = malloc((lenLine + 1) * sizeof(wchar_t));
+            if (!wcharString) return -1;
+        }
+#if defined(_WIN32)
+        MultiByteToWideChar(CP_UTF8, 0, line->line, -1, wcharString, lenLine + 1);
+#else
+        mbstowcs(wcharString, line->line, lenLine + 1);
+#endif
+        const wchar_t *pos = wcsistr(wcharString, buffer);
+        if (pos) {
+            start_window_line = (line_pos-4>0)?line_pos-4:0;
+            cob.line_pos = line_pos - start_window_line - 1;
+            found = TRUE;
+            break;
+        }
+        line = line->line_after;
+        if(line==NULL && loop){
+            loop=FALSE;
+            line = cob.lines;
+            init_pos = 0; line_pos=0;
+        }
+    }
+    free(wcharString);
+    return found;
 }
 
 int show_button(){
@@ -782,15 +867,8 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'f':
             case 'F':
                 if(!cob.waitAnswer){
-                   show_sources(sendCommandGdb, FALSE);
-                   cob.showFile=TRUE;
-                   MI2getStack(sendCommandGdb,1);
-                }
-                break;
-            case 'l':
-            case 'L':
-                if(!cob.waitAnswer){
                    load_file();
+                   //show_sources(sendCommandGdb, FALSE);
                    cob.showFile=TRUE;
                    MI2getStack(sendCommandGdb,1);
                 }
@@ -845,6 +923,15 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'o':
                 focus_window_by_title(cob.title);
                 break;
+            case VKEY_CTRLF:
+                if(!search_text()){
+                    cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
+                    showCobMessage("Text not found.",1);
+                }
+                lines = set_window_pos(&cob.line_pos);
+                cob.showFile = TRUE;
+                cob.status_bar = 0;
+                break;
             default: 
                 if(cob.waitAnswer){
                     WAIT_GDB++;
@@ -858,7 +945,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
         }
         show_info();
-        //printf("Key = %d", input_character);
+        if(cob.input_character!=0) printf("Key = %d", cob.input_character);
     }
     return TRUE;
 }
@@ -916,7 +1003,6 @@ int main(int argc, char **argv) {
     int arg_count = 0;      // Initialize a counter for storing arguments
     char fileCGroup[10][512];
     char fileCobGroup[10][512];
-    boolean withHigh=TRUE;
 
     setlocale(LC_CTYPE, "");
     setlocale(LC_ALL,"");
@@ -926,6 +1012,7 @@ int main(int argc, char **argv) {
     #endif    
     strcpy(cob.file_cobol,"");
     strcpy(cob.connect,"");
+    sprintf(cob.find_text, "%61s", "");
  
     if(!isCommandInstalled("gdb")){
         printf("GDB is not installed.\n");
@@ -983,9 +1070,18 @@ int main(int argc, char **argv) {
         printf("%-*s\r",60,"cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob");
         print_colorBK(color_white, color_black);
         draw_box_last(10,12,60);
+        gotoxy(10,15);
+        printf("Press a key to continue...");
         enableEcho();
         fflush(stdout);
-        while(key_press(MOUSE_OFF)<=0);  
+        double check_start = getCurrentTime();
+        while (key_press(MOUSE_OFF)<=0) {
+            double end_time = getCurrentTime();
+            double elapsed_time = end_time - check_start;
+            if (elapsed_time > 4) {
+                break;
+            }
+        }
         strcat(cob.title, nameExecFile);  
         start_gdb(nameExecFile,cob.cwd);
         freeBKList();
@@ -1010,10 +1106,7 @@ int main(int argc, char **argv) {
                 if (arg_count < 10) {
                     strncpy(values[arg_count], argv[i], sizeof(values[0]) - 1);
                     values[arg_count][sizeof(values[0]) - 1] = '\0';
-                    if(strcmp(values[arg_count],"-nh")==0){
-                        withHigh=FALSE;
-                        continue;
-                    }if(strcasecmp(values[arg_count],"--connect")==0){
+                    if(strcasecmp(values[arg_count],"--connect")==0){
                         if(i>(argc-2)){
                             printf("Please provide the parameters.\n");
                             return 0;
@@ -1068,7 +1161,7 @@ int main(int argc, char **argv) {
         strcpy(cob.file_cobol,cob.name_file);
         strcpy(cob.first_file, cob.file_cobol);
         loadfile(cob.file_cobol);
-        if(withHigh) highlightParse(); 
+        highlightParse(); 
         //printf("The current locale is %s \n",setlocale(LC_ALL,""));
         //while(key_press(MOUSE_OFF)<=0); 
         strcat(cob.title, nameExecFile);          

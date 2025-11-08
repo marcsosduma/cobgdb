@@ -210,9 +210,27 @@ void getPathName(char * path, char * org) {
    path[final_pos]='\0';
 }
 
-int isAbsolutPath(char * path){
-    if(strstr(path, "/")!=NULL) return 1;
-    if(strstr(path, "\\")!=NULL) return 1;
+#include <ctype.h>
+
+int isAbsolutePath(char *path) {
+    if (!path || !*path)
+        return 0;
+#ifdef _WIN32
+    if (isalpha((unsigned char)path[0]) && path[1] == ':' &&
+        (path[2] == '\\' || path[2] == '/'))
+        return 1;    
+    if (path[0] == '\\' && path[1] == '\\')
+        return 1;
+    if (path[0] == '/')
+        return 1;
+    if(strstr(path, "/")!=NULL) return 2;
+    if(strstr(path, "\\")!=NULL) return 2;
+#else
+    if (path[0] == '/')
+        return 1;
+    if(strstr(path, "/")!=NULL) 
+        return 2;
+#endif
     return 0;
 }
 

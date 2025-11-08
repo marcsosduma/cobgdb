@@ -9,10 +9,11 @@
  * 
  * Author: Marcos Martins Duma
  */
- #include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <wctype.h>
 #include "cobgdb.h"
 
 struct st_parse parse_blank = {
@@ -112,6 +113,21 @@ struct st_parse * tk_val(struct st_parse line_parsed[100], int qtt_tk, int pos){
     return tk;
 }
 
+// Returns a pointer to the first occurrence of the specified text (case-insensitive)
+const wchar_t *wcsistr(const wchar_t *haystack, const wchar_t *needle) {
+    if (!*needle) return haystack;
+    for (; *haystack; haystack++) {
+        const wchar_t *h = haystack;
+        const wchar_t *n = needle;
+        while (*h && *n && towlower(*h) == towlower(*n)) {
+            h++;
+            n++;
+        }
+        if (!*n)
+            return haystack;
+    }
+    return NULL;
+}
 
 void lineParse(char * line_to_parse, struct st_parse h[100], int *qtt ){
     char * ch = line_to_parse;

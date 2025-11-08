@@ -121,10 +121,10 @@ In this example, p0.cob is the source code of the executable, and p1.cob is the 
 - `H` - Show: shows the values of variables for the selected line (right-click also functions).
 - `D` - Display of variables: set the automatic display during debugging/animation ON or OFF (default is OFF).
 - `F` - File: allows selecting the source file for debugging.
-- `L` - Load: loads a COBOL file not included in the executable, from the source directory.
 - `A` - Attach: attach to GDBSERVER or Application PID.
 - `W` - Window Size: switches between window sizes: 80x24 and 132x34.
 - `O` - Changes the focus to the window where the debugging code is being displayed (Windows or X11 only).
+- `CTRL-F` - Find: search for text in the source code.
 - `Q` - Quit: quits the program.
 
 ## 💡 Tip for Windows 11

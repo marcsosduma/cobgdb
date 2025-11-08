@@ -11,6 +11,7 @@
 #define VKEY_DEL 3
 #define VKEY_LEFT 37
 #define VKEY_RIGHT 39
+#define VKEY_CTRLF 250
 #elif defined(__linux__)
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define VKEY_BACKSPACE 127
@@ -23,6 +24,7 @@
 #define VKEY_ENTER 13
 #define VKEY_ESCAPE 27
 #define VKEY_DEL 3
+#define VKEY_CTRLF 250
 #endif // Windows/Linux
 #ifndef boolean 
 #define boolean int
@@ -103,6 +105,7 @@ struct st_cobgdb {
     char cwd[512];
     char first_file[512];
     char connect[256];
+    char find_text[100];
     int num_dig;
     int debug_line;
     int running;
@@ -297,7 +300,7 @@ void   getPathName(char * path, char * org);
 char * subString (const char* input, int offset, int len, char* dest);
 void normalizePath(char * path);
 char * Trim(char * s);
-int isAbsolutPath(char * path);
+int isAbsolutePath(char * path);
 char* toLower(char* str);
 char* toUpper(char* str);
 boolean isSpace(char c);
@@ -399,3 +402,4 @@ int printHighlight(struct st_highlt * hight, int bkg, int start, int tot);
 //sting_parser.c
 void lineParse(char * line_to_parse, struct st_parse h[100], int *qtt );
 struct st_parse * tk_val(struct st_parse line_parsed[100], int qtt_tk, int pos);
+const wchar_t *wcsistr(const wchar_t *haystack, const wchar_t *needle);

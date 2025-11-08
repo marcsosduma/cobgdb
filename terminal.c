@@ -183,6 +183,10 @@ int readKeyLinux(int type) {
             return 0;
         }
     } else {
+        // Ctrl+F = ASCII 6
+        if (buf[0] == 6) {
+            return VKEY_CTRLF;
+        }
         wchar_t wc;
         if (mbtowc(&wc, (const char *)buf, nread) <= 0) {
             return buf[0];
@@ -331,7 +335,15 @@ int key_press(int type){
                 }                
                 //printf("Mouse X: %d, Y: %d\n", mouseX, mouseY);
             }
-            if (inp.Event.KeyEvent.bKeyDown && inp.Event.KeyEvent.uChar.UnicodeChar != 0) {
+            DWORD ctrlState = inp.Event.KeyEvent.dwControlKeyState;
+            virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
+            if ((ctrlState & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) && inp.Event.KeyEvent.bKeyDown ){
+                     virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
+                     if(virtualKeyCode == 'F'){
+                        FlushConsoleInputBuffer(hIn);                        
+                        return VKEY_CTRLF;
+                     }
+            } else if(inp.Event.KeyEvent.bKeyDown && inp.Event.KeyEvent.uChar.UnicodeChar != 0) {
                     WCHAR key = inp.Event.KeyEvent.uChar.UnicodeChar;
                     FlushConsoleInputBuffer(hIn);
                     return (int)key;
