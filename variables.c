@@ -1266,7 +1266,7 @@ void show_help(int is_popup){
         "O - Changes the focus to the window where the debugging code is being",
         "    displayed (Windows or X11 only).",
         "CTRL-F - Find: search for text in the source code.",
-        "CTRL+L - Go to: Go to Line.",
+        "CTRL-L - Go to: Go to Line.",
         "Q - Quit: quits the program.",
         "  ",
         "CobGDB takes one or more programs with COB/CBL extension as parameters",
