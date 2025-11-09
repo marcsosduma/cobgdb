@@ -19,6 +19,10 @@
 #include <dirent.h> 
 #include "cobgdb.h"
 
+#ifndef VKEY_BACKSPACE
+#define VKEY_BACKSPACE 8
+#endif
+
 extern struct st_cobgdb cob;
 extern ST_DebuggerVariable * DebuggerVariable;
 
@@ -943,10 +947,6 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
                 highlightParse();
                 input_character=-100;
                 break;
-            case 'R':
-            case 'r':
-            case 'Q':
-            case 'q':
             case VKEY_ESCAPE:
                 input_character=-100;
                 break;
@@ -970,147 +970,169 @@ void load_file(){
     int start_file=0;
     int file_sel = -1;
     boolean show = TRUE;
-    DIR *d;
+    boolean must_out = FALSE;
     struct dirent *dir;
     char baseName[256];
     char nameCFile[1024];
-
+    char str[512];
+    char str1[512];
+    int i=0;
+    DIR *d;
+    
+    str[0] = '\0';
+    str1[0] = '\0';
     getPathName(cwd, cob.first_file);
-    d = opendir(cwd);
-    if (d) {
-        while ((dir = readdir(d)) != NULL) {
-            if(istrstr(dir->d_name,".cbl")!=NULL || istrstr(dir->d_name,".cob")!=NULL){
-                sprintf(files[qtd_files],"%s/%s",cwd,dir->d_name);
-                normalizePath(files[qtd_files]);
+    while(!must_out){
+        d = opendir(cwd);
+        if (d) {
+            qtd_files = 0;
+            while ((dir = readdir(d)) != NULL) {
+                if(strlen(str)>0 && istrstr(dir->d_name, str)==NULL) continue;
+                if(istrstr(dir->d_name,".cbl")!=NULL || istrstr(dir->d_name,".cob")!=NULL){
+                    sprintf(files[qtd_files],"%s/%s",cwd,dir->d_name);
+                    normalizePath(files[qtd_files]);
 
-                fileNameWithoutExtension(files[qtd_files], &baseName[0]);
-                strcpy(baseName,getFileNameFromPath(baseName));
-                // C File
-                snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
-                if(!file_exists(nameCFile)){
-                    continue;
-                }
-                qtd_files++;
-            }
-        }
-        closedir(d);
-    }
-    if(qtd_files == 0){
-        showCobMessage("GnuCobol (cob or cbl) file not found.",1);
-        return;
-    }
-    show_info();
-    while(input_character!=-100){
-        disableEcho();
-        gotoxy(1,1);
-        int lin = 7;
-        int col = 9;
-        int size = 60;
-        if(show){
-            gotoxy(col,lin);
-            print_colorBK(frg, bkgr);
-            draw_box_first(col,lin++,size,"Source Files");
-            int f = start_file;
-            int pos=0;
-            file_sel=-1;
-            while(pos<10){
-                print_colorBK(frg, bkgr);
-                draw_box_border(col, lin);
-                bkg=(line_pos==pos)?csel:bkgr;
-                print_colorBK(frg, bkg);
-                if(f<qtd_files){
-                    int len = strlen(files[f]);
-                    if(len>60){
-                        int start=len-56;
-                        printf("...%-60s",&files[f][start]);
-                    }else{
-                        printf("%-60s",files[f]);
+                    fileNameWithoutExtension(files[qtd_files], &baseName[0]);
+                    strcpy(baseName,getFileNameFromPath(baseName));
+                    // C File
+                    snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
+                    if(!file_exists(nameCFile)){
+                        continue;
                     }
-                    if(line_pos==pos) file_sel=f;
-                }else{
-                    printf("%-60s"," ");
+                    qtd_files++;
+                }
+            }
+            closedir(d);
+        }
+        show_info();
+        while(input_character!=-100){
+            disableEcho();
+            gotoxy(1,1);
+            int lin = 7;
+            int col = 9;
+            int size = 60;
+            if(show){
+                gotoxy(col,lin);
+                print_colorBK(frg, bkgr);
+                draw_box_first(col,lin++,size,"Source Files");
+                int f = start_file;
+                int pos=0;
+                file_sel=-1;
+                while(pos<10){
+                    print_colorBK(frg, bkgr);
+                    draw_box_border(col, lin);
+                    bkg=(line_pos==pos)?csel:bkgr;
+                    print_colorBK(frg, bkg);
+                    if(f<qtd_files){
+                        int len = strlen(files[f]);
+                        if(len>60){
+                            int start=len-56;
+                            printf("...%-60s",&files[f][start]);
+                        }else{
+                            printf("%-60s",files[f]);
+                        }
+                        if(line_pos==pos) file_sel=f;
+                    }else{
+                        printf("%-60s"," ");
+                    }
+                    print_colorBK(frg, bkgr);
+                    draw_box_border(col+ size+1, lin);
+                    f++; lin++; pos++;
                 }
                 print_colorBK(frg, bkgr);
-                draw_box_border(col+ size+1, lin);
-                f++; lin++; pos++;
+                draw_box_last(col, lin, size);
             }
-            print_colorBK(frg, bkgr);
-            draw_box_last(col, lin, size);
+            strcpy(str1,str);
+            gotoxy(1,24); 
+            print_colorBK(color_gray, color_black);
+            if(strlen(str)>0)
+                printf("Search: %-60s\r", str);
+            else
+                printf("<ESC> - Exit   <ENTER> - Select file\r");
+            print_color_reset();
+            fflush(stdout);
+            gotoxy(1,1);
+            enableEcho();
+            input_character =  key_press(MOUSE_NORMAL);
+            switch (input_character)
+            {
+                case VKEY_UP:
+                    if(line_pos>0){
+                        line_pos--;
+                    }else{
+                        start_file=(start_file>0)?start_file-1:0; 
+                    }
+                    show = TRUE;
+                    break;
+                case VKEY_DOWN: 
+                    if(line_pos<9){
+                        line_pos++;
+                    }else{
+                        start_file=(start_file<qtd_files)?start_file+1:qtd_files; 
+                    }
+                    show = TRUE;
+                    break;
+                case VKEY_PGUP:
+                    if(line_pos>0){
+                        line_pos= 0;
+                    }else{
+                        line_pos-= 9;
+                        line_pos=(line_pos<0)?0:line_pos;
+                        start_file-=10;
+                        start_file = (start_file>0)?start_file:0;
+                    }
+                    show = TRUE;
+                    break;
+                case VKEY_PGDOWN: 
+                    if(line_pos<9){
+                        line_pos=9;
+                    }else{
+                        line_pos+=9;
+                        if(line_pos>9) line_pos=9;
+                        start_file+=10;
+                        start_file = (start_file>qtd_files)?qtd_files:start_file;
+                    }
+                    show = TRUE;
+                    break;
+                case VKEY_ENTER:       
+                    if(file_sel<0) break;
+                    freeFile();
+                    strcpy(cob.file_cobol, files[file_sel]);
+                    fileNameWithoutExtension(files[file_sel], &baseName[0]);
+                    normalizePath(baseName);
+                    strcpy(baseName,getFileNameFromPath(baseName));
+                    // C File
+                    snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
+                    if(file_exists(nameCFile)){
+                        cob.status_bar = 1;
+                        parser(nameCFile, 0);
+                    }
+                    cob.status_bar = 0;         
+                    loadfile(files[file_sel]);
+                    highlightParse();
+                    input_character=-100;
+                    must_out = TRUE;
+                    break;
+                case VKEY_ESCAPE:
+                    must_out = TRUE;
+                    input_character=-100;
+                    break;
+                default: 
+                    if ((input_character == VKEY_BACKSPACE || input_character==37) && i > 0) {
+                        i--;
+                        str[i] = '\0';
+                    }else if(input_character==39 && strlen(str) < (size_t) size){
+                        str[i++]=' ';
+                        str[i]='\0';
+                    } else if (strlen(str) < (size_t) size && input_character >= 32 && input_character!=127) {
+                        str[i] = input_character;
+                        i++;
+                        str[i] = '\0';
+                    }
+                    break;
+            }
+            if(strcmp(str,str1)!=0) break;
         }
-        print_color_reset();
-        fflush(stdout);
-        gotoxy(1,1);
-        enableEcho();
-        input_character =  key_press(MOUSE_NORMAL);
-        switch (input_character)
-        {
-            case VKEY_UP:
-                if(line_pos>0){
-                    line_pos--;
-                }else{
-                    start_file=(start_file>0)?start_file-1:0; 
-                }
-                show = TRUE;
-                break;
-            case VKEY_DOWN: 
-                if(line_pos<9){
-                    line_pos++;
-                }else{
-                    start_file=(start_file<qtd_files)?start_file+1:qtd_files; 
-                }
-                show = TRUE;
-                break;
-            case VKEY_PGUP:
-                if(line_pos>0){
-                    line_pos= 0;
-                }else{
-                    line_pos-= 9;
-                    line_pos=(line_pos<0)?0:line_pos;
-                    start_file-=10;
-                    start_file = (start_file>0)?start_file:0;
-                }
-                show = TRUE;
-                break;
-            case VKEY_PGDOWN: 
-                if(line_pos<9){
-                    line_pos=9;
-                }else{
-                    line_pos+=9;
-                    if(line_pos>9) line_pos=9;
-                    start_file+=10;
-                    start_file = (start_file>qtd_files)?qtd_files:start_file;
-                }
-                show = TRUE;
-                break;
-            case VKEY_ENTER:       
-                if(file_sel<0) break;
-                freeFile();
-                strcpy(cob.file_cobol, files[file_sel]);
-                fileNameWithoutExtension(files[file_sel], &baseName[0]);
-                normalizePath(baseName);
-                strcpy(baseName,getFileNameFromPath(baseName));
-                // C File
-                snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
-                if(file_exists(nameCFile)){
-                    cob.status_bar = 1;
-                    parser(nameCFile, 0);
-                }
-                cob.status_bar = 0;         
-                loadfile(files[file_sel]);
-                highlightParse();
-                input_character=-100;
-                break;
-            case 'R':
-            case 'r':
-            case 'Q':
-            case 'q':
-            case VKEY_ESCAPE:
-                input_character=-100;
-                break;
-            default: 
-                break;
-        }
-        //gotoxy(1,23); if(input_character>0) printf("%d\n", input_character);
     }
 }
 

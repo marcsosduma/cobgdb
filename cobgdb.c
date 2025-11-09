@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.5"
+#define COBGDB_VERSION "2.6"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -793,6 +793,8 @@ int debug(int (*sendCommandGdb)(char *)){
                         }  
                         cob.showFile=TRUE;
                         MI2getStack(sendCommandGdb,1);
+                    }else{
+                        showCobMessage("Not a debugeable line",1);
                     } 
                 }
                 break;
@@ -869,6 +871,8 @@ int debug(int (*sendCommandGdb)(char *)){
                         WAIT_GDB=100;
                         lines = set_window_pos(&cob.line_pos);
                         cob.status_bar = 0;
+                    }else{
+                        showCobMessage("Not a debugeable line",1);
                     } 
                     cob.showFile=TRUE;
                 }
