@@ -16,53 +16,45 @@ endif
 # path where the source resides - same as current Makefile's directory
 SRCDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
+# compat only, could be dropped otherwise
+CPPFLAGS += $(INCS)
+
+OBJ      = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
+
 #
 # Windows
 # objdump -x cobgdb.exe | findstr /R /C:"DLL"
 #
 ifeq ($(WINMODE),1)
-CC       = gcc.exe
-RES      = 
-COMP     = comp.bat
-OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o string_parser.o
-LINKOBJ  = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o string_parser.o
-LIBS     = 
-INCS     = 
-BIN      = cobgdb.exe
-CFLAGS   = $(INCS) -fdiagnostics-color=always -g -Wall -Wextra
-RM       = del
-CP       = copy
+  CC       = gcc.exe
+  RES      = 
+  COMP     = comp.bat
+  OBJ     += realpath.o
+  BIN      = cobgdb.exe
+  RM       = del
+  CP       = copy
+
 else
 #
 # Linux
 #
 
-# Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
-X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
+  CC       = gcc
+  RES      =
+  COMP     = comp.sh
+  BIN      = cobgdb
+  RM       = rm -f
+  CP       = cp
 
-ifeq ($(X11_HEADER_EXISTS),yes)
-    CC       = gcc
-    RES      =
-    OBJ      = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
-    LINKOBJ  = $(OBJ)
-    LIBS     = -lX11
-    INCS     = -I/usr/include/X11
-    CFLAGS   = $(INCS) -DHAVE_X11 -fdiagnostics-color=always -g -Wall -Wextra
-else
-    CC       = gcc
-    RES      =
-    OBJ      = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
-    LINKOBJ  = $(OBJ)
-    LIBS     =
-    INCS     =
-    CFLAGS   = -fdiagnostics-color=always -g -Wall -Wextra
+  # Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
+  X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
+  ifeq ($(X11_HEADER_EXISTS),yes)
+    LIBS     += -lX11
+    CPPFLAGS += -DHAVE_X11 -I/usr/include/X11
+  endif
 endif
 
-BIN      = cobgdb
-RM       = rm -f
-CP       = cp
-COMP     = comp.sh
-endif
+CFLAGS   = $(CPPFLAGS) -fdiagnostics-color=always -g -Wall -Wextra
 
 .PHONY: all all-before all-after clean clean-custom copy
 
@@ -79,7 +71,7 @@ clean: clean-custom
 	${RM} $(OBJ)
 
 $(BIN): $(OBJ)
-	$(CC) $(LINKOBJ) -o $(BIN) $(LIBS)
+	$(CC) $(OBJ) -o $(BIN) $(LIBS)
 
 cobgdb.o: $(SRCDIR)/cobgdb.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/cobgdb.c -o cobgdb.o $(CFLAGS)
