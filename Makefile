@@ -64,7 +64,21 @@ CP       = cp
 COMP     = comp.sh
 endif
 
-.PHONY: all all-before all-after clean clean-custom copy
+COBGDB_VERSION := $(shell awk '/#define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c)
+DIST_DIR ?= cobgdb-$(COBGDB_VERSION)
+
+DIST_FILES = README.md $(wildcard *.png) $(wildcard doc/*.pdf) LICENSE
+
+dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
+	$(CP) $(BIN) $(DIST_DIR)/
+	$(CP) $(COMP) $(DIST_DIR)/
+	$(foreach f,$(DIST_FILES),cp $(f) $(DIST_DIR)/;)
+	@echo "Distribution files copied to $(DIST_DIR)/"
+
+$(DIST_DIR):
+	mkdir $(DIST_DIR)
+
+.PHONY: all all-before all-after clean clean-custom copy dist
 
 all: all-before $(BIN) all-after
 
