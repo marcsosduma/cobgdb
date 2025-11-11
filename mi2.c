@@ -119,11 +119,12 @@ int couldBeOutput(char * line) {
 }
 
 void loadLibrary(char * file){
-    char baseName[256];
+    char temp[256];
     char nameCFile[1024];
-    fileNameWithoutExtension(file, &baseName[0]);
-    normalizePath(baseName);
-    strcpy(baseName,getFileNameFromPath(baseName));
+    char baseName[256]; 
+    fileNameWithoutExtension(file, &temp[0]);
+    normalizePath(temp);
+    strcpy(baseName,getFileNameFromPath(temp));
     // C File
     snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
     if(file_exists(nameCFile)){
