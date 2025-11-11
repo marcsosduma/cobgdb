@@ -74,8 +74,8 @@ all: all-before $(BIN) all-after
 dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
 	$(CP) $(BIN) $(DIST_DIR)
 	$(CP) $(COMP) $(DIST_DIR)
-	$(foreach f,$(DIST_FILES),$(CP) $(f) $(DIST_DIR)$(notdir;)
-	$(foreach f,$(DIST_FILES_PDF),$(CP) doc$(SLASH)$(f) $(DIST_DIR)$(notdir;)
+	$(foreach f,$(DIST_FILES),$(CP) $(f) $(DIST_DIR)$(SLASH);)
+	$(foreach f,$(DIST_FILES_PDF),$(CP) doc$(SLASH)$(f) $(DIST_DIR)$(SLASH);)
 	@echo "Distribution files copied to $(DIST_DIR)"
 
 $(DIST_DIR):
