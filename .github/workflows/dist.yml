@@ -17,7 +17,7 @@ jobs:
 
     - name: make (term only)
       run: |
-        where gcc
+        which gcc
         gcc --version
         make
 
@@ -80,7 +80,6 @@ jobs:
       run: |
         bash -lc "echo PATH is $PATH"
         bash -lc "printf \"GCC in $(cd $(dirname $(which gcc)); pwd -W):\n$(gcc --version)\""
-        bash -lc "printf \"Bash in $(cd $(dirname $(which bash)); pwd -W):\n$(bash --version)\""
 
     - name: Install MSYS1
       if: steps.restore-msys.outputs.cache-hit != 'true'
