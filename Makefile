@@ -29,6 +29,7 @@ BIN      = cobgdb.exe
 RM       = del
 CP       = copy
 COMP     = comp.bat
+COBGDB_VERSION := $(shell $(SRCDIR)/get_version.bat "$(SRCDIR)/cobgdb.c")
 else
 #
 # Linux
@@ -39,6 +40,7 @@ BIN      = cobgdb
 RM       = rm -f
 CP       = cp
 COMP     = comp.sh
+COBGDB_VERSION := $(shell awk '/#define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c)
 # Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
 X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
 ifeq ($(X11_HEADER_EXISTS),yes)
@@ -48,12 +50,6 @@ endif
 endif
 
 CFLAGS   = $(CPPFLAGS) -fdiagnostics-color=always -g -Wall -Wextra
-
-ifeq ($(OS),Windows_NT)
-COBGDB_VERSION := $(shell $(SRCDIR)/get_version.bat "$(SRCDIR)/cobgdb.c")
-else
-COBGDB_VERSION := $(shell awk '/#define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c)
-endif
 
 $(info COBGDB_VERSION = $(COBGDB_VERSION))
 
@@ -71,7 +67,6 @@ else
 	MKDIR = mkdir -p "$(DIST_DIR)"
 endif
 
-
 .PHONY: all all-before all-after clean clean-custom copy dist
 
 #=== Default target (executed when running just make) ===
@@ -83,7 +78,6 @@ copy:
 	$(CP) $(COMP) windows
 	$(RM) $(BIN)
 endif
-
 
 dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
 	$(CP) $(BIN) $(DIST_DIR)
