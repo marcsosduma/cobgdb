@@ -19,7 +19,7 @@ jobs:
       run: |
         which gcc
         gcc --version
-        make
+        make -j2
 
     - name: make dist
       run: make dist
@@ -28,7 +28,7 @@ jobs:
       run: |
           make clean
           sudo apt install -y libx11-dev
-          make
+          make -j2
           cp cobgdb $(ls -d cobgdb-*)/cobgdb-x11
 
     - name: Upload dist package
@@ -106,7 +106,8 @@ jobs:
       run: |
         %MSYS_BIN%\bash -lc "echo PATH is $PATH"
         %MSYS_BIN%\bash -lc "printf \"GCC in $(cd $(dirname $(which gcc)); pwd -W):\n$(gcc --version)\""
-        %MSYS_BIN%\bash -lc "make DIST_DIR=cobgdb-nightly clean"
+        %MSYS_BIN%\bash -lc "pushd \"%CD%\"; make DIST_DIR=cobgdb-nightly clean"
+        %MSYS_BIN%\bash -lc "pushd \"%CD%\"; make DIST_DIR=cobgdb-nightly"
         copy cobgdb.exe cobgdb-nightly/cobgdb-mingw.exe
 
     - name: Upload dist package
