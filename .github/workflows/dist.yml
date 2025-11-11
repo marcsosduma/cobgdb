@@ -107,8 +107,8 @@ jobs:
         make DIST_DIR=cobgdb-nightly clean
         %MSYS_BIN%\bash -lc "echo PATH is $PATH"
         %MSYS_BIN%\bash -lc "printf \"GCC in $(cd $(dirname $(which gcc)); pwd -W):\n$(gcc --version)\""
-        %MSYS_BIN%\bash -lc "pushd \"%CD%\"; make -d -i DIST_DIR=cobgdb-nightly"
-        copy cobgdb.exe cobgdb-nightly/cobgdb-mingw.exe
+        %MSYS_BIN%\bash -lc "pushd \"%CD%\"; make DIST_DIR=cobgdb-nightly"
+        copy cobgdb.exe cobgdb-nightly\cobgdb-mingw.exe
 
     - name: Upload dist package
       uses: actions/upload-artifact@v4
