@@ -871,7 +871,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
                     int len = strlen(files[f]);
                     if(len>60){
                         int start=len-56;
-                        printf("...%-60s",&files[f][start]);
+                        printf("...%-57s",&files[f][start]);
                     }else{
                         printf("%-60s",files[f]);
                     }
@@ -1027,7 +1027,7 @@ void load_file(){
                         int len = strlen(files[f]);
                         if(len>60){
                             int start=len-56;
-                            printf("...%-60s",&files[f][start]);
+                            printf("...%-57s",&files[f][start]);
                         }else{
                             printf("%-60s",files[f]);
                         }

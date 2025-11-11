@@ -14,64 +14,70 @@ else
 endif
 
 # path where the source resides - same as current Makefile's directory
-SRCDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+SRCDIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o string_parser.o
 
-# compat only, could be dropped otherwise
-CPPFLAGS += $(INCS)
-
-OBJ      = cobgdb.o terminal.o read_file.o parser.o parser_mi2.o gdb_process.o mi2.o testMI2.o testParser.o variables.o debugger.o output.o highlight.o string_parser.o
-
+$(info SRCDIR = $(SRCDIR))
 #
 # Windows
 # objdump -x cobgdb.exe | findstr /R /C:"DLL"
 #
 ifeq ($(WINMODE),1)
-  CC       = gcc.exe
-  RES      = 
-  COMP     = comp.bat
-  OBJ     += realpath.o
-  BIN      = cobgdb.exe
-  RM       = del
-  CP       = copy
-
+CC       = gcc.exe
+RES      = 
+LIBS     = 
+INCS     = 
+BIN      = cobgdb.exe
+CFLAGS   = $(INCS) -fdiagnostics-color=always -g -Wall -Wextra
+RM       = del
+CP       = copy
+COMP     = comp.bat
 else
 #
 # Linux
 #
-
-  CC       = gcc
-  RES      =
-  COMP     = comp.sh
-  BIN      = cobgdb
-  RM       = rm -f
-  CP       = cp
-
-  # Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
-  X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
-  ifeq ($(X11_HEADER_EXISTS),yes)
+CC       = gcc
+RES      =
+BIN      = cobgdb
+RM       = rm -f
+CP       = cp
+COMP     = comp.sh
+# Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
+X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
+ifeq ($(X11_HEADER_EXISTS),yes)
     LIBS     += -lX11
     CPPFLAGS += -DHAVE_X11 -I/usr/include/X11
-  endif
+endif
 endif
 
 CFLAGS   = $(CPPFLAGS) -fdiagnostics-color=always -g -Wall -Wextra
 
+ifeq ($(OS),Windows_NT)
+COBGDB_VERSION := $(shell $(SRCDIR)/get_version.bat "$(SRCDIR)/cobgdb.c")
+else
 COBGDB_VERSION := $(shell awk '/#define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c)
+endif
+
+$(info COBGDB_VERSION = $(COBGDB_VERSION))
+
+# Directory and files for distribution
 DIST_DIR ?= cobgdb-$(COBGDB_VERSION)
+DIST_FILES = $(SRCDIR)README.md \
+             $(wildcard $(SRCDIR)*.png) \
+             $(wildcard $(SRCDIR)doc/*.pdf) \
+             $(SRCDIR)LICENSE
 
-DIST_FILES = README.md $(wildcard *.png) $(wildcard doc/*.pdf) LICENSE
+# Commands for Windows and Linux
+ifeq ($(WINMODE),1)
+	MKDIR = if not exist "$(DIST_DIR)" mkdir "$(DIST_DIR)"
+else
+	MKDIR = mkdir -p "$(DIST_DIR)"
+endif
 
-dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
-	$(CP) $(BIN) $(DIST_DIR)/
-	$(CP) $(COMP) $(DIST_DIR)/
-	$(foreach f,$(DIST_FILES),cp $(f) $(DIST_DIR)/;)
-	@echo "Distribution files copied to $(DIST_DIR)/"
-
-$(DIST_DIR):
-	mkdir $(DIST_DIR)
 
 .PHONY: all all-before all-after clean clean-custom copy dist
 
+#=== Default target (executed when running just make) ===
 all: all-before $(BIN) all-after
 
 ifeq ($(WINMODE),1)
@@ -81,6 +87,31 @@ copy:
 	$(RM) $(BIN)
 endif
 
+
+dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
+	$(CP) $(BIN) $(DIST_DIR)
+	$(CP) $(COMP) $(DIST_DIR)
+ifeq ($(WINMODE),1)
+	@for %%f in ($(DIST_FILES)) do ( \
+		set "src=%%f" && \
+		setlocal enabledelayedexpansion && \
+		set "src=!src:/=\!" && \
+		echo Copiando: !src! && \
+		copy "!src!" "$(DIST_DIR)" >nul 2>&1 || echo ERRO ao copiar: !src! && \
+		endlocal \
+	)
+else
+	@for f in $(DIST_FILES); do \
+		echo "Copiando: $$f"; \
+		cp "$$f" "$(DIST_DIR)" || echo "ERRO ao copiar: $$f"; \
+	done
+endif
+	@echo Distribution files copied to $(DIST_DIR)
+
+# Creation of the distribution directory
+$(DIST_DIR):
+	@$(MKDIR)
+	
 clean: clean-custom
 	${RM} $(OBJ)
 

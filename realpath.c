@@ -7,6 +7,7 @@
  * 
  * Author: Marcos Martins Duma
  */
+#if defined(_WIN32)
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -44,3 +45,4 @@ char* realpath(const char* name, char* resolved) {
 
     return fullPath;
 }
+#endif
