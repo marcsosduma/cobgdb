@@ -31,8 +31,8 @@ ifeq ($(WINMODE),1)
   COMP     = comp.bat
   OBJ     += realpath.o
   BIN      = cobgdb.exe
-  RM       = del
-  CP       = copy
+  RM       = cmd.exe /c del
+  CP       = cmd.exe /c copy
 
 else
 #
