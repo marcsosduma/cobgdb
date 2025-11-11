@@ -75,6 +75,8 @@ jobs:
         bash -lc "echo PATH is $PATH"
         bash -lc "printf \"GCC in $(cd $(dirname $(which gcc)); pwd -W):\n$(gcc --version)\""
         bash -lc "printf \"Bash in $(cd $(dirname $(which bash)); pwd -W):\n$(bash --version)\""
+        where gcc
+        gcc --version
 
     - name: Install MSYS1
       if: steps.restore-msys.outputs.cache-hit != 'true'
@@ -98,10 +100,10 @@ jobs:
         path: ${{ env.MSYS_ROOT }}
 
     - name: make
-      run: bash -lc "make DIST_DIR=cobgdb-nightly"
+      run: make DIST_DIR=cobgdb-nightly
 
     - name: make dist
-      run: bash -lc "make dist DIST_DIR=cobgdb-nightly"
+      run: make dist DIST_DIR=cobgdb-nightly
 
     - name: Upload dist package
       uses: actions/upload-artifact@v4
