@@ -66,7 +66,7 @@ jobs:
         make DIST_DIR=cobgdb-nightly
 
     - name: make dist
-      run: make dist DIST_DIR=cobgdb-nightly CP=cp
+      run: make dist DIST_DIR=cobgdb-nightly CP=cp SLASH=/
         
     - name: Restore MSYS1 cache
       id: restore-msys
