@@ -10,13 +10,16 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 4
     
     steps:
     - uses: actions/checkout@v4
 
     - name: make (term only)
-      run: make
+      run: |
+        where gcc
+        gcc --version
+        make
 
     - name: make dist
       run: make dist
@@ -37,7 +40,7 @@ jobs:
 
   build-mingw:
     runs-on: windows-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
 
     env:
       MSYS_ROOT: C:\MinGW
@@ -102,10 +105,10 @@ jobs:
 
     - name: make (MinGW GCC)
       run: |
-        echo %MSYS_ROOT%\gcc.exe
-        %MSYS_ROOT%\gcc.exe --version
+        echo %MSYS_ROOT%\bin\gcc.exe
+        %MSYS_ROOT%\bin\gcc.exe --version
         make DIST_DIR=cobgdb-nightly clean
-        make DIST_DIR=cobgdb-nightly CC="%MSYS_ROOT%\gcc.exe"
+        make DIST_DIR=cobgdb-nightly CC="%MSYS_ROOT%\bin\gcc.exe"
         copy cobgdb.exe cobgdb-nightly/cobgdb-mingw.exe
 
     - name: Upload dist package
