@@ -56,11 +56,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup build environment
+    - name: make (Strawberry GCC)
+      run: |
+        where gcc
+        gcc --version
+        make DIST_DIR=cobgdb-nightly
+
+    - name: make dist
+      run: make dist DIST_DIR=cobgdb-nightly
+
+    - name: setup MSYS build environment
       shell: pwsh
       run: |
-        echo $env:MSYS_BIN >> $env:GITHUB_PATH
-        echo HOME=$env:GITHUB_WORKSPACE >> $env:GITHUB_ENV
+        echo PATH=$env:MSYS_BIN;$env:GITHUB_PATH >> $env:GITHUB_ENV
         
     - name: Restore MSYS1 cache
       id: restore-msys
@@ -99,11 +107,12 @@ jobs:
         key: cache-msys
         path: ${{ env.MSYS_ROOT }}
 
-    - name: make
-      run: make DIST_DIR=cobgdb-nightly
-
-    - name: make dist
-      run: make dist DIST_DIR=cobgdb-nightly
+    - name: make (MinGW GCC)
+      run: |
+        where gcc
+        gcc --version
+        make DIST_DIR=cobgdb-nightly
+        copy cobgdb.exe cobgdb-nightly/cobgdb-mingw.exe
 
     - name: Upload dist package
       uses: actions/upload-artifact@v4
