@@ -33,7 +33,7 @@ ifeq ($(WINMODE),1)
   BIN      = cobgdb.exe
   RM       = cmd.exe /c del
   CP       = cmd.exe /c copy
-  SLASH    = \\
+  SLASH    = \
 
 else
 #
