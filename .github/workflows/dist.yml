@@ -56,7 +56,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: make (Strawberry GCC)
+    - name: make (mingw64 GCC)
       run: |
         where gcc
         gcc --version
@@ -64,11 +64,6 @@ jobs:
 
     - name: make dist
       run: make dist DIST_DIR=cobgdb-nightly
-
-    - name: setup MSYS build environment
-      shell: pwsh
-      run: |
-        echo PATH=$env:MSYS_BIN;$env:GITHUB_PATH >> $env:GITHUB_ENV
         
     - name: Restore MSYS1 cache
       id: restore-msys
@@ -83,8 +78,6 @@ jobs:
         bash -lc "echo PATH is $PATH"
         bash -lc "printf \"GCC in $(cd $(dirname $(which gcc)); pwd -W):\n$(gcc --version)\""
         bash -lc "printf \"Bash in $(cd $(dirname $(which bash)); pwd -W):\n$(bash --version)\""
-        where gcc
-        gcc --version
 
     - name: Install MSYS1
       if: steps.restore-msys.outputs.cache-hit != 'true'
@@ -109,9 +102,10 @@ jobs:
 
     - name: make (MinGW GCC)
       run: |
-        where gcc
-        gcc --version
-        make DIST_DIR=cobgdb-nightly
+        echo %MSYS_BIN%\gcc
+        %MSYS_BIN%\gcc --version
+        make DIST_DIR=cobgdb-nightly clean
+        make DIST_DIR=cobgdb-nightly CC="%MSYS_BIN%\gcc"
         copy cobgdb.exe cobgdb-nightly/cobgdb-mingw.exe
 
     - name: Upload dist package
