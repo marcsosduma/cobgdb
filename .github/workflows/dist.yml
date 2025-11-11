@@ -9,9 +9,9 @@ on:
 jobs:
 
   build:
-
     runs-on: ubuntu-latest
-
+    timeout-minutes: 5
+    
     steps:
     - uses: actions/checkout@v4
 
@@ -32,4 +32,79 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: cobgdb nightly dist
+        path: cobgdb-**
+
+
+  build-mingw:
+    runs-on: windows-latest
+    timeout-minutes: 5
+
+    env:
+      MSYS_ROOT: C:\MinGW
+      MSYS_BIN: C:\MinGW\msys\1.0\bin
+
+      MSYSTEM: MINGW32
+      MSYSPKGS: msys-coreutils msys-patch pthreads
+
+      # we use the MinGW backup as its upstream mirror is down
+      MSYS_URL:  https://www.arnoldtrembley.com/MinGW-bkup02.7z
+
+    defaults:
+      run:
+        shell: cmd
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup build environment
+      shell: pwsh
+      run: |
+        echo $env:MSYS_BIN >> $env:GITHUB_PATH
+        echo HOME=$env:GITHUB_WORKSPACE >> $env:GITHUB_ENV
+        
+    - name: Restore MSYS1 cache
+      id: restore-msys
+      uses: actions/cache/restore@v4
+      with:
+        key: cache-msys
+        path: ${{ env.MSYS_ROOT }}
+
+    - name: MSYS1 cache info
+      if: steps.restore-msys.outputs.cache-hit == 'true'
+      run: |
+        bash -lc "echo PATH is $PATH"
+        bash -lc "printf \"GCC in $(cd $(dirname $(which gcc)); pwd -W):\n$(gcc --version)\""
+        bash -lc "printf \"Bash in $(cd $(dirname $(which bash)); pwd -W):\n$(bash --version)\""
+
+    - name: Install MSYS1
+      if: steps.restore-msys.outputs.cache-hit != 'true'
+      run: |
+        curl -L %MSYS_URL% -o msys.7z
+        7z x msys.7z -o%MSYS_ROOT%
+
+    - name: Cleanup MSYS1 env
+      if: steps.restore-msys.outputs.cache-hit != 'true'
+      run: |
+        rmdir /Q /S %MSYS_ROOT%\docs
+        rmdir /Q /S %MSYS_ROOT%\var
+        # possilby drop that... if needed, use a newer multiarch GDB
+        # del /Q %MSYS_ROOT%\bin\gdb*
+
+    - name: Save MSYS1 cache
+      if: steps.restore-msys.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        key: cache-msys
+        path: ${{ env.MSYS_ROOT }}
+
+    - name: make
+      run: bash -lc "make"
+
+    - name: make dist
+      run: bash -lc "make dist"
+
+    - name: Upload dist package
+      uses: actions/upload-artifact@v4
+      with:
+        name: cobgdb nightly dist mingw
         path: cobgdb-**
