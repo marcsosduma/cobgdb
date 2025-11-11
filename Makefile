@@ -56,8 +56,10 @@ endif
 
 CFLAGS   = $(CPPFLAGS) -fdiagnostics-color=always -g -Wall -Wextra
 
-COBGDB_VERSION := $(shell awk '/#define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c)
-DIST_DIR ?= cobgdb-$(COBGDB_VERSION)
+ifndef DIST_DIR
+  COBGDB_VERSION := $(shell awk '/#define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c)
+  DIST_DIR ?= cobgdb-$(COBGDB_VERSION)
+endif
 
 DIST_FILES = README.md $(wildcard *.png) $(wildcard doc/*.pdf) LICENSE
 

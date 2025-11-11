@@ -98,13 +98,13 @@ jobs:
         path: ${{ env.MSYS_ROOT }}
 
     - name: make
-      run: bash -lc "make"
+      run: bash -lc "make DIST_DIR=cobgdb-nightly"
 
     - name: make dist
-      run: bash -lc "make dist"
+      run: bash -lc "make dist DIST_DIR=cobgdb-nightly"
 
     - name: Upload dist package
       uses: actions/upload-artifact@v4
       with:
         name: cobgdb nightly dist mingw
-        path: cobgdb-**
+        path: cobgdb-nightly
