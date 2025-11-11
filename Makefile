@@ -61,6 +61,11 @@ DIST_DIR ?= cobgdb-$(COBGDB_VERSION)
 
 DIST_FILES = README.md $(wildcard *.png) $(wildcard doc/*.pdf) LICENSE
 
+
+.PHONY: all all-before all-after clean clean-custom copy dist
+all: all-before $(BIN) all-after
+
+
 dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
 	$(CP) $(BIN) $(DIST_DIR)/
 	$(CP) $(COMP) $(DIST_DIR)/
@@ -70,9 +75,6 @@ dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
 $(DIST_DIR):
 	mkdir $(DIST_DIR)
 
-.PHONY: all all-before all-after clean clean-custom copy dist
-
-all: all-before $(BIN) all-after
 
 ifeq ($(WINMODE),1)
 copy:
