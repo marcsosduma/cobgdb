@@ -56,7 +56,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: make (mingw64 GCC)
+    - name: make (MinGW-Builds project GCC)
       run: |
         where gcc
         gcc --version
@@ -102,10 +102,10 @@ jobs:
 
     - name: make (MinGW GCC)
       run: |
-        echo %MSYS_BIN%\gcc
-        %MSYS_BIN%\gcc --version
+        echo %MSYS_ROOT%\gcc.exe
+        %MSYS_ROOT%\gcc.exe --version
         make DIST_DIR=cobgdb-nightly clean
-        make DIST_DIR=cobgdb-nightly CC="%MSYS_BIN%\gcc"
+        make DIST_DIR=cobgdb-nightly CC="%MSYS_ROOT%\gcc.exe"
         copy cobgdb.exe cobgdb-nightly/cobgdb-mingw.exe
 
     - name: Upload dist package
