@@ -87,8 +87,8 @@ jobs:
       run: |
         rmdir /Q /S %MSYS_ROOT%\docs
         rmdir /Q /S %MSYS_ROOT%\var
-        # possilby drop that... if needed, use a newer multiarch GDB
-        # del /Q %MSYS_ROOT%\bin\gdb*
+        rem possilby drop that... if needed, use a newer multiarch GDB
+        rem del /Q %MSYS_ROOT%\bin\gdb*
 
     - name: Save MSYS1 cache
       if: steps.restore-msys.outputs.cache-hit != 'true'
