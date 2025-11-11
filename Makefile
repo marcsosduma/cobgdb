@@ -33,6 +33,7 @@ ifeq ($(WINMODE),1)
   BIN      = cobgdb.exe
   RM       = cmd.exe /c del
   CP       = cmd.exe /c copy
+  SLASH    = \\
 
 else
 #
@@ -45,6 +46,7 @@ else
   BIN      = cobgdb
   RM       = rm -f
   CP       = cp
+  SLASH    = /
 
   # Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
   X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
@@ -61,7 +63,8 @@ ifndef DIST_DIR
   DIST_DIR ?= cobgdb-$(COBGDB_VERSION)
 endif
 
-DIST_FILES = README.md $(wildcard *.png) $(wildcard doc/*.pdf) LICENSE
+DIST_FILES = README.md $(wildcard *.png) LICENSE
+DIST_FILES_PDF = $(notdir $(wildcard doc/*.pdf) )
 
 
 .PHONY: all all-before all-after clean clean-custom copy dist
@@ -71,7 +74,8 @@ all: all-before $(BIN) all-after
 dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
 	$(CP) $(BIN) $(DIST_DIR)
 	$(CP) $(COMP) $(DIST_DIR)
-	$(foreach f,$(DIST_FILES),$(CP) $(f) $(DIST_DIR)/;)
+	$(foreach f,$(DIST_FILES),$(CP) $(f) $(DIST_DIR)$(notdir;)
+	$(foreach f,$(DIST_FILES_PDF),$(CP) doc$(SLASH)$(f) $(DIST_DIR)$(notdir;)
 	@echo "Distribution files copied to $(DIST_DIR)"
 
 $(DIST_DIR):
