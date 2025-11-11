@@ -107,7 +107,7 @@ jobs:
         echo %MSYS_ROOT%\bin\gcc.exe
         %MSYS_ROOT%\bin\gcc.exe --version
         make DIST_DIR=cobgdb-nightly clean
-        make DIST_DIR=cobgdb-nightly CC="%MSYS_ROOT%\bin\gcc.exe"
+        make DIST_DIR=cobgdb-nightly CC=%MSYS_ROOT%\bin\gcc.exe
         copy cobgdb.exe cobgdb-nightly/cobgdb-mingw.exe
 
     - name: Upload dist package
