@@ -15,11 +15,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: make
+    - name: make (term only)
       run: make
 
     - name: make dist
       run: make dist
+
+    - name: make (x11)
+      run: |
+          make clean
+          sudo apt install -y libx11-dev
+          make
+          cp cobgdb cobgdb-*/cobgdb-x11
 
     - name: Upload dist package
       uses: actions/upload-artifact@v4
