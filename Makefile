@@ -40,7 +40,8 @@ BIN      = cobgdb
 RM       = rm -f
 CP       = cp
 COMP     = comp.sh
-COBGDB_VERSION := $(shell awk '/#define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c)
+COBGDB_VERSION := $(shell awk '/define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c )
+
 # Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
 X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
 ifeq ($(X11_HEADER_EXISTS),yes)
