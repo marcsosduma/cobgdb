@@ -65,7 +65,7 @@ jobs:
         gcc --version
         make DIST_DIR=cobgdb-nightly
 
-    - name: make dist
+    - name: make dist CP=cp
       run: make dist DIST_DIR=cobgdb-nightly
         
     - name: Restore MSYS1 cache
@@ -74,12 +74,6 @@ jobs:
       with:
         key: cache-msys
         path: ${{ env.MSYS_ROOT }}
-
-    - name: MSYS1 cache info
-      if: steps.restore-msys.outputs.cache-hit == 'true'
-      run: |
-        bash -lc "echo PATH is $PATH"
-        bash -lc "printf \"GCC in $(cd $(dirname $(which gcc)); pwd -W):\n$(gcc --version)\""
 
     - name: Install MSYS1
       if: steps.restore-msys.outputs.cache-hit != 'true'
@@ -92,8 +86,8 @@ jobs:
       run: |
         rmdir /Q /S %MSYS_ROOT%\docs
         rmdir /Q /S %MSYS_ROOT%\var
-        rem possilby drop that... if needed, use a newer multiarch GDB
-        rem del /Q %MSYS_ROOT%\bin\gdb*
+        rem the old version of GDB does not work with cobgdb - if needed, use a newer multiarch GDB
+        del /Q %MSYS_ROOT%\bin\gdb*
 
     - name: Save MSYS1 cache
       if: steps.restore-msys.outputs.cache-hit != 'true'
