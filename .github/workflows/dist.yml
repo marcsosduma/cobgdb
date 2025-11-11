@@ -1,0 +1,28 @@
+name: ci build
+
+on:
+  push:
+  pull_request:
+  # manual run in actions tab - for all branches
+  workflow_dispatch:
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: make
+      run: make
+
+    - name: make dist
+      run: make dist
+
+    - name: Upload dist package
+      uses: actions/upload-artifact@v4
+      with:
+        name: cobgdb nightly dist
+        path: dist**

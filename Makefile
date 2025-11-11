@@ -25,10 +25,7 @@ $(info SRCDIR = $(SRCDIR))
 ifeq ($(WINMODE),1)
 CC       = gcc.exe
 RES      = 
-LIBS     = 
-INCS     = 
 BIN      = cobgdb.exe
-CFLAGS   = $(INCS) -fdiagnostics-color=always -g -Wall -Wextra
 RM       = del
 CP       = copy
 COMP     = comp.bat
