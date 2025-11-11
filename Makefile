@@ -69,10 +69,10 @@ all: all-before $(BIN) all-after
 
 
 dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
-	$(CP) $(BIN) $(DIST_DIR)/
-	$(CP) $(COMP) $(DIST_DIR)/
-	$(foreach f,$(DIST_FILES),cp $(f) $(DIST_DIR)/;)
-	@echo "Distribution files copied to $(DIST_DIR)/"
+	$(CP) $(BIN) $(DIST_DIR)
+	$(CP) $(COMP) $(DIST_DIR)
+	$(foreach f,$(DIST_FILES),$(CP) $(f) $(DIST_DIR)/;)
+	@echo "Distribution files copied to $(DIST_DIR)"
 
 $(DIST_DIR):
 	mkdir $(DIST_DIR)
