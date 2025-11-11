@@ -26,7 +26,7 @@ jobs:
           make clean
           sudo apt install -y libx11-dev
           make
-          cp cobgdb $(awk '/#define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' cobgdb.c)/cobgdb-x11
+          cp cobgdb $(ls -d "cobgdb-*")/cobgdb-x11
 
     - name: Upload dist package
       uses: actions/upload-artifact@v4
