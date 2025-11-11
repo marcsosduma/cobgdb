@@ -65,8 +65,8 @@ jobs:
         gcc --version
         make DIST_DIR=cobgdb-nightly
 
-    - name: make dist CP=cp
-      run: make dist DIST_DIR=cobgdb-nightly
+    - name: make dist
+      run: make dist DIST_DIR=cobgdb-nightly CP=cp
         
     - name: Restore MSYS1 cache
       id: restore-msys
