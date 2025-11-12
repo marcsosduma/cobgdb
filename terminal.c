@@ -383,6 +383,7 @@ int readchar(char * str, int size) {
     char c =' ';
     int i = 0;
     str[0] = '\0';
+    int ret=TRUE;
     cursorON();
     while (1) {
         do{
@@ -390,6 +391,10 @@ int readchar(char * str, int size) {
             fflush(stdout);
         }while(c<=0);
         if (c == 13) {
+            break;
+        }
+        if (c == 27) {
+            ret = FALSE;
             break;
         }
         if ((c == VKEY_BACKSPACE || c==37) && i > 0) {
@@ -410,7 +415,7 @@ int readchar(char * str, int size) {
         }
     }
     cursorOFF();
-    return 0;
+    return ret;
 }
 
 int updateStr(char *value, int size, int x, int y) {

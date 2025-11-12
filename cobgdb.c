@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.7"
+#define COBGDB_VERSION "2.8"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -269,7 +269,7 @@ int search_text(Lines ** lines) {
     wchar_t buffer[500];
     int lin = 10;
     int bkg = color_dark_red;
-    int found = FALSE;
+    int found = 0;
 
     gotoxy(10, lin + 2);
     print_colorBK(color_white, bkg);
@@ -290,7 +290,8 @@ int search_text(Lines ** lines) {
         cob.find_text[a]=' ';
         cob.find_text[99]='\0';
     }
-    updateStr(cob.find_text, 61, 11, lin + 2);
+    if (updateStr(cob.find_text, 61, 11, lin + 2) == FALSE)
+        return 1;
     a=60; 
     while(a>=0){
         if(cob.find_text[a]!=' '){
@@ -342,7 +343,7 @@ int search_text(Lines ** lines) {
                  start_window_line--;
                  cob.line_pos++;
             }
-            found = TRUE;
+            found = 2;
             break;
         }
         line = line->line_after;
@@ -361,7 +362,7 @@ int gotoLine(Lines **lines) {
     char buffer[500];
     int lin = 10;
     int bkg = color_dark_red;
-    int found = FALSE;
+    int found = 0;
 
     gotoxy(30, lin + 2);
     print_colorBK(color_white, bkg);
@@ -377,10 +378,11 @@ int gotoLine(Lines **lines) {
     print_colorBK(color_green, bkg);
     fflush(stdout);
     gotoxy(31, lin + 2);
-    readchar(buffer,31);
+    if(readchar(buffer,31)==FALSE)
+        return 1;
     int new_line = atoi(buffer);
     if(new_line==0){
-        return FALSE;
+        return 0;
     }
     while (line != NULL) {
         if(new_line==line->file_line){
@@ -393,7 +395,7 @@ int gotoLine(Lines **lines) {
                  start_window_line--;
                  cob.line_pos++;
             }
-            found = TRUE;
+            found = 2;
             break;
         }
         line = line->line_after;
@@ -734,6 +736,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     }else if(cob.line_pos<=(VIEW_LINES-5)){
                         cob.line_pos++;
                     }
+                    while((lines->file_line+cob.line_pos)>cob.qtd_lines) cob.line_pos--;
                 }
                 cob.showFile=TRUE;
                 break;
@@ -741,7 +744,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 if(cob.line_pos>0){
                     cob.line_pos=0;
                 }else{
-                    qtd_page = VIEW_LINES-2;
+                    qtd_page = VIEW_LINES-3;
                     cob.line_pos=0;
                     while((qtd_page--)>0 && lines->line_before!=NULL){
                         start_window_line--;
@@ -756,7 +759,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     cob.line_pos=VIEW_LINES-4;
                 }else{
                     if((cob.qtd_lines-start_window_line)>(VIEW_LINES-3)){
-                        while((qtd_page++)<(VIEW_LINES-2) && lines->line_after!=NULL){
+                        while((qtd_page++)<(VIEW_LINES-3) && lines->line_after!=NULL){
                             start_window_line++;
                             lines=lines->line_after;
                         }
@@ -881,7 +884,7 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'J':
                 if(!cob.waitAnswer){ 
                     show_wait();
-                    if(!MI2lineToJump(sendCommandGdb)){
+                    if(MI2lineToJump(sendCommandGdb)==0){
                         line_debug=NULL;
                         show_file(lines, cob.line_pos, &line_debug);
                         showCobMessage("Not a debuggable line.",2);
@@ -980,8 +983,8 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'o':
                 focus_window_by_title(cob.title);
                 break;
-            case VKEY_CTRLF:
-                if(!search_text(&lines)){
+            case VKEY_CTRLF:            
+                if(search_text(&lines)==0){
                     cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
                     showCobMessage("Text not found.",1);
                 }
@@ -989,7 +992,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 cob.status_bar = 0;
                 break;
             case VKEY_CTRLL:
-                if(!gotoLine(&lines)){
+                if(gotoLine(&lines)==0){
                     cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
                     showCobMessage("Line not found.",1);
                 }

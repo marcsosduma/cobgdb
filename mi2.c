@@ -1055,7 +1055,7 @@ int MI2attach(int (*sendCommandGdb)(char *)){
         print_colorBK(color_green, bkg);
         fflush(stdout);
         gotoxy(12+strlen(aux),lin+2);
-        readchar(aux,55);  
+        if(readchar(aux,55)==FALSE) return 0;  
     }else{
         strcpy(aux,cob.connect);
     }
@@ -1106,7 +1106,7 @@ int MI2attach(int (*sendCommandGdb)(char *)){
 int MI2lineToJump(int (*sendCommandGdb)(char *)){
     char aux[500];
     int bkg= color_dark_red;
-    int ret=TRUE;    
+    int ret=2;    
 
     int lin=VIEW_LINES/2-2;
     gotoxy(10,lin);
@@ -1125,13 +1125,13 @@ int MI2lineToJump(int (*sendCommandGdb)(char *)){
     print_colorBK(color_green, bkg);
     fflush(stdout);
     gotoxy(11+strlen(aux),readLine);
-    readchar(aux,50);
+    if(readchar(aux,50) == FALSE) return 1;
     int line = atoi(aux);
     int check=hasCobolLine(line);
     if(check>0){
         MI2goToCursor(sendCommandGdb, cob.name_file, line);
     }else{
-        ret = FALSE;
+        ret = 0;
     } 
     return ret;
 }
