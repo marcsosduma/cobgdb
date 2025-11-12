@@ -64,16 +64,18 @@ endif
 
 DIST_FILES = README.md $(wildcard *.png) LICENSE
 DIST_FILES_PDF = $(notdir $(wildcard doc/*.pdf) )
+DIST_FILES_COB = $(wildcard *.cob) $(wildcard *.cpy)
 
 
 .PHONY: all all-before all-after clean clean-custom copy dist
 all: all-before $(BIN) all-after
 
 
-dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
+dist: $(DIST_DIR) $(BIN)
 	$(CP) $(BIN) $(DIST_DIR)
 	$(CP) $(COMP) $(DIST_DIR)
 	$(foreach f,$(DIST_FILES),$(CP) $(f) $(DIST_DIR)$(SLASH);)
+	$(foreach f,$(DIST_FILES_COB),$(CP) $(f) $(DIST_DIR)$(SLASH);)
 	$(foreach f,$(DIST_FILES_PDF),$(CP) doc$(SLASH)$(f) $(DIST_DIR)$(SLASH);)
 	@echo "Distribution files copied to $(DIST_DIR)"
 
