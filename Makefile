@@ -15,7 +15,7 @@ endif
 
 # path where the source resides - same as current Makefile's directory
 SRCDIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o realpath.o variables.o debugger.o output.o highlight.o string_parser.o
+OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o variables.o debugger.o highlight.o string_parser.o
 
 $(info SRCDIR = $(SRCDIR))
 #
@@ -26,6 +26,7 @@ ifeq ($(WINMODE),1)
 CC       = gcc.exe
 RES      = 
 BIN      = cobgdb.exe
+OBJ     += realpath.o
 RM       = del
 CP       = copy
 COMP     = comp.bat
@@ -36,6 +37,7 @@ else
 #
 CC       = gcc
 RES      =
+OBJ     += output.o
 BIN      = cobgdb
 RM       = rm -f
 CP       = cp
