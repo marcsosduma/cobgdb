@@ -393,7 +393,7 @@ int readchar(char * str, int size) {
         if (c == 13) {
             break;
         }
-        if (c == 27) {
+        if (c == VKEY_ESCAPE) {
             ret = FALSE;
             break;
         }

@@ -405,3 +405,4 @@ int printHighlight(struct st_highlt * hight, int bkg, int start, int tot);
 void lineParse(char * line_to_parse, struct st_parse h[100], int *qtt );
 struct st_parse * tk_val(struct st_parse line_parsed[100], int qtt_tk, int pos);
 const wchar_t *wcsistr(const wchar_t *haystack, const wchar_t *needle);
+wchar_t *to_wide(const char *src);

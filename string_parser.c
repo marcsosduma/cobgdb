@@ -178,3 +178,22 @@ void lineParse(char * line_to_parse, struct st_parse h[100], int *qtt ){
             *qtt = *qtt + 1;
         }
 }
+
+wchar_t *to_wide(const char *src) {
+    if (!src) return NULL;
+#if defined(_WIN32)
+    int needed = MultiByteToWideChar(CP_UTF8, 0, src, -1, NULL, 0);
+    if (needed <= 0) return NULL;
+    wchar_t *w = malloc(needed * sizeof(wchar_t));
+    if (!w) return NULL;
+    MultiByteToWideChar(CP_UTF8, 0, src, -1, w, needed);
+    return w;
+#else
+    size_t len = mbstowcs(NULL, src, 0);
+    if (len == (size_t)-1) return NULL;
+    wchar_t *w = malloc((len + 1) * sizeof(wchar_t));
+    if (!w) return NULL;
+    mbstowcs(w, src, len + 1);
+    return w;
+#endif
+}
