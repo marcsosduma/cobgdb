@@ -1038,7 +1038,9 @@ int loadfile(char * nameCobFile) {
             ST_bk * search = BPList;
             while(search!=NULL){
                 if(search->line==line->file_line && strcasecmp(search->name, cob.file_cobol)==0){
-                    line->breakpoint='S';
+                    int check=hasCobolLine(line->file_line);
+                    if(check>0)
+                        line->breakpoint='S';
                 }
                 search=search->next;
             }            
