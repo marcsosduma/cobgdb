@@ -183,13 +183,11 @@ int readKeyLinux(int type) {
             return 0;
         }
     } else {
-        // Ctrl+F = ASCII 6
-        if (buf[0] == 6) {
-            return VKEY_CTRLF;
-        }
-        // Ctrl+L = ASCII 12
-        if (buf[0] == 12) {
-            return VKEY_CTRLL;
+        switch (buf[0]) {
+            case 2:  return VKEY_CTRLB;   // Ctrl+B
+            case 6:  return VKEY_CTRLF;   // Ctrl+F
+            case 12: return VKEY_CTRLL;   // Ctrl+L
+            case 19: return VKEY_CTRLS;   // Ctrl+S
         }
         wchar_t wc;
         if (mbtowc(&wc, (const char *)buf, nread) <= 0) {
@@ -217,53 +215,24 @@ void mouseCobHover(int col, int line){
 }
 
 int mouseCobAction(int col, int line, int type){
-    int action=-1;
+    int action=0;
     cob.mouseButton = 1;
-    switch (cob.mouse){
-            case 1:
-                action = VKEY_PGUP;
-                break;
-            case 2:
-                action = VKEY_PGDOWN;
-                break;
-            case 10:
-                action = 'R';
-                break;
-            case 20:
-                action = 'N';
-                break;
-            case 30:
-                action = 'S';
-                break;
-            case 40:
-                action = 'G';
-                break;
-            case 50:
-                action = 'Q';
-                break;
-            case 60:
-                action = 'O';
-                break;
-            case 70:
-                action = 'D';
-                break;
-            case 80:
-                action = '?';
-                break;
-            default:
-                action = -1;
-                break;
+    int type_mouse[] = {0 , 1        , 2          , 10 , 20 ,  30,  40,  50,  60,  70,  80};
+    int type_act[]   = {-1, VKEY_PGUP, VKEY_PGDOWN, 'R', 'N', 'S', 'G', 'Q', 'O', 'D', '?'};
+    action = type_act[0];
+    int size = sizeof(type_mouse) / sizeof(type_mouse[0]);
+    for (int idx = 0; idx < size; idx++) {
+        if (cob.mouse == type_mouse[idx]) {
+            action = type_act[idx];
+            break; 
+        }
     }
     if(action == -1 && line>0 && line<VIEW_LINES-2){
         if(type>1){
             cob.line_pos = line-1;
             cob.showFile = TRUE;
         }
-        if(col<cob.num_dig+2){
-            action = 'B';
-        }else{
-            action=VKEY_ENTER;
-        }
+        action = (col < cob.num_dig + 2) ? 'B' : VKEY_ENTER;
     }
     return action;
 }
@@ -332,36 +301,36 @@ int key_press(int type){
                 }
                 if (inp.Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
                     int delta = GET_WHEEL_DELTA_WPARAM(inp.Event.MouseEvent.dwButtonState);
-                    if (delta > 0) 
-                        return VKEY_UP;
-                    else
-                        return VKEY_DOWN;
+                    return (delta > 0)? VKEY_UP: VKEY_DOWN;
                 }                
                 //printf("Mouse X: %d, Y: %d\n", mouseX, mouseY);
             }
             DWORD ctrlState = inp.Event.KeyEvent.dwControlKeyState;
             virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
             if ((ctrlState & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) && inp.Event.KeyEvent.bKeyDown ){
-                     virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
-                     if(virtualKeyCode == 'F'){
-                        FlushConsoleInputBuffer(hIn);                        
-                        return VKEY_CTRLF;
-                     }else if(virtualKeyCode == 'L'){
-                        FlushConsoleInputBuffer(hIn);                        
-                        return VKEY_CTRLL;
-                     }
+                virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
+                switch (virtualKeyCode) {
+                    case 'F': FlushConsoleInputBuffer(hIn); return VKEY_CTRLF;
+                    case 'L': FlushConsoleInputBuffer(hIn); return VKEY_CTRLL;
+                    case 'B': FlushConsoleInputBuffer(hIn); return VKEY_CTRLB;
+                    case 'S': FlushConsoleInputBuffer(hIn); return VKEY_CTRLS;
+                }
             } else if(inp.Event.KeyEvent.bKeyDown && inp.Event.KeyEvent.uChar.UnicodeChar != 0) {
-                    WCHAR key = inp.Event.KeyEvent.uChar.UnicodeChar;
-                    FlushConsoleInputBuffer(hIn);
-                    return (int)key;
+                WCHAR key = inp.Event.KeyEvent.uChar.UnicodeChar;
+                FlushConsoleInputBuffer(hIn);
+                return (int)key;
             } else if (inp.Event.KeyEvent.bKeyDown) { 
                 //virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
-                if(virtualKeyCode==VKEY_PGUP || virtualKeyCode==VKEY_PGDOWN || virtualKeyCode==VKEY_UP ||
-                   virtualKeyCode==VKEY_DOWN || virtualKeyCode==VKEY_RIGHT || virtualKeyCode==VKEY_LEFT){
-                    return virtualKeyCode;
-                }
-                if (virtualKeyCode == VK_DELETE) {
-                    return VKEY_DEL;
+                switch (virtualKeyCode) {
+                    case VKEY_PGUP:
+                    case VKEY_PGDOWN:
+                    case VKEY_UP:
+                    case VKEY_DOWN:
+                    case VKEY_RIGHT:
+                    case VKEY_LEFT:
+                        return virtualKeyCode;
+                    case VK_DELETE:
+                        return VKEY_DEL;
                 }
                 FlushConsoleInputBuffer(hIn);
                 return 0;

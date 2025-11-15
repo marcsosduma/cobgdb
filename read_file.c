@@ -30,6 +30,8 @@
 #endif
 #include "cobgdb.h"
 
+extern struct st_cobgdb cob;
+extern struct st_cfiles * parsed_cfiles;
 
 // Function to get the current directory
 char* getCurrentDirectory() {
@@ -326,4 +328,87 @@ int file_exists(const char *filepath) {
         return TRUE;
     }
     return FALSE;
+}
+
+int save_breakpoints(struct st_bkpoint *head, char *filename) {
+    char baseName[512];    
+    fileNameWithoutExtension(filename, &baseName[0]);
+    normalizePath(baseName);
+    strcat(baseName, ".bkp");
+    FILE *fp = fopen(baseName, "w");
+    if (!fp) {
+        perror("fopen");
+        return FALSE;
+    }
+    struct st_bkpoint *cur = head;
+    while (cur) {
+        fprintf(fp, "%s %d\n", cur->name, cur->line);
+        cur = cur->next;
+    }
+    fclose(fp);
+    return TRUE;
+}
+
+int set_break_on_file(int (*sendCommandGdb)(char *), struct st_bkpoint *bp_list) {
+    struct st_bkpoint *bp = bp_list;
+    if(bp_list == NULL) return FALSE;
+    MI2removeAllBreakPoint(sendCommandGdb);
+    struct st_bkpoint *prev = NULL;
+    while(bp!=NULL){
+        if(prev==NULL || strcmp(prev->name, bp->name)!=0)
+            loadLibrary(bp->name);
+        MI2addBreakPoint(sendCommandGdb, bp->name, bp->line);
+        prev=bp;
+        bp= bp->next;
+    }
+
+    bp = bp_list;
+    Lines * line = cob.lines;
+    while(line!=NULL){
+        line->breakpoint='N';
+        ST_bk * search = bp;
+        while(search!=NULL){
+            if(search->line==line->file_line && strcasecmp(search->name, cob.file_cobol)==0){
+                line->breakpoint='S';
+            }
+            search=search->next;
+        }            
+        line=line->line_after;
+    }
+    return TRUE;
+}
+
+
+struct st_bkpoint *load_breakpoints(int (*sendCommandGdb)(char *), struct st_bkpoint *head, char *filename) {
+    char baseName[512];    
+    fileNameWithoutExtension(filename, &baseName[0]);
+    normalizePath(baseName);
+    strcat(baseName, ".bkp");
+    if(!file_exists(baseName)){
+        showCobMessage("Breakpoint file not found.",1);
+        return head;
+    }
+    FILE *fp = fopen(baseName, "r");
+    if (!fp) return head;
+    freeBKList();
+    head = NULL;
+    struct st_bkpoint *tail = NULL;
+    char namebuf[256];
+    int line;
+    while (fscanf(fp, "%255s %d", namebuf, &line) == 2) {
+        struct st_bkpoint *node = malloc(sizeof(*node));
+        node->name = strdup(namebuf);
+        node->line = line;
+        node->next = NULL;
+        if (!head)
+            head = tail = node;
+        else {
+            tail->next = node;
+            tail = node;
+        }
+    }
+    fclose(fp);
+    set_break_on_file(sendCommandGdb, head);
+    showCobMessage("Breakpoint file loaded.",1);
+    return head;
 }

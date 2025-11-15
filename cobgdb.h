@@ -13,6 +13,8 @@
 #define VKEY_RIGHT 39
 #define VKEY_CTRLF 250
 #define VKEY_CTRLL 251
+#define VKEY_CTRLB 252
+#define VKEY_CTRLS 253
 #elif defined(__linux__)
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define VKEY_BACKSPACE 127
@@ -27,6 +29,8 @@
 #define VKEY_DEL 3
 #define VKEY_CTRLF 250
 #define VKEY_CTRLL 251
+#define VKEY_CTRLB 252
+#define VKEY_CTRLS 253
 #endif // Windows/Linux
 #ifndef boolean 
 #define boolean int
@@ -294,6 +298,7 @@ int freeFile();
 int isCommandInstalled(const char *command);
 double getCurrentTime();
 int show_opt();
+void freeBKList();
 // read_file.c
 int readCodFile(struct st_cobgdb * program);
 void GetFileParts(char *path, char *path_, char *base_, char *ext_);
@@ -311,6 +316,8 @@ void fileNameWithoutExtension(char * file, char * onlyName);
 void fileExtension(char * file, char * onlyExtension);
 char* getCurrentDirectory();
 int file_exists(const char *path);
+int save_breakpoints(struct st_bkpoint *head, char *filename);
+struct st_bkpoint *load_breakpoints(int (*sendCommandGdb)(char *), struct st_bkpoint *head, char *filename);
 //terminal.c
 void get_terminal_size(int *width, int *height);
 void set_terminal_size(int width, int height);
@@ -363,8 +370,9 @@ ST_DebuggerVariable * getVariablesByCobol();
 void freeParsed(ST_MIInfo * parsed);
 // mi2.c
 int couldBeOutput(char * line);
-int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber );
 int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber );
+int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber );
+void MI2removeAllBreakPoint (int (*sendCommandGdb)(char *) );
 int MI2removeBreakPoint (int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber );
 int MI2start(int (*sendCommandGdb)(char *));
 int MI2stepOver(int (*sendCommandGdb)(char *));
@@ -381,6 +389,7 @@ int MI2getStack(int (*sendCommandGdb)(char *), int thread);
 int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]);
 int MI2attach(int (*sendCommandGdb)(char *));
 int MI2lineToJump(int (*sendCommandGdb)(char *));
+void loadLibrary(char * file);
 //variables.c
 int show_variables(int (*sendCommandGdb)(char *));
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 

@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.9"
+#define COBGDB_VERSION "2.10"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -978,6 +978,18 @@ int debug(int (*sendCommandGdb)(char *)){
                 cob.showFile = TRUE;
                 cob.status_bar = 0;
                 break;
+            case VKEY_CTRLS:
+                if(save_breakpoints(BPList, cob.first_file)){
+                    showCobMessage("Breakpoints saved",1);
+                }
+                cob.showFile = TRUE;
+                cob.status_bar = 0;
+                break;                
+            case VKEY_CTRLB:
+                BPList = load_breakpoints(sendCommandGdb, BPList, cob.first_file);
+                cob.showFile = TRUE;
+                cob.status_bar = 0;
+                break;                
             default: 
                 if(cob.waitAnswer){
                     WAIT_GDB++;

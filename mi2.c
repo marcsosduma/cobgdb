@@ -561,17 +561,21 @@ int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNu
     return TRUE;
 }
 
+void MI2removeAllBreakPoint(int (*sendCommandGdb)(char *) ){
+    int status=0;
+    char command[256];
+    strcpy(command,"break-delete\n");
+    sendCommandGdb(command);
+    do{
+        sendCommandGdb("");
+        MI2onOuput(sendCommandGdb, -1, &status);
+    }while(status==GDB_RUNNING);
+}
+
 int MI2removeBreakPoint (int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
     ST_Line * line = getLineC(fileCobol, lineNumber);
-    int status=0;
     if(line!=NULL){
-        char command[256];
-        strcpy(command,"break-delete\n");
-        sendCommandGdb(command);
-        do{
-            sendCommandGdb("");
-            MI2onOuput(sendCommandGdb, -1, &status);
-        }while(status==GDB_RUNNING);
+        MI2removeAllBreakPoint (sendCommandGdb);
         ST_bk * search = BPList;
         ST_bk * before = NULL;
         ST_bk * remove = NULL;
