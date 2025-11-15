@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.8"
+#define COBGDB_VERSION "2.9"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -264,6 +264,15 @@ Lines * set_window_pos(int * line_pos){
     return line;
 }
 
+int show_esc_exit(){
+    gotoxy(1,VIEW_LINES);
+    print_colorBK(color_yellow, color_black);
+    printf("%-*s\r",VIEW_COLS-1, "Press ESC to exit");
+    fflush(stdout);
+    return TRUE;
+}
+
+
 int search_text(Lines ** lines) {
     Lines *line = cob.lines;
     wchar_t buffer[500];
@@ -271,6 +280,7 @@ int search_text(Lines ** lines) {
     int bkg = color_dark_red;
     int found = 0;
 
+    show_esc_exit();
     gotoxy(10, lin + 2);
     print_colorBK(color_white, bkg);
     draw_box_first(10, lin + 2, 61, "Search");
@@ -364,6 +374,7 @@ int gotoLine(Lines **lines) {
     int bkg = color_dark_red;
     int found = 0;
 
+    show_esc_exit();
     gotoxy(30, lin + 2);
     print_colorBK(color_white, bkg);
     draw_box_first(30, lin + 2, 21, "Line");
@@ -634,7 +645,7 @@ void check_screen_size(double * check_start, int * check_size){
 
 int debug(int (*sendCommandGdb)(char *)){
     int qtd_page = 0;
-    int dblAux = -1;
+    int tempValue = -1;
     int check_size=0;
     double check_start = getCurrentTime();
     char key=' ';
@@ -801,21 +812,21 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 's':
             case 'S':
-                dblAux= cob.debug_line;
+                tempValue= cob.debug_line;
                 if(!cob.waitAnswer){
                     MI2stepInto(sendCommandGdb);
                     cob.status_bar = 0;
                 }
-                cob.debug_line = dblAux;
+                cob.debug_line = tempValue;
                 break;
             case 'n':
             case 'N':
-                dblAux= cob.debug_line;
+                tempValue= cob.debug_line;
                 if(!cob.waitAnswer){
                     MI2stepOver(sendCommandGdb);
                     cob.status_bar = 0;
                 }
-                cob.debug_line = dblAux;
+                cob.debug_line = tempValue;
                 break;
             case 'g':
             case 'G':
@@ -946,10 +957,16 @@ int debug(int (*sendCommandGdb)(char *)){
                 focus_window_by_title(cob.title);
                 break;
             case VKEY_CTRLF:            
-                if(search_text(&lines)==0){
-                    cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
-                    showCobMessage("Text not found.",1);
-                }
+                tempValue=0;
+                do{
+                    tempValue=search_text(&lines);
+                    if(tempValue==0){
+                        showCobMessage("Text not found.",1);
+                        cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
+                    }else if(tempValue==2){
+                        cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
+                    }
+                }while(tempValue!=1);
                 cob.showFile = TRUE;
                 cob.status_bar = 0;
                 break;

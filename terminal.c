@@ -450,15 +450,16 @@ int updateStr(char *value, int size, int x, int y) {
     int startChar = 0;
     int isPrint = TRUE;
     print_colorBK(color_green, color_red);
-    cursorON();
     i = 0;
     while (1) {
         if (isPrint) {
+            cursorOFF();
             wcsncpy(wcBuffer, &str[startChar], lt);
             wcBuffer[lt]=L'\0';
             gotoxy(x, y);
             printf("%*ls\r", lt, wcBuffer);
             fflush(stdout);
+            cursorON();
             isPrint = FALSE;
         }
         gotoxy(x + i, y);
