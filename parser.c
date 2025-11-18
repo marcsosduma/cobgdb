@@ -883,6 +883,7 @@ int parser(char * file_name, int fileN){
         printf("%s", lines->line);
         #endif
 
+
         qtt_tk=0;
         lineParse(lines->line, line_parsed, &qtt_tk);
         if(!bfileCobolRegex){            
@@ -924,6 +925,7 @@ int parser(char * file_name, int fileN){
             }
         }
 
+        //char procedureRegex[] = "/\\*\\sLine:\\s([0-9]+)(\\s+:\\sEntry\\s)?";
         boolean isPerform=FALSE;
         boolean bprocedureRegex = procedureRegex(line_parsed, qtt_tk, &tmp[0], &isPerform, &varEntry);
         if(bprocedureRegex){

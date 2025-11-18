@@ -86,12 +86,7 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
             start_linex_x2=-1 * nm;
         }
         if(var->value!=NULL){
-            wchar_t *wcharString = (wchar_t *)malloc((strlen(var->value) + 1) * sizeof(wchar_t));           
-            #if defined(_WIN32)
-            MultiByteToWideChar(CP_UTF8, 0, var->value, -1, wcharString,(strlen(var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
-            #else
-            mbstowcs(wcharString, var->value, strlen(var->value) + 1);
-            #endif
+            wchar_t *wcharString = to_wide(var->value);
             int lenVar = wcslen(wcharString);
             if(start_linex_x2<lenVar){
                 nm = lenVar-start_linex_x2;
@@ -348,12 +343,7 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
             start_linex_x2=-1 * nm;
         }
         if(var->value!=NULL){
-            wchar_t *wcharString = (wchar_t *)malloc((strlen(var->value) + 1) * sizeof(wchar_t));           
-            #if defined(_WIN32)
-            MultiByteToWideChar(CP_UTF8, 0, var->value, -1, wcharString,(strlen(var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
-            #else
-            mbstowcs(wcharString, var->value, strlen(var->value) + 1);
-            #endif
+            wchar_t *wcharString = to_wide(var->value);
             int lenVar = wcslen(wcharString);
             if(start_linex_x2<lenVar){
                 nm = lenVar-start_linex_x2;
@@ -1043,7 +1033,7 @@ void load_file(){
                 draw_box_last(col, lin, size);
             }
             strcpy(str1,str);
-            gotoxy(1,24); 
+            gotoxy(1,VIEW_LINES); 
             print_colorBK(color_gray, color_black);
             if(strlen(str)>0)
                 printf("Search: %-60s\r", str);

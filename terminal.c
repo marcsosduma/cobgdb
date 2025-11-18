@@ -129,29 +129,20 @@ int readKeyLinux(int type) {
     ssize_t nread;
 
     if ((nread = read(STDIN_FILENO, buf, sizeof(buf))) <= 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) 
             return 0;
-        }
         return -1;
     }
-
     if (buf[0] == TM_ESCAPE && buf[1] == TM_CSI) {
         if (nread >= 3) {
             switch (buf[2]) {
-                case '3':
-                    return VKEY_DEL;
-                case '5':
-                    return VKEY_PGUP;
-                case '6':
-                    return VKEY_PGDOWN;
-                case 'A':
-                    return VKEY_UP;
-                case 'B':
-                    return VKEY_DOWN;
-                case 'C':
-                    return VKEY_RIGHT;
-                case 'D':
-                    return VKEY_LEFT;
+                case '3': return VKEY_DEL;
+                case '5': return VKEY_PGUP;
+                case '6': return VKEY_PGDOWN;
+                case 'A': return VKEY_UP;
+                case 'B': return VKEY_DOWN;
+                case 'C': return VKEY_RIGHT;
+                case 'D': return VKEY_LEFT;
             }
         }
         if (buf[2] == TM_MOUSE) {
@@ -190,9 +181,8 @@ int readKeyLinux(int type) {
             case 19: return VKEY_CTRLS;   // Ctrl+S
         }
         wchar_t wc;
-        if (mbtowc(&wc, (const char *)buf, nread) <= 0) {
+        if (mbtowc(&wc, (const char *)buf, nread) <= 0)
             return buf[0];
-        }
         return (int)wc;
     }
     return 0;
@@ -274,7 +264,6 @@ void freeInputBuffer(){
 #endif
 }
 
-
 int key_press(int type){
 #if defined(_WIN32)
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -337,7 +326,6 @@ int key_press(int type){
             }
         }
     }
-    
     return 0;      
 #elif defined(__linux__)
   enableRawMode();
@@ -414,7 +402,6 @@ int updateStr(char *value, int size, int x, int y) {
         }
     }
     wcBuffer = malloc(256);
-
     int lt = (len > size) ? size : len;
     int startChar = 0;
     int isPrint = TRUE;
@@ -557,7 +544,6 @@ int win_size_verify(int showFile, int *check_size){
 }
 #endif
 
-
 #if defined(_WIN32)
 void DisableMaxWindow(){
     HWND hwnd = GetConsoleWindow();
@@ -639,7 +625,6 @@ Window find_window_by_title(Display *display, Window root, const char *title) {
             }
             XFree(window_name);
         }
-
         // Recurse
         Window child = find_window_by_title(display, children[i], title);
         if (child) return child;
