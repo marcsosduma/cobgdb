@@ -104,9 +104,9 @@ int psNumber(char * ch){
     return count;
 }
 
-struct st_parse * tk_val(struct st_parse line_parsed[100], int qtt_tk, int pos){
+struct st_parse * tk_val(struct st_parse * line_parsed, int qtt_tk, int pos){
     struct st_parse * tk = NULL;
-    if(pos<qtt_tk){
+    if(pos>=0 && pos<qtt_tk){
         tk = &line_parsed[pos];
     }
     if(tk==NULL){ tk=&parse_blank; }
@@ -129,50 +129,57 @@ const wchar_t *wcsistr(const wchar_t *haystack, const wchar_t *needle) {
     return NULL;
 }
 
-void lineParse(char * line_to_parse, struct st_parse h[100], int *qtt ){
+void lineParse(char * line_to_parse, struct st_parse **h, int *qtt, int *cap ){
     char * ch = line_to_parse;
     *qtt=0;
-    while(*ch!='\0' && *qtt<100){
+    while(*ch!='\0'){
+            if (*qtt >= *cap) {
+                *cap *= 2;
+                *h = realloc(*h, (*cap) * sizeof(struct st_parse));
+            }
+
+            struct st_parse *t = &(*h)[*qtt];
+
             if(*ch==' ' || *ch=='\t'){
                 int size = psSpaces(ch);
                 ch+=size;
                 continue;
             }else if(isdigit(*ch)){
-                h[*qtt].token=ch;
-                h[*qtt].type=TP_NUMBER;
-                h[*qtt].size = psNumber(ch);
-                ch+=h[*qtt].size;
+                t->token=ch;
+                t->type=TP_NUMBER;
+                t->size = psNumber(ch);
+                ch+=t->size;
             }else if(*ch == '&' || *ch == '=' || *ch == '(' || *ch == '[' 
                     || *ch == '{' || *ch == ')' || *ch == ']' || *ch == '}'){
-                h[*qtt].token=ch;
-                h[*qtt].type=TP_SYMBOL;
-                h[*qtt].size = 1;
-                ch+=h[*qtt].size;
+                t->token=ch;
+                t->type=TP_SYMBOL;
+                t->size = 1;
+                ch+=t->size;
             }else if(isalpha(*ch)){
-                h[*qtt].token=ch;
-                h[*qtt].type=TP_ALPHA;
-                h[*qtt].size = psAlpha(ch);
-                ch+=h[*qtt].size;
+                t->token=ch;
+                t->type=TP_ALPHA;
+                t->size = psAlpha(ch);
+                ch+=t->size;
             }else if(!isalpha(*ch) && *ch!=' ' && *ch!='\t' && *ch!='\n' && *ch!='\0'){
-                h[*qtt].token=ch;
-                h[*qtt].type=TP_ALPHA;
-                h[*qtt].size = psSymbols(ch);
-                ch+=h[*qtt].size;
+                t->token=ch;
+                t->type=TP_ALPHA;
+                t->size = psSymbols(ch);
+                ch+=t->size;
             }else if(*ch=='\''){
-                h[*qtt].token=ch;
-                h[*qtt].type=TP_STRING1;
-                h[*qtt].size = psString(ch);
-                ch+=h[*qtt].size;
+                t->token=ch;
+                t->type=TP_STRING1;
+                t->size = psString(ch);
+                ch+=t->size;
             }else if(*ch=='"'){
-                h[*qtt].token=ch;
-                h[*qtt].type=TP_STRING2;
-                h[*qtt].size = psString(ch);
-                ch+=h[*qtt].size;
+                t->token=ch;
+                t->type=TP_STRING2;
+                t->size = psString(ch);
+                ch+=t->size;
             }else{
-                h[*qtt].token=ch;
-                h[*qtt].type=TP_OTHER;
-                h[*qtt].size = 1;
-                ch+=h[*qtt].size;
+                t->token=ch;
+                t->type=TP_OTHER;
+                t->size = 1;
+                ch+=t->size;
                 break;
             }
             *qtt = *qtt + 1;

@@ -334,6 +334,7 @@ void print_color_reset();
 void print_color(int textcolor);
 void print_colorBK(const int textcolor, const int backgroundcolor);
 int readchar(char * str, int size);
+int readnum(char * str, int size);
 int updateStr(char * value, int size, int x, int y);
 int win_size_verify(int showFile, int *check_size);
 int draw_box_first(int posx, int posy, int width, char *text);
@@ -411,7 +412,7 @@ int highlightParse();
 void freeHighlight(struct st_highlt * hight);
 int printHighlight(struct st_highlt * hight, int bkg, int start, int tot);
 //sting_parser.c
-void lineParse(char * line_to_parse, struct st_parse h[100], int *qtt );
-struct st_parse * tk_val(struct st_parse line_parsed[100], int qtt_tk, int pos);
+void lineParse(char * line_to_parse, struct st_parse **h, int *qtt, int *cap );
+struct st_parse * tk_val(struct st_parse * line_parsed, int qtt_tk, int pos);
 const wchar_t *wcsistr(const wchar_t *haystack, const wchar_t *needle);
 wchar_t *to_wide(const char *src);

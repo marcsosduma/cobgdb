@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.11"
+#define COBGDB_VERSION "2.12"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -276,31 +276,32 @@ int show_esc_exit(){
 int search_text(Lines ** lines) {
     Lines *line = cob.lines;
     wchar_t buffer[500];
-    int lin = 10;
+    int lin = VIEW_LINES-9;
+    int col = (VIEW_COLS-60)/2;
     int bkg = color_dark_red;
     int found = 0;
 
     show_esc_exit();
     gotoxy(10, lin + 2);
     print_colorBK(color_white, bkg);
-    draw_box_first(10, lin + 2, 61, "Search");
-    draw_box_border(10, lin + 3);
-    draw_box_border(72, lin + 3);
+    draw_box_first(col, lin + 2, 61, "Search");
+    draw_box_border(col, lin + 3);
+    draw_box_border(col+62, lin + 3);
     print_colorBK(color_yellow, bkg);
-    gotoxy(11, lin + 3);
+    gotoxy(col+1, lin + 3);
     printf("%61s"," ");
     lin++;
     print_colorBK(color_white, bkg);
-    draw_box_last(10, lin + 3, 61);
+    draw_box_last(col, lin + 3, 61);
     print_colorBK(color_green, bkg);
     fflush(stdout);
-    gotoxy(71, lin + 2);
+    gotoxy(col+61, lin + 2);
     int a=strlen(cob.find_text);
     if(a<61){
         cob.find_text[a]=' ';
         cob.find_text[99]='\0';
     }
-    if (updateStr(cob.find_text, 61, 11, lin + 2) == FALSE)
+    if (updateStr(cob.find_text, 61, col+1, lin + 2) == FALSE)
         return 1;
     a=60; 
     while(a>=0){
@@ -370,26 +371,27 @@ int search_text(Lines ** lines) {
 int gotoLine(Lines **lines) {
     Lines *line = cob.lines;
     char buffer[500];
-    int lin = 10;
+    int lin = VIEW_LINES-9;
+    int col = (VIEW_COLS-22)/2;
     int bkg = color_dark_red;
     int found = 0;
 
     show_esc_exit();
-    gotoxy(30, lin + 2);
+    gotoxy(col, lin + 2);
     print_colorBK(color_white, bkg);
-    draw_box_first(30, lin + 2, 21, "Line");
-    draw_box_border(30, lin + 3);
-    draw_box_border(52, lin + 3);
+    draw_box_first(col, lin + 2, 21, "Line");
+    draw_box_border(col, lin + 3);
+    draw_box_border(col+22, lin + 3);
     print_colorBK(color_yellow, bkg);
-    gotoxy(31, lin + 3);
+    gotoxy(col+1, lin + 3);
     printf("%21s"," ");
     lin++;
     print_colorBK(color_white, bkg);
-    draw_box_last(30, lin + 3, 21);
+    draw_box_last(col, lin + 3, 21);
     print_colorBK(color_green, bkg);
     fflush(stdout);
-    gotoxy(31, lin + 2);
-    if(readchar(buffer,31)==FALSE)
+    gotoxy(col+1, lin + 2);
+    if(readnum(buffer,20)==FALSE)
         return 1;
     int new_line = atoi(buffer);
     if(new_line==0){
@@ -986,9 +988,11 @@ int debug(int (*sendCommandGdb)(char *)){
                 cob.status_bar = 0;
                 break;                
             case VKEY_CTRLB:
+                tempValue= cob.debug_line;
                 BPList = load_breakpoints(sendCommandGdb, BPList, cob.first_file);
                 cob.showFile = TRUE;
                 cob.status_bar = 0;
+                cob.debug_line = tempValue;
                 break;                
             default: 
                 if(cob.waitAnswer){

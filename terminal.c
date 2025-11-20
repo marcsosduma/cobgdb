@@ -336,7 +336,7 @@ int key_press(int type){
 #endif // Windows/Linux
 }
 
-int readchar(char * str, int size) {
+int readalpha(char * str, int size, int isNumber) {
     char c =' ';
     int i = 0;
     str[0] = '\0';
@@ -347,6 +347,8 @@ int readchar(char * str, int size) {
             c = key_press(MOUSE_OFF);
             fflush(stdout);
         }while(c<=0);
+        if (c==VKEY_UP || c==VKEY_PGDOWN || c==VKEY_DOWN || c==VKEY_PGDOWN || (c==VKEY_LEFT && i==0)) 
+                continue;
         if (c == 13) {
             break;
         }
@@ -354,7 +356,7 @@ int readchar(char * str, int size) {
             ret = FALSE;
             break;
         }
-        if ((c == VKEY_BACKSPACE || c==37) && i > 0) {
+        if ((c == VKEY_BACKSPACE || c==VKEY_LEFT) && i > 0) {
             putchar(8);
             putchar(' ');
             putchar(8);
@@ -364,7 +366,7 @@ int readchar(char * str, int size) {
             putchar(' ');
             str[i++]=' ';
             str[i]='\0';
-        } else if (strlen(str) < (size_t) size && c >= 32) {
+        } else if (strlen(str) < (size_t) size && c >= 32 && ((!isNumber) || (c>='0' && c<='9'))) {
             str[i] = c;
             putchar(c);
             i++;
@@ -373,6 +375,15 @@ int readchar(char * str, int size) {
     }
     cursorOFF();
     return ret;
+}
+
+int readchar(char * str, int size) {
+    return readalpha(str, size, FALSE);
+}
+
+
+int readnum(char * str, int size) {
+    return readalpha(str, size, TRUE);
 }
 
 int updateStr(char *value, int size, int x, int y) {
@@ -432,7 +443,7 @@ int updateStr(char *value, int size, int x, int y) {
             break;
         }
         if (c == VKEY_DEL) c = L' ';
-        if (c == VKEY_LEFT && i >= 0) {
+        if ((c == VKEY_LEFT || c == VKEY_UP || c == VKEY_PGUP) && i >= 0) {
             i--;
             if (i < 0) {
                 startChar = (startChar > 0) ? startChar - 1 : startChar;
@@ -448,7 +459,7 @@ int updateStr(char *value, int size, int x, int y) {
             } else {
                 str[startChar + i] = L' ';
             }
-        } else if (c == VKEY_RIGHT) {
+        } else if (c == VKEY_RIGHT || c == VKEY_DOWN || c == VKEY_PGDOWN) {
             i++;
             if (i >= lt) {
                 startChar = (str[i + startChar] != L'\0') ? startChar + 1 : startChar;
