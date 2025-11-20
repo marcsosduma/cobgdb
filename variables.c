@@ -842,8 +842,8 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     while(input_character!=-100){
         disableEcho();
         gotoxy(1,1);
-        int lin = 7;
-        int col = 9;
+        int lin = (VIEW_LINES-12)/2;
+        int col = (VIEW_COLS-60)/2;
         int size = 60;
         if(show){
             gotoxy(col,lin);
@@ -998,8 +998,8 @@ void load_file(){
         while(input_character!=-100){
             disableEcho();
             gotoxy(1,1);
-            int lin = 7;
-            int col = 9;
+            int lin = (VIEW_LINES-12)/2;
+            int col = (VIEW_COLS-60)/2;
             int size = 60;
             if(show){
                 gotoxy(col,lin);

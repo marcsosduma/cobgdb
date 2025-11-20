@@ -381,7 +381,6 @@ int readchar(char * str, int size) {
     return readalpha(str, size, FALSE);
 }
 
-
 int readnum(char * str, int size) {
     return readalpha(str, size, TRUE);
 }
