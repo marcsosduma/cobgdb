@@ -1256,7 +1256,7 @@ void show_help(int is_popup){
         "O - Changes the focus to the window where the debugging code is being",
         "    displayed (Windows or X11 only).",
         "CTRL-F - Find: search for text in the source code.",
-        "CTRL-L - Go to: Go to Line.",
+        "CTRL-G - Go to: Go to Line.",
         "CTRL-S - Save breakpoints.",
         "CTRL-B - Load saved breakpoints.",
         "Q - Quit: quits the program.",

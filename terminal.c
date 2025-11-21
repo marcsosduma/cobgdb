@@ -177,7 +177,7 @@ int readKeyLinux(int type) {
         switch (buf[0]) {
             case 2:  return VKEY_CTRLB;   // Ctrl+B
             case 6:  return VKEY_CTRLF;   // Ctrl+F
-            case 12: return VKEY_CTRLL;   // Ctrl+L
+            case 7: return VKEY_CTRLG;    // Ctrl+G
             case 19: return VKEY_CTRLS;   // Ctrl+S
         }
         wchar_t wc;
@@ -300,7 +300,7 @@ int key_press(int type){
                 virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
                 switch (virtualKeyCode) {
                     case 'F': FlushConsoleInputBuffer(hIn); return VKEY_CTRLF;
-                    case 'L': FlushConsoleInputBuffer(hIn); return VKEY_CTRLL;
+                    case 'G': FlushConsoleInputBuffer(hIn); return VKEY_CTRLG;
                     case 'B': FlushConsoleInputBuffer(hIn); return VKEY_CTRLB;
                     case 'S': FlushConsoleInputBuffer(hIn); return VKEY_CTRLS;
                 }
@@ -380,6 +380,7 @@ int readalpha(char * str, int size, int isNumber) {
 int readchar(char * str, int size) {
     return readalpha(str, size, FALSE);
 }
+
 
 int readnum(char * str, int size) {
     return readalpha(str, size, TRUE);

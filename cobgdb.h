@@ -12,7 +12,7 @@
 #define VKEY_LEFT 37
 #define VKEY_RIGHT 39
 #define VKEY_CTRLF 250
-#define VKEY_CTRLL 251
+#define VKEY_CTRLG 251
 #define VKEY_CTRLB 252
 #define VKEY_CTRLS 253
 #elif defined(__linux__)
@@ -28,7 +28,7 @@
 #define VKEY_ESCAPE 27
 #define VKEY_DEL 3
 #define VKEY_CTRLF 250
-#define VKEY_CTRLL 251
+#define VKEY_CTRLG 251
 #define VKEY_CTRLB 252
 #define VKEY_CTRLS 253
 #endif // Windows/Linux

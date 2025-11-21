@@ -125,12 +125,18 @@ In this example, p0.cob is the source code of the executable, and p1.cob is the 
 - `W` - Window Size: switches between window sizes: 80x24 and 132x34.
 - `O` - Changes the focus to the window where the debugging code is being displayed (Windows or X11 only).
 - `CTRL-F` - Find: search for text in the source code.
-- `CTRL-L` - Go to: Go to Line.
+- `CTRL-G` - Go to: Go to Line.
 - `CTRL-S` - Save breakpoints.
 - `CTRL-B` - Load saved breakpoints.
 - `Q` - Quit: quits the program.
 
 ## 💡 Tip for Windows 11
+
+This tip is for anyone who wants to use the ```w``` command in COBGDB to dynamically resize the screen.
+For the ```w``` command to work correctly, COBGDB must run inside the Windows Console Host.
+If you run it inside Windows Terminal, the dynamic window-resize events are not passed through properly, so the ```w``` command will not behave as expected.
+
+To switch to Windows Console Host, follow these steps:
 
 - Open Windows Terminal.
 - Go to Settings (click the down arrow and select "Settings").

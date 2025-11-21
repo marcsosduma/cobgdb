@@ -25,7 +25,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.12"
+#define COBGDB_VERSION "2.13"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -916,15 +916,13 @@ int debug(int (*sendCommandGdb)(char *)){
             case 'a':
             case 'A':
                 if(!cob.waitAnswer){
+                    cob.input_character=' ';
                     gotoxy(1,VIEW_LINES);
                     disableEcho();
                     printf("%s\r", "Connecting            ");
                     fflush(stdout);
                     MI2attach(sendCommandGdb);
                     cob.showFile=TRUE;
-                    MI2getStack(sendCommandGdb,1);
-                    WAIT_GDB=100;
-                    cob.input_character=' ';
                     lines = set_window_pos(&cob.line_pos);
                 }
                 break;
@@ -972,7 +970,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 cob.showFile = TRUE;
                 cob.status_bar = 0;
                 break;
-            case VKEY_CTRLL:
+            case VKEY_CTRLG:
                 if(gotoLine(&lines)==0){
                     cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
                     showCobMessage("Line not found.",1);
@@ -1003,6 +1001,8 @@ int debug(int (*sendCommandGdb)(char *)){
                         cob.changeLine=FALSE;
                         cob.isStepOver=-1;
                     }
+                    if(!cob.waitAnswer && cob.debug_line==-1 && strcmp(cob.connect,"attaching")==0)
+                        cob.waitAnswer=TRUE;
                 }
                 break;
         }

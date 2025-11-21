@@ -41,7 +41,8 @@ enum GDB_STATUS {
     GDB_STEP_OUT_END,
     GDB_SIGNAL_STOP,
     GDB_STOPPED,
-    GDB_CONNECTED
+    GDB_CONNECTED,
+    GDB_ERROR
 };
 
 #pragma GCC diagnostic push
@@ -153,7 +154,7 @@ int loadCobSourceFile(char * atualFile, char * newFile){
 ST_Line * hasLineCobol(ST_MIInfo * parsed){
     boolean find=FALSE;
     ST_Line * hasLine = NULL;
-    if(parsed->outOfBandRecord->output->next!=NULL){
+    if(parsed->outOfBandRecord!=NULL && parsed->outOfBandRecord->output!=NULL && parsed->outOfBandRecord->output->next!=NULL){
         ST_TableValues * search1=parseMIvalueOf(parsed->outOfBandRecord->output, "frame.fullname", NULL, &find);
         if(search1==NULL) return NULL;
         find=FALSE;
@@ -226,7 +227,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                 ST_MIInfo * parsed = parseMI(line);
                 if (parsed->resultRecords!=NULL){
                     if(strcmp(parsed->resultRecords->resultClass,"error")==0 || strcmp(parsed->resultRecords->resultClass,"done")==0 ) {
-                        *status=GDB_STEP_END;
+                        *status=(strcmp(parsed->resultRecords->resultClass,"error")==0)?GDB_ERROR:GDB_STEP_END;
                         cob.waitAnswer=FALSE;
                         cob.running=FALSE;
                         cob.showFile=TRUE;
@@ -237,6 +238,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                         }
                     }else if(strcmp(parsed->resultRecords->resultClass,"connected")==0){
                         *status=GDB_CONNECTED;
+                        sendCommandGdb("exec-continue\n");
                     }
                 }
                 if(parsed!=NULL && parsed->outOfBandRecord!=NULL){
@@ -1069,40 +1071,91 @@ int MI2attach(int (*sendCommandGdb)(char *)){
     if(strstr(aux,":")!=NULL){
         snprintf(command, 300, "target-select remote %s\n", aux);
         sendCommandGdb(command);
-        #if defined(_WIN32)
-        Sleep(2000);
-        #else
-        usleep(4000000);
-        #endif
-        int total=0;
+        double check_start = getCurrentTime();
         do{
+            double end_time = getCurrentTime();
+            double elapsed_time = end_time - check_start;
+            if (elapsed_time > 10) {
+                break;
+            }
             sendCommandGdb("");
+            //printf("%s\n", gdbOutput);
             MI2onOuput(sendCommandGdb, tk, &status);
-        }while(status!=GDB_CONNECTED && total++<3); 
+        }while(status!=GDB_CONNECTED); 
         tocontinue=(status==GDB_CONNECTED)?TRUE:FALSE;
+        if(tocontinue){
+            double check_start = getCurrentTime();
+            do{
+                if(gdbOutput!=NULL){
+                    free(gdbOutput);
+                    gdbOutput=NULL;
+                }
+                double end_time = getCurrentTime();
+                double elapsed_time = end_time - check_start;
+                if (elapsed_time > 10) {
+                    break;
+                }
+                MI2getStack(sendCommandGdb,1);
+            }while(cob.debug_line == -1);
+        }
     }else{
         snprintf(command, 300, "target-attach %s\n", aux);
         sendCommandGdb(command);
+        double check_start = getCurrentTime();
         do{
+            double end_time = getCurrentTime();
+            double elapsed_time = end_time - check_start;
+            if (elapsed_time > 10) {
+                break;
+            }
             sendCommandGdb("");
+            //printf("%s\n", gdbOutput);
             MI2onOuput(sendCommandGdb, tk, &status);
-        }while(strcmp(gdbOutput,"")!=0); 
-        tocontinue=TRUE;
+        }while(status!=2);
+        if(status==2) {
+        #if defined(__linux__)
+            double check_start = getCurrentTime();
+            do{
+                if(gdbOutput!=NULL){
+                    free(gdbOutput);
+                    gdbOutput=NULL;
+                }
+                double end_time = getCurrentTime();
+                double elapsed_time = end_time - check_start;
+                if (elapsed_time > 50) {
+                    break;
+                }
+                MI2getStack(sendCommandGdb,1);
+            }while(cob.debug_line == -1);
+        #else
+            /*
+            double check_start = getCurrentTime();
+            do{
+                if(gdbOutput!=NULL){
+                    free(gdbOutput);
+                    gdbOutput=NULL;
+                }
+                double end_time = getCurrentTime();
+                double elapsed_time = end_time - check_start;
+                if (elapsed_time > 120) {
+                    break;
+                }
+                strcpy(lastComand,"exec-next\n");
+                MI2onOuput(sendCommandGdb, tk, &status);
+                sendCommandGdb("stack-list-frames --thread 0 0 0\n");
+                sendCommandGdb("");
+                printf("%s\n", gdbOutput);
+                MI2onOuput(sendCommandGdb, tk, &status);
+            }while(cob.debug_line == -1);
+            */
+            sendCommandGdb("exec-continue\n");
+            cob.running=TRUE;
+            cob.waitAnswer=TRUE;
+            cob.changeLine=FALSE;
+        #endif
+        }
     }
     strcpy(cob.connect,"");
-    if(gdbOutput!=NULL){
-        free(gdbOutput);
-        gdbOutput=NULL;
-    }
-    if(tocontinue){
-        strcpy(lastComand,"exec-next\n"); 
-        strcpy(command,"exec-continue\n");
-        sendCommandGdb(command);
-        do{
-            sendCommandGdb("");
-            MI2onOuput(sendCommandGdb, tk, &status);
-        }while(status==GDB_RUNNING); 
-    }
     return 0;
 }
 
