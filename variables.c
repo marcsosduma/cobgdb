@@ -868,6 +868,7 @@ int show_hover_var(int (*sendCommandGdb)(char *), struct st_hoverer_var *hVar){
     MI2evalVariable(sendCommandGdb,hVar->cobVar,0,0);
     hVar->cobVar->value=EspecialTrim(hVar->cobVar->value);
     wchar_t * wcharString = (wchar_t*)malloc((500 + 1) * sizeof(wchar_t));
+    wcharString[0]='\0';
     if(hVar->cobVar->value!=NULL){
         #if defined(_WIN32)
         int new_size = MultiByteToWideChar(CP_UTF8, 0, hVar->cobVar->value, -1, NULL, 0);
