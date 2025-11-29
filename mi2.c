@@ -1182,7 +1182,7 @@ int MI2lineToJump(int (*sendCommandGdb)(char *)){
     print_colorBK(color_green, bkg);
     fflush(stdout);
     gotoxy(11+strlen(aux),readLine);
-    if(readchar(aux,50) == FALSE) return 1;
+    if(readnum(aux,50) == FALSE) return 1;
     int line = atoi(aux);
     int check=hasCobolLine(line);
     if(check>0){

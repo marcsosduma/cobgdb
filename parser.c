@@ -1136,9 +1136,9 @@ ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar){
     while(search!=NULL){        
         if(search->variablesByCobol!=NULL){
             sprintf(tmp1,"%s%c",functionName,'.');
-            if(strstr(search->variablesByCobol,tmp1)!=NULL){
+            if(my_strcasestr(search->variablesByCobol,tmp1)>=0){
                 sprintf(tmp1,"%c%s",'.',cobVar);
-                if(strstr(search->variablesByCobol,tmp1)!=NULL){
+                if(my_strcasestr(search->variablesByCobol,tmp1)>=0){
                     break;
                 }
             }
@@ -1148,15 +1148,33 @@ ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar){
     return search;
 }
 
+int isVariableByCobol(char * cobVar){
+    ST_DebuggerVariable * search = DebuggerVariable;
+    int ret=FALSE;
+    char tmp1[256];
+    sprintf(tmp1,".%s",cobVar);
+    while(search!=NULL){        
+        if(search->variablesByCobol!=NULL){
+            if(my_strcasestr(search->variablesByCobol,tmp1)>=0){
+                ret=TRUE;
+                break;
+            }
+        }
+        search = search->next;
+    }
+    return ret;
+}
+
+
 ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVar, ST_DebuggerVariable * start){
     ST_DebuggerVariable * search = start;
     char tmp1[256];
     while(search!=NULL){        
         if(search->variablesByCobol!=NULL){
             sprintf(tmp1,"%s%c",functionName,'.');
-            if(strstr(search->variablesByCobol,tmp1)!=NULL){
+            if(my_strcasestr(search->variablesByCobol,tmp1)>=0){
                 sprintf(tmp1,"%c%s",'.',cobVar);
-                if(strstr(search->variablesByCobol,tmp1)!=NULL){
+                if(my_strcasestr(search->variablesByCobol,tmp1)>=0){
                     if(strncmp(search->cName,"f_",2)==0) break; 
                     ST_DebuggerVariable * search1=findFieldVariableByCobol(functionName, cobVar, search->next);
                     if(search1!=NULL) search=search1;

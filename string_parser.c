@@ -204,3 +204,22 @@ wchar_t *to_wide(const char *src) {
     return w;
 #endif
 }
+
+int my_strcasestr(const char *haystack, const char *needle) {
+    if (!haystack || !needle) return -1;
+
+    size_t nh = strlen(haystack);
+    size_t nn = strlen(needle);
+
+    if (nn > nh) return -1;
+
+    for (size_t i = 0; i <= nh - nn; i++) {
+        size_t j = 0;
+        while (j < nn && tolower((unsigned char)haystack[i+j]) ==
+                         tolower((unsigned char)needle[j])) {
+            j++;
+        }
+        if (j == nn) return j;  // match
+    }
+    return -1;
+}

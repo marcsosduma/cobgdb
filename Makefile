@@ -15,7 +15,7 @@ endif
 
 # path where the source resides - same as current Makefile's directory
 SRCDIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o variables.o debugger.o highlight.o string_parser.o
+OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o variables.o debugger.o highlight.o string_parser.o util.o
 
 $(info SRCDIR = $(SRCDIR))
 #
@@ -30,6 +30,7 @@ OBJ     += realpath.o
 RM       = del
 CP       = copy
 COMP     = comp.bat
+LIBS	 = -static
 COBGDB_VERSION := $(shell $(SRCDIR)/get_version.bat "$(SRCDIR)/cobgdb.c")
 else
 #
@@ -42,6 +43,7 @@ BIN      = cobgdb
 RM       = rm -f
 CP       = cp
 COMP     = comp.sh
+LIBS	 = -lpthread
 COBGDB_VERSION := $(shell awk '/define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c )
 
 # Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
@@ -156,3 +158,6 @@ highlight.o: $(SRCDIR)/highlight.c $(SRCDIR)/cobgdb.h
 
 string_parser.o: $(SRCDIR)/string_parser.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/string_parser.c -o string_parser.o $(CFLAGS)
+
+util.o: $(SRCDIR)/util.c $(SRCDIR)/cobgdb.h
+	$(CC) -c $(SRCDIR)/util.c -o util.o $(CFLAGS)

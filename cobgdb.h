@@ -1,5 +1,6 @@
 #if defined(_WIN32)
 #include <windows.h>
+#include <process.h>
 #define VKEY_DOWN 40
 #define VKEY_UP 38
 #define VKEY_PGDOWN 34
@@ -15,7 +16,13 @@
 #define VKEY_CTRLG 251
 #define VKEY_CTRLB 252
 #define VKEY_CTRLS 253
+typedef HANDLE thread_t;
+typedef CRITICAL_SECTION mutex_t;
 #elif defined(__linux__)
+#include <pthread.h>
+#include <unistd.h>
+typedef pthread_t thread_t;
+typedef pthread_mutex_t mutex_t;
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define VKEY_BACKSPACE 127
 #define VKEY_DOWN 40
@@ -55,6 +62,8 @@
 #define color_pink      13
 #define color_yellow    14
 #define color_white     15
+#define color_dark_gray 16
+#define color_m_gray    17
 #include <wchar.h>
 #include <time.h>
 #define MAX_MATCH_LENGTH 512
@@ -102,35 +111,6 @@ struct ST_Line {
 };
 
 typedef struct ST_Line ST_Line;
-
-struct st_cobgdb {
-	char name_file[256];
-    char file_cobol[512];
-    char title[512];
-    char cfile[1048];
-    char cwd[512];
-    char first_file[512];
-    char connect[256];
-    char find_text[100];
-    int num_dig;
-    int debug_line;
-    int running;
-    int showFile;
-    int waitAnswer;
-    int changeLine;
-	Lines * lines;
-	int qtd_lines;
-    int ctlVar;    
-    double isStepOver;
-    int mouse;
-    int mouseX;
-    int mouseY;
-    int mouseButton;	
-    int line_pos;
-    int input_character;
-    int showVariables;
-    int status_bar;
-};
 
 // ATTRIBUTTES -- START
 struct ST_Attribute {
@@ -284,6 +264,45 @@ enum types{
     TP_OTHER
 };
 
+
+struct st_cobgdb {
+	char name_file[256];
+    char file_cobol[512];
+    char title[512];
+    char cfile[1048];
+    char cwd[512];
+    char first_file[512];
+    char connect[256];
+    char find_text[100];
+    int num_dig;
+    int debug_line;
+    int running;
+    int showFile;
+    int waitAnswer;
+    int changeLine;
+	Lines * lines;
+	int qtd_lines;
+    int ctlVar;    
+    double isStepOver;
+    int status_bar;
+    int mouse;
+    int mouseX;
+    int mouseY;
+    int mouseButton;	
+    int line_pos;
+    int input_character;
+    int showVariables;
+};
+
+struct st_hoverer_var {
+    char hover_var[100];
+    int isHoverVar;
+    int hover_x;
+    int hover_y;
+    ST_DebuggerVariable * cobVar;
+};
+
+
 #ifdef WIN32
     char *realpath( const char *name, char *resolved );
 #endif
@@ -333,10 +352,13 @@ void print_no_resetBK(char * s, int textcolor, int backgroundcolor);
 void print_color_reset();
 void print_color(int textcolor);
 void print_colorBK(const int textcolor, const int backgroundcolor);
+void print_no_resetBK256c(char * s, int textcolor, int backgroundcolor);
+void print_color256c(int textcolor);
+void print_colorBK256c(const int textcolor, const int backgroundcolor);
 int readchar(char * str, int size);
 int readnum(char * str, int size);
 int updateStr(char * value, int size, int x, int y);
-int win_size_verify(int showFile, int *check_size);
+int win_size_verify(int showFile);
 int draw_box_first(int posx, int posy, int width, char *text);
 int draw_box_last(int posx, int posy, int width);
 int draw_box_border(int posx, int posy);
@@ -350,6 +372,7 @@ void focus_window_by_title(const char *window_title);
 #if defined(_WIN32)
 void DisableMaxWindow();
 #endif
+void init_terminal_colors();
 // parser.c
 void SourceMap(char fileGroup[][512]);
 int parser(char * file_name, int fileN);
@@ -368,6 +391,7 @@ ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar);
 ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVar, ST_DebuggerVariable * start);
 ST_DebuggerVariable * getShowVariableByC(char * cVar);
 ST_DebuggerVariable * getVariablesByCobol();
+int isVariableByCobol(char * cobVar);
 void freeParsed(ST_MIInfo * parsed);
 // mi2.c
 int couldBeOutput(char * line);
@@ -401,6 +425,8 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
 void show_sources(int (*sendCommandGdb)(char *), int mustParse);
 void show_help(int is_popup);
 void load_file();
+int check_hover(struct st_hoverer_var *hVar, int start_window_line, int start_line_x, int posx, int posy);
+int show_hover_var(int (*sendCommandGdb)(char *), struct st_hoverer_var *hVar);
 //debugger.c
 char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags, int digits);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags);
@@ -416,3 +442,11 @@ void lineParse(char * line_to_parse, struct st_parse **h, int *qtt, int *cap );
 struct st_parse * tk_val(struct st_parse * line_parsed, int qtt_tk, int pos);
 const wchar_t *wcsistr(const wchar_t *haystack, const wchar_t *needle);
 wchar_t *to_wide(const char *src);
+int my_strcasestr(const char *haystack, const char *needle);
+//util.c
+void thread_create(thread_t *t, void (*func)(void*), void *userdata);
+void mutex_init(mutex_t *m);
+void mutex_destroy(mutex_t *m);
+void mutex_lock(mutex_t *m);
+void mutex_unlock(mutex_t *m);
+void sleep_ms(unsigned int ms);

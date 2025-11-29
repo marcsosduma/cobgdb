@@ -17,6 +17,7 @@
 #include <time.h>
 #if defined(__linux__)
 #include <unistd.h>
+#include <stdint.h>
 #else
 #include <windows.h>
 #include <io.h>
@@ -25,7 +26,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.13"
+#define COBGDB_VERSION "2.2.0"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -38,7 +39,7 @@ struct st_cobgdb cob ={
     .mouse = 0,
     .num_dig = 4,
     .showVariables = FALSE,
-    .status_bar = 0
+    .status_bar = 0,
 };
 
 int VIEW_COLS=  80;
@@ -48,7 +49,11 @@ int start_window_line = 0;
 int qtd_window_line = 22;
 int start_line_x = 0;
 int WAIT_GDB=100;
-
+volatile int CHECKING_SCR_SIZE = 0;
+volatile int CHECKING_HOVER = 0;
+int mousex=-1;
+int mousey=-1;
+double check_hover_start=0;
 char * gdbOutput = NULL;
 int color_frame=color_light_blue;
 
@@ -272,7 +277,6 @@ int show_esc_exit(){
     return TRUE;
 }
 
-
 int search_text(Lines ** lines) {
     Lines *line = cob.lines;
     wchar_t buffer[500];
@@ -312,11 +316,11 @@ int search_text(Lines ** lines) {
             cob.find_text[a]='\0';
         a--;
     }
-#if defined(_WIN32)
+    #if defined(_WIN32)
     MultiByteToWideChar(CP_UTF8, 0, cob.find_text, -1, buffer, 500);
-#else
+    #else
     mbstowcs(buffer, cob.find_text, 499);
-#endif
+    #endif
     buffer[499] = L'\0';
     wchar_t *wcharString = malloc(501 * sizeof(wchar_t));
     if (!wcharString) return -1;
@@ -338,11 +342,11 @@ int search_text(Lines ** lines) {
             wcharString = malloc((lenLine + 1) * sizeof(wchar_t));
             if (!wcharString) return -1;
         }
-#if defined(_WIN32)
+        #if defined(_WIN32)
         MultiByteToWideChar(CP_UTF8, 0, line->line, -1, wcharString, lenLine + 1);
-#else
+        #else
         mbstowcs(wcharString, line->line, lenLine + 1);
-#endif
+        #endif
         const wchar_t *pos = wcsistr(wcharString, buffer);
         if (pos) {
             start_window_line = line_pos;
@@ -451,7 +455,7 @@ int show_opt(){
     draw_utf8_text("\u2191");
     gotoxy(1,VIEW_LINES-1);
     snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-1,VIEW_COLS-1,cob.file_cobol);
-    printBK(aux, color_light_gray, color_frame);
+    printBK(aux, color_white, color_frame);
     gotoxy(VIEW_COLS,VIEW_LINES-1);
     print_colorBK(color_light_gray, color_frame);
     draw_utf8_text("\u2193");
@@ -529,9 +533,10 @@ int show_info() {
 int show_file(Lines * lines_file, int line_pos, Lines ** line_debug){
     Lines * show_line=lines_file;
     int NUM_TXT=VIEW_COLS-4-cob.num_dig;    
-    
+
     gotoxy(1,1);
     show_opt();
+    int  bar_color = color_dark_gray;
     int  bkgColor=color_gray;
     char chExec = ' ';
     for(int i=0;i<(VIEW_LINES-3);i++){
@@ -543,8 +548,11 @@ int show_file(Lines * lines_file, int line_pos, Lines ** line_debug){
             print_no_resetBK(" \r",color_white, color_frame);
             continue;
         }
+        //\u25CF or B (Breakpoint)
         printBK(show_line->breakpoint == 'S' ? "B" : " ", color_yellow, color_frame);
-        print_colorBK(color_gray, color_black);
+        //print_colorBK(color_red, color_frame);
+        //draw_utf8_text(show_line->breakpoint == 'S' ? "\u25CF" : " ");
+        print_colorBK(color_black, color_black);
         if(cob.debug_line==show_line->file_line && !cob.running){
             print(">", color_green);
             if(WAIT_GDB>10)
@@ -579,7 +587,7 @@ int show_file(Lines * lines_file, int line_pos, Lines ** line_debug){
             }
             free(wcharString);
         }else{
-            bkgColor=(line_pos==i)?color_gray:-1;
+            bkgColor=(line_pos==i)?bar_color:-1;
             printHighlight(show_line->high, bkgColor, start_line_x, NUM_TXT);
         }
         show_line = show_line->line_after;
@@ -634,29 +642,58 @@ int set_first_break(int (*sendCommandGdb)(char *)){
     return ret;
 }
 
-void check_screen_size(double * check_start, int * check_size){
-    if(*check_size<3){
-        double end_time = getCurrentTime();
-        double elapsed_time = end_time - *check_start;
-        if(elapsed_time>1){
-            cob.showFile=win_size_verify(cob.showFile, check_size);
-            *check_start = getCurrentTime();
+void td_check_screen_size(void *arg){
+    cob.showFile=win_size_verify(cob.showFile);
+    if(!cob.showFile) sleep_ms(1000);
+    (void)arg;
+    CHECKING_SCR_SIZE=FALSE;
+}    
+
+void td_check_hover_var(void *arg) {
+    struct st_hoverer_var *hVar = arg;    
+    if (hVar->isHoverVar && hVar->cobVar!=NULL) {
+        int dx = cob.mouseX - hVar->hover_x;
+        int dy = cob.mouseY - hVar->hover_y;
+        if (dx < -1 || dx >= 10 || abs(dy) >= 2) {
+            hVar->isHoverVar = FALSE;
+            cob.showFile   = TRUE;
+        }
+        CHECKING_HOVER = FALSE;
+        return;
+    }
+    if (mousex != cob.mouseX || mousey != cob.mouseY) {
+        check_hover_start = getCurrentTime();
+        check_hover_start = check_hover_start;
+    }
+    mousex = cob.mouseX;
+    mousey = cob.mouseY;
+    double elapsed_time = getCurrentTime() - check_hover_start;
+    if (elapsed_time > 1 && cob.mouseY > 0 && cob.mouseY < VIEW_LINES - 2){
+        if (check_hover(hVar, start_window_line, start_line_x,cob.mouseX, cob.mouseY)) {
+            mousex = -9999;
+            mousey = -9999;
         }
     }
-}    
+    CHECKING_HOVER = FALSE;
+}
 
 int debug(int (*sendCommandGdb)(char *)){
     int qtd_page = 0;
     int tempValue = -1;
-    int check_size=0;
-    double check_start = getCurrentTime();
     char key=' ';
+    thread_t t1;
+    struct st_hoverer_var hVar ={
+        .hover_var[0] = '\0',
+        .isHoverVar = FALSE,
+        .cobVar = NULL
+    };
 
     initTerminal();
     cob.line_pos=0;
     Lines * lb = NULL;
     int bstop = FALSE;
     cursorOFF();
+    print_colorBK(color_white, color_black);
     clearScreen();
     Lines * line_debug=NULL;
     if(lines==NULL){
@@ -673,7 +710,10 @@ int debug(int (*sendCommandGdb)(char *)){
             cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
             int aux1=cob.debug_line;
             int aux2=cob.running;
-            if(line_debug!=NULL && cob.showVariables) var_watching(line_debug, sendCommandGdb, cob.waitAnswer, cob.line_pos);
+            if(!cob.waitAnswer){
+                if(line_debug!=NULL && cob.showVariables) var_watching(line_debug, sendCommandGdb, cob.waitAnswer, cob.line_pos);
+                if(hVar.isHoverVar) show_hover_var(sendCommandGdb, &hVar);
+            }
             cob.debug_line=aux1;
             cob.running=aux2;
             print_color_reset();
@@ -686,7 +726,16 @@ int debug(int (*sendCommandGdb)(char *)){
         cob.input_character = -1;
         if(cob.isStepOver<0){
             cob.input_character = key_press(MOUSE_EXT);
-            if(!cob.waitAnswer) check_screen_size(&check_start, &check_size);
+            if(!cob.waitAnswer){
+                if(CHECKING_SCR_SIZE==FALSE){
+                    CHECKING_SCR_SIZE=TRUE;
+                    thread_create(&t1, td_check_screen_size, (void*)1);
+                } 
+                if(CHECKING_HOVER==FALSE && cob.input_character == 0){
+                    CHECKING_HOVER=TRUE;
+                    thread_create(&t1, td_check_hover_var, (void *) &hVar );
+                }
+            }
         }
         if(cob.connect[0]!='\0') cob.input_character='a';
         switch (cob.input_character)
@@ -814,6 +863,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 's':
             case 'S':
+                hVar.isHoverVar = FALSE;
                 tempValue= cob.debug_line;
                 if(!cob.waitAnswer){
                     MI2stepInto(sendCommandGdb);
@@ -823,6 +873,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 'n':
             case 'N':
+                hVar.isHoverVar = FALSE;
                 tempValue= cob.debug_line;
                 if(!cob.waitAnswer){
                     MI2stepOver(sendCommandGdb);
@@ -836,6 +887,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 'c':
             case 'C':
+                hVar.isHoverVar = FALSE;
                 if(!cob.waitAnswer){ 
                     lb = lines;           
                     for(int a=0;a<cob.line_pos;a++) lb=lb->line_after;
@@ -856,6 +908,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 'j':
             case 'J':
+                hVar.isHoverVar = FALSE;
                 if(!cob.waitAnswer){ 
                     show_wait();
                     if(MI2lineToJump(sendCommandGdb)==0){
@@ -900,6 +953,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 'f':
             case 'F':
+                hVar.isHoverVar = FALSE;
                 if(!cob.waitAnswer){
                    load_file();
                    //show_sources(sendCommandGdb, FALSE);
@@ -908,6 +962,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 break;
             case '?':
+                hVar.isHoverVar = FALSE;
                 if(!cob.waitAnswer){
                     show_help(TRUE);
                     cob.showFile=TRUE;
@@ -915,6 +970,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case 'a':
             case 'A':
+                hVar.isHoverVar = FALSE;
                 if(!cob.waitAnswer){
                     cob.input_character=' ';
                     gotoxy(1,VIEW_LINES);
@@ -939,6 +995,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 clearScreen();
                 set_terminal_size(VIEW_COLS, VIEW_LINES);
                 cob.showFile = TRUE;
+                lines = set_window_pos(&cob.line_pos);
                 break;
             case 'D':
             case 'd':
@@ -1146,9 +1203,31 @@ int handle_exe_mode(char *exePath) {
     strcat(baseName, ".exe");
 #endif
 
+    gotoxy(1,1);
+    print_no_resetBK("",color_white, color_black);
     clearScreen();
     disableEcho();
-    printf("Name: %s\n", baseName);
+    printf("Name: %s\n",baseName);        
+    draw_box_first(10,10,60,"Utilize the parameters below to compile your COBOL program:");
+    draw_box_border(10,11);
+    draw_box_border(71,11);
+    print_colorBK(color_yellow, color_black);
+    gotoxy(11,11);
+    printf("%-*s\r",60,"cobc -g -fsource-location -ftraceall -v -O0 -x prog.cob");
+    print_colorBK(color_white, color_black);
+    draw_box_last(10,12,60);
+    gotoxy(10,15);
+    printf("Press a key to continue...");
+    enableEcho();
+    fflush(stdout);
+    double check_start = getCurrentTime();
+    while (key_press(MOUSE_OFF)<=0) {
+        double end_time = getCurrentTime();
+        double elapsed_time = end_time - check_start;
+        if (elapsed_time > 4) {
+            break;
+        }
+    }
 
     init_cob_context(cwd, baseName);
     start_gdb(baseName, cob.cwd);
@@ -1231,24 +1310,20 @@ int handle_cob_files(int argc, char **argv, int arg_init) {
 
 int main(int argc, char **argv) {
     int arg_init=1;
-
     setup_locale();
+    init_terminal_colors();
 
     if(handle_connect_args(argc, argv)){
         arg_init=3;
     }
-
     if (handle_special_args(argc, argv, arg_init))
         return 0;
-
     if (!isCommandInstalled("gdb"))
         exit_with_message("GDB is not installed.", 0);
-
     if (argc >= 3 && strcmp(argv[arg_init], "--exe") == 0)
         handle_exe_mode(argv[arg_init+1]);
     else
         handle_cob_files(argc, argv, arg_init);
-
     print_color_reset();
     cursorON();
     printf("The end of the CobGDB execution.\n");
