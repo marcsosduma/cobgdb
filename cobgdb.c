@@ -725,17 +725,17 @@ int debug(int (*sendCommandGdb)(char *)){
         }
         cob.input_character = -1;
         if(cob.isStepOver<0){
-            cob.input_character = key_press(MOUSE_EXT);
             if(!cob.waitAnswer){
                 if(CHECKING_SCR_SIZE==FALSE){
                     CHECKING_SCR_SIZE=TRUE;
                     thread_create(&t1, td_check_screen_size, (void*)1);
                 } 
-                if(CHECKING_HOVER==FALSE && cob.input_character == 0){
+                if(CHECKING_HOVER==FALSE){
                     CHECKING_HOVER=TRUE;
                     thread_create(&t1, td_check_hover_var, (void *) &hVar );
                 }
             }
+            cob.input_character = key_press(MOUSE_EXT);
         }
         if(cob.connect[0]!='\0') cob.input_character='a';
         switch (cob.input_character)
