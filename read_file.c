@@ -414,3 +414,60 @@ struct st_bkpoint *load_breakpoints(int (*sendCommandGdb)(char *), struct st_bkp
     showCobMessage("Breakpoint file loaded.",1);
     return head;
 }
+
+void save_cfg_value(int value)
+{
+    char *home = NULL;
+    char msg[1024];
+
+    #if defined(_WIN32)
+    home = getenv("USERPROFILE");
+    if (!home) home = getenv("HOMEPATH");
+    #else
+    home = getenv("HOME");
+    #endif
+    if (!home) {
+        fprintf(stderr, "Error: could not determine HOME directory.\n");
+        return;
+    }
+    char path[512];
+    #if defined(_WIN32)
+    snprintf(path, sizeof(path), "%s\\cobgdb.cfg", home);
+    #else
+    snprintf(path, sizeof(path), "%s/cobgdb.cfg", home);
+    #endif
+    FILE *f = fopen(path, "w");
+    if (!f) {
+        showCobMessage("Error: unable to open file for writing", 1);
+        return;
+    }
+    fprintf(f, "%d\n", value);
+    fclose(f);
+    snprintf(msg, 1024, "Color %d saved to: %s", value, path);
+    showCobMessage(msg, 1);
+}
+
+int load_cfg_value(void)
+{
+    char *home = NULL;
+
+    #if defined(_WIN32)
+    home = getenv("USERPROFILE");
+    if (!home) home = getenv("HOMEPATH");
+    #else
+    home = getenv("HOME");
+    #endif
+    if (!home) return -1;
+    char path[512];
+    #if defined(_WIN32)
+    snprintf(path, sizeof(path), "%s\\cobgdb.cfg", home);
+    #else
+    snprintf(path, sizeof(path), "%s/cobgdb.cfg", home);
+    #endif
+    FILE *f = fopen(path, "r");
+    if (!f) return -1;
+    int value = -1;
+    fscanf(f, "%d", &value);
+    fclose(f);
+    return value;
+}

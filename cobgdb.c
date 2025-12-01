@@ -26,7 +26,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.2.0"
+#define COBGDB_VERSION "2.2.1"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -56,6 +56,8 @@ int mousey=-1;
 double check_hover_start=0;
 char * gdbOutput = NULL;
 int color_frame=color_light_blue;
+int highlight_bar;
+int sava_cfg = FALSE;
 
 ST_Line * LineDebug=NULL;
 ST_Attribute * Attributes=NULL;
@@ -446,7 +448,7 @@ int show_button() {
 int show_opt(){
     char * opt = " CobGDB                  GnuCOBOL GDB Interpreter";
     char aux[200];
-    snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-19, VIEW_COLS-19, opt);
+    snprintf(aux,VIEW_COLS+2,"%-*.*s\r", VIEW_COLS-19, VIEW_COLS-19, opt);
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
     if(cob.mouse>9) show_button();
@@ -470,7 +472,77 @@ int show_wait(){
     return TRUE;
 }
 
+
 int show_info() {
+    int len =
+    #if defined(_WIN32)
+        VIEW_COLS - 1;
+    #else
+        VIEW_COLS;
+    #endif
+
+    const char *msg = "";
+    int bg = color_black;
+    int fg = color_yellow;
+
+    if (cob.status_bar > 0) {
+        fg = color_pink;
+        switch (cob.status_bar) {
+            case 1: msg = "Parsing file"; break;
+            case 2: msg = "Loading file"; break;
+        }
+    } else if (cob.mouse != 0) {
+        fg = color_green;
+        switch (cob.mouse) {
+            case 1:  msg = "page up"; break;
+            case 2:  msg = "page down"; break;
+            case 3:  msg = "breakpoint"; break;
+            case 10: msg = "run"; break;
+            case 20: msg = "next"; break;
+            case 30: msg = "step"; break;
+            case 40: msg = "go"; break;
+            case 50: msg = "quit"; break;
+            case 60: msg = "switch to the debug output"; break;
+            case 70: msg = cob.showVariables ?
+                            "display of variables: ON" :
+                            "display of variables: OFF";
+                      break;
+            case 80: msg = "help"; break;
+        }
+    } else {
+        if (cob.debug_line > 0) {
+            if (cob.running) {
+                fg = color_red;
+                msg = "Running";
+            } else {
+                fg = color_green;
+                msg = "Debugging";
+            }
+        } else {
+            fg = color_yellow;
+            msg = cob.waitAnswer ? "Waiting" : "";
+        }
+    }
+    gotoxy(1, VIEW_LINES);
+    print_colorBK(fg, bg);
+    char out[512];
+    int mlen = (int)strlen(msg);
+    if (mlen > len)
+        mlen = len;
+    memcpy(out, msg, mlen);
+    memset(out + mlen, ' ', len - mlen);
+    out[len] = '\r';
+    fwrite(out, 1, len + 1, stdout);
+    gotoxy(1, VIEW_LINES);
+    show_button();
+    gotoxy(1, VIEW_LINES);
+    if (!cob.showFile)
+        fflush(stdout);
+    return TRUE;
+}
+
+
+int show_info1() {
     int len =
     #if defined(_WIN32)
         VIEW_COLS - 1;
@@ -612,6 +684,10 @@ int initTerminal(){
     printf("width= %d", width);
     printf(", height= %d\n", height);
     qtd_window_line = height-2;
+    highlight_bar=load_cfg_value();
+    if(highlight_bar>=0){
+        setBarColor(highlight_bar);
+    }
     return TRUE;
 }
 
@@ -804,6 +880,16 @@ int debug(int (*sendCommandGdb)(char *)){
                     cob.showFile=TRUE;
                 }
                 break;
+            case '+':  
+                highlight_bar= modifyBarColor(1);
+                sava_cfg=TRUE;
+                cob.showFile=TRUE;
+                break;
+            case '-':    
+                highlight_bar= modifyBarColor(-1);
+                sava_cfg=TRUE;
+                cob.showFile=TRUE;
+                break;
             case 'b':    
             case 'B':    
                 if(!cob.waitAnswer){
@@ -839,6 +925,9 @@ int debug(int (*sendCommandGdb)(char *)){
                 if(key=='Y' || key=='y'){
                     sendCommandGdb("gdb-exit\n");
                     bstop = 1;
+                }
+                if(sava_cfg){
+                    save_cfg_value(highlight_bar);
                 }
                 cob.showFile=TRUE; 
                 break;

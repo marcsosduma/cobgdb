@@ -337,7 +337,11 @@ char* getCurrentDirectory();
 int file_exists(const char *path);
 int save_breakpoints(struct st_bkpoint *head, char *filename);
 struct st_bkpoint *load_breakpoints(int (*sendCommandGdb)(char *), struct st_bkpoint *head, char *filename);
+void save_cfg_value(int value);
+int load_cfg_value(void);
 //terminal.c
+int modifyBarColor(int a);
+void setBarColor(int color);
 void get_terminal_size(int *width, int *height);
 void set_terminal_size(int width, int height);
 int key_press(int type);

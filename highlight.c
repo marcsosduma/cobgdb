@@ -132,29 +132,30 @@ int parseDigitOrAlpha(wchar_t * ch,struct st_highlt * h){
     return count;
 }
 
-
-#define BUF_MAX 8192
-
 int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
     struct st_highlt * h = hight;
-    wchar_t wcBuffer[512];
+    wchar_t wcBuffer[512];    
     int qtdMove=0;
     int tot=total;
     int fg=-1;
-    void (*fprint_colorBK)() = print_colorBK;
+    void (*fprint_colorBK)(int,int);
     int st = start;
-    
+    #if defined(_WIN32)
+    static HANDLE hConsole = NULL;
+    if (!hConsole)
+        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    #else
+    char    utf8buf[2048];
+    mbstate_t mbst = {0};
+    #endif
+
     while (st > 0 && h != NULL) {
         if (st < h->size) break;
         st -= h->size;
         h = h->next;
     }
     bkg = (bkg > 0) ? bkg : color_black;
-    if (bkg == color_dark_gray) {
-        fprint_colorBK = print_colorBK256c;
-    } else {
-        fprint_colorBK = print_colorBK;
-    }
+    fprint_colorBK = (bkg == color_dark_gray ? print_colorBK256c : print_colorBK);
     fprint_colorBK(bkg, bkg);
     fg = bkg;
     while (h != NULL && tot > 0) {
@@ -169,10 +170,13 @@ int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
             wcBuffer[qtdMove] = L'\0';
             #if defined(_WIN32)
             DWORD written;
-            WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE),
-                          wcBuffer, qtdMove, &written, NULL);
+            WriteConsoleW(hConsole, wcBuffer, qtdMove, &written, NULL);
             #else
-            printf("%*ls", qtdMove, wcBuffer);
+            const wchar_t *src = wcBuffer;
+            size_t out = wcsrtombs(utf8buf, &src, sizeof(utf8buf), &mbst);
+            if (out != (size_t)-1)
+                fwrite(utf8buf, 1, out, stdout);
+            //printf("%*ls", qtdMove, wcBuffer);
             #endif
         }
         tot -= qtdMove;

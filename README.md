@@ -128,6 +128,7 @@ In this example, p0.cob is the source code of the executable, and p1.cob is the 
 - `CTRL-G` - Go to: Go to Line.
 - `CTRL-S` - Save breakpoints.
 - `CTRL-B` - Load saved breakpoints.
+- `+/-` - Can be used to change the highlight color of the line.
 - `Q` - Quit: quits the program.
 
 ## 💡 Tip for Windows 11

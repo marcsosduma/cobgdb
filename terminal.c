@@ -93,15 +93,16 @@ static const int ansi256_fg_map[18] = {
      1,  5,  3,  7,
      8, 12, 10, 14,
      9, 13, 11, 15,
-     235, 242
+     52, 242
 };
-static const int ansi256_bg_map[18] = {
+static int ansi256_bg_map[18] = {
      0,  4,  2,  6,
      1,  5,  3,  7,
      8, 12, 10, 14,
      9, 13, 11, 15,
-     235, 242
+     52, 242
 };
+// 103, 138, 175, 202, 137, 115, 109, 74, 75, 172, 246
 
 void cursorON();
 void cursorOFF();
@@ -225,6 +226,17 @@ int readKeyLinux(int type) {
     return 0;
 }
 #endif
+
+int modifyBarColor(int a){
+    ansi256_bg_map[16]+= (a);
+    if(ansi256_bg_map[16]<1) ansi256_bg_map[16]=255;
+    if(ansi256_bg_map[16]>255) ansi256_bg_map[16]=1;
+    return ansi256_bg_map[16];
+}
+
+void setBarColor(int color){
+    ansi256_bg_map[16]=color;
+}
 
 void mouseCobHover(int col, int line){
     cob.mouse = 0;
