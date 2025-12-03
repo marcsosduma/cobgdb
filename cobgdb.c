@@ -697,12 +697,12 @@ int debug(int (*sendCommandGdb)(char *)){
     int tempValue = -1;
     char key=' ';
     thread_t t1;
+    double check_start = getCurrentTime();
     struct st_hoverer_var hVar ={
         .hover_var[0] = '\0',
         .isHoverVar = FALSE,
         .cobVar = NULL
     };
-    double check_start = getCurrentTime();
 
     initTerminal();
     cob.line_pos=0;
