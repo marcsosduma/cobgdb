@@ -702,6 +702,7 @@ int debug(int (*sendCommandGdb)(char *)){
         .isHoverVar = FALSE,
         .cobVar = NULL
     };
+    double check_start = getCurrentTime();
 
     initTerminal();
     cob.line_pos=0;
@@ -741,8 +742,8 @@ int debug(int (*sendCommandGdb)(char *)){
         cob.input_character = -1;
         if(cob.isStepOver<0){
             if(!cob.waitAnswer){
-                cob.input_character = key_press(MOUSE_EXT);
                 disableEcho();
+                cob.input_character = key_press(MOUSE_EXT);
                 if(CHECKING_SCR_SIZE==FALSE){
                     CHECKING_SCR_SIZE=TRUE;
                     thread_create(&t1, td_check_screen_size, (void*)1);
@@ -751,7 +752,15 @@ int debug(int (*sendCommandGdb)(char *)){
                     CHECKING_HOVER=TRUE;
                     thread_create(&t1, td_check_hover_var, (void *) &hVar );
                 }
+                check_start = getCurrentTime();
                 enableEcho();
+            }else{
+                double elapsed_time = getCurrentTime() - check_start;
+                if (elapsed_time > 0.5) {
+                    disableEcho();
+                    cob.input_character = key_press(MOUSE_EXT);
+                    enableEcho();
+                }
             }
         }
         if(cob.connect[0]!='\0') cob.input_character='a';
