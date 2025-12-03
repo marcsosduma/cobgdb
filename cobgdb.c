@@ -132,8 +132,8 @@ void freeBKList()
 }
 
 void show_version(){
-    printf("CobGDB - GnuCobol GDB Interpreter - version %s\n", COBGDB_VERSION);
-    printf("Copyright (C) 2013 Free Software Foundation, Inc.\n");
+    printf("CobGDB - GnuCOBOL GDB Interpreter - version %s\n", COBGDB_VERSION);
+    printf("Copyright (C) 2025 Free Software Foundation, Inc.\n");
     printf("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n");
     printf("This is free software: you are free to change and redistribute it.\n");
     #ifdef __MINGW32__
