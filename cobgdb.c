@@ -26,7 +26,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.2.1"
+#define COBGDB_VERSION "2.2.2"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -541,67 +541,6 @@ int show_info() {
     return TRUE;
 }
 
-
-int show_info1() {
-    int len =
-    #if defined(_WIN32)
-        VIEW_COLS - 1;
-    #else
-        VIEW_COLS;
-    #endif
-    const char *msg = NULL;
-    int bg = color_black;
-    int fg = color_yellow;
-    gotoxy(1, VIEW_LINES);
-    if (cob.status_bar > 0) {
-        fg = color_pink;
-        switch (cob.status_bar) {
-            case 1: msg = "Parsing file"; break;
-            case 2: msg = "Loading file"; break;
-        }
-    }else if (cob.mouse != 0) {
-        fg = color_green;
-        switch (cob.mouse) {
-            case 1:  msg = "page up"; break;
-            case 2:  msg = "page down"; break;
-            case 3:  msg = "breakpoint"; break;
-            case 10: msg = "run"; break;
-            case 20: msg = "next"; break;
-            case 30: msg = "step"; break;
-            case 40: msg = "go"; break;
-            case 50: msg = "quit"; break;
-            case 60: msg = "switch to the debug output"; break;
-            case 70:
-                msg = cob.showVariables ?
-                        "display of variables: ON" :
-                        "display of variables: OFF";
-                break;
-            case 80: msg = "help"; break;
-        }
-    }else {
-        if (cob.debug_line > 0 && !cob.running) {
-            fg = color_green;
-            msg = "Debugging";
-        }else if (cob.debug_line > 0 && cob.running) {
-            fg = color_red;
-            msg = "Running";
-        }else {
-            fg = color_yellow;
-            msg = cob.waitAnswer ? "Waiting" : " ";
-        }
-    }
-    if (msg != NULL) {
-        print_colorBK(fg, bg);
-        printf("%-*s\r", len, msg);
-    }
-    gotoxy(1, VIEW_LINES);
-    show_button();
-    gotoxy(1, VIEW_LINES);
-    if (!cob.showFile)
-        fflush(stdout);
-    return TRUE;
-}
-
 int show_file(Lines * lines_file, int line_pos, Lines ** line_debug){
     Lines * show_line=lines_file;
     int NUM_TXT=VIEW_COLS-4-cob.num_dig;    
@@ -802,6 +741,8 @@ int debug(int (*sendCommandGdb)(char *)){
         cob.input_character = -1;
         if(cob.isStepOver<0){
             if(!cob.waitAnswer){
+                cob.input_character = key_press(MOUSE_EXT);
+                disableEcho();
                 if(CHECKING_SCR_SIZE==FALSE){
                     CHECKING_SCR_SIZE=TRUE;
                     thread_create(&t1, td_check_screen_size, (void*)1);
@@ -810,8 +751,8 @@ int debug(int (*sendCommandGdb)(char *)){
                     CHECKING_HOVER=TRUE;
                     thread_create(&t1, td_check_hover_var, (void *) &hVar );
                 }
+                enableEcho();
             }
-            cob.input_character = key_press(MOUSE_EXT);
         }
         if(cob.connect[0]!='\0') cob.input_character='a';
         switch (cob.input_character)
