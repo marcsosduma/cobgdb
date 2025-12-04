@@ -26,7 +26,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.2.2"
+#define COBGDB_VERSION "2.2.3"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -41,6 +41,17 @@ struct st_cobgdb cob ={
     .showVariables = FALSE,
     .status_bar = 0,
 };
+
+typedef struct {
+    int version_len;
+    int title_len;
+    int left_label_len;
+    int total_fixed;
+    int pad_left;
+    int pad_right;
+} ST_HeaderLayout;
+
+ST_HeaderLayout headerLayout;
 
 int VIEW_COLS=  80;
 int VIEW_LINES= 24;
@@ -445,20 +456,43 @@ int show_button() {
     return TRUE;
 }
 
-int show_opt(){
-    char * opt = " CobGDB                  GnuCOBOL GDB Interpreter";
-    char aux[200];
-    snprintf(aux,VIEW_COLS+2,"%-*.*s\r", VIEW_COLS-19, VIEW_COLS-19, opt);
+void set_title_layout() {
+    int button_width=20;
+    headerLayout.left_label_len = strlen("CobGDB");
+    headerLayout.version_len    = strlen(COBGDB_VERSION);
+    headerLayout.title_len      = strlen("GnuCOBOL GDB Interpreter");
+    headerLayout.total_fixed =
+        1 +                                 // " "
+        headerLayout.left_label_len +       // "CobGDB"
+        2 +                                 // " v"
+        headerLayout.version_len +          // version
+        1 +                                 // " "
+        headerLayout.title_len +            // "GnuCOBOL GDB Interpreter"
+        1;                                  // " "
+    int free_space = VIEW_COLS - headerLayout.total_fixed - button_width;
+    if (free_space < 2) free_space = 2;
+    headerLayout.pad_left  = free_space / 2;
+    headerLayout.pad_right = free_space - headerLayout.pad_left;
+}
+
+int show_opt() {
+    char aux[512];
+    const char *leftLabel = "CobGDB";
+    const char *title     = "GnuCOBOL GDB Interpreter";
+
+    snprintf(aux, sizeof(aux), " %s v%s %*s %s %*s\r", leftLabel, COBGDB_VERSION,
+             headerLayout.pad_left, " ", title, headerLayout.pad_right, " ");
     gotoxy(1,1);
     printBK(aux, color_white, color_frame);
-    if(cob.mouse>9) show_button();
+    if (cob.mouse > 9) show_button();
     gotoxy(VIEW_COLS,1);
     print_colorBK(color_light_gray, color_frame);
     draw_utf8_text("\u2191");
-    gotoxy(1,VIEW_LINES-1);
-    snprintf(aux,VIEW_COLS+2,"%-*.*s\r",VIEW_COLS-1,VIEW_COLS-1,cob.file_cobol);
+    gotoxy(1, VIEW_LINES - 1);
+    const char *filename = (cob.file_cobol ? cob.file_cobol : "");
+    snprintf(aux, sizeof(aux), "%-*.*s\r", VIEW_COLS - 1, VIEW_COLS - 1, filename);
     printBK(aux, color_white, color_frame);
-    gotoxy(VIEW_COLS,VIEW_LINES-1);
+    gotoxy(VIEW_COLS, VIEW_LINES - 1);
     print_colorBK(color_light_gray, color_frame);
     draw_utf8_text("\u2193");
     return TRUE;
@@ -471,7 +505,6 @@ int show_wait(){
     fflush(stdout);
     return TRUE;
 }
-
 
 int show_info() {
     int len =
@@ -627,6 +660,7 @@ int initTerminal(){
     if(highlight_bar>=0){
         setBarColor(highlight_bar);
     }
+    set_title_layout();
     return TRUE;
 }
 
@@ -1030,6 +1064,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     VIEW_COLS=80;
                     VIEW_LINES=24;
                 }
+                set_title_layout();
                 freeWatchingList();
                 clearScreen();
                 set_terminal_size(VIEW_COLS, VIEW_LINES);

@@ -847,89 +847,93 @@ int check_hover(struct st_hoverer_var *hVar, int start_window_line, int start_li
     return ret;
 }
 
-int show_hover_var(int (*sendCommandGdb)(char *), struct st_hoverer_var *hVar){
+
+int show_hover_var(int (*sendCommandGdb)(char *), struct st_hoverer_var *hVar)
+{
     int fcollor = color_blue;
-    int bkg= color_light_gray; //color_dark_red; //
-    int size=10;
-    int len=60;
-    int posy=(hVar->hover_y>1)?hVar->hover_y:hVar->hover_y+1;
-    int posx=hVar->hover_x;
-    char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
-    if(functionName!=NULL){
-        hVar->cobVar = findFieldVariableByCobol(functionName, hVar->hover_var, DebuggerVariable);
-        if(hVar->cobVar==NULL){
-            hVar->isHoverVar = FALSE;
-            return FALSE;
-        }
-    }else{
+    int bkg = color_light_gray;
+    int size = 10;
+    int len = 60;
+    int posy = (hVar->hover_y > 1) ? hVar->hover_y : hVar->hover_y + 1;
+    int posx = hVar->hover_x;    
+    wchar_t *wcharString = NULL;
+    wchar_t wcBuffer[512];
+
+    char *functionName = MI2getCurrentFunctionName(sendCommandGdb);
+    if (!functionName) {
         hVar->isHoverVar = FALSE;
         return FALSE;
     }
-    MI2evalVariable(sendCommandGdb,hVar->cobVar,0,0);
-    hVar->cobVar->value=EspecialTrim(hVar->cobVar->value);
-    wchar_t * wcharString = (wchar_t*)malloc((500 + 1) * sizeof(wchar_t));
-    wcharString[0]='\0';
-    if(hVar->cobVar->value!=NULL){
+    hVar->cobVar = findFieldVariableByCobol(functionName, hVar->hover_var, DebuggerVariable);
+    if (!hVar->cobVar) {
+        hVar->isHoverVar = FALSE;
+        return FALSE;
+    }
+    MI2evalVariable(sendCommandGdb, hVar->cobVar, 0, 0);
+    hVar->cobVar->value = EspecialTrim(hVar->cobVar->value);
+    // Allocate base wchar buffer
+    size_t wideCharSize = 500;
+    wcharString = malloc((wideCharSize + 1) * sizeof(wchar_t));
+    if (!wcharString) return FALSE;
+    wcharString[0] = L'\0';
+    if (hVar->cobVar->value != NULL)
+    {
         #if defined(_WIN32)
-        int new_size = MultiByteToWideChar(CP_UTF8, 0, hVar->cobVar->value, -1, NULL, 0);
-        int wideCharSize = 500;
-        if(new_size>wideCharSize){
-            wideCharSize = new_size;
-            free(wcharString);
-            wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
+        int needed = MultiByteToWideChar(CP_UTF8, 0,  hVar->cobVar->value, -1, NULL, 0);
+        if (needed <= 0) goto end;
+        if ((size_t)needed > wideCharSize) {
+            wchar_t *newbuf = realloc(wcharString, (needed + 1) * sizeof(wchar_t));
+            if (!newbuf) goto end;
+            wcharString = newbuf;
+            wideCharSize = needed;
         }
-        MultiByteToWideChar(CP_UTF8, 0, hVar->cobVar->value, -1, wcharString,(strlen(hVar->cobVar->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
+        MultiByteToWideChar(CP_UTF8, 0, hVar->cobVar->value, -1, wcharString, (int)wideCharSize);
         #else
-        int wideCharSize = 500;
-        size_t new_size = mbstowcs(NULL, hVar->cobVar->value, 0);
-        if(new_size>(size_t)wideCharSize){
-            wideCharSize = new_size;
-            free(wcharString);
-            wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
+        size_t needed = mbstowcs(NULL, hVar->cobVar->value, 0);
+        if (needed == (size_t)-1) goto end;
+        if (needed > wideCharSize) {
+            wchar_t *newbuf = realloc(wcharString, (needed + 1) * sizeof(wchar_t));
+            if (!newbuf) goto end;
+            wcharString = newbuf;
+            wideCharSize = needed;
         }
-        mbstowcs(wcharString, hVar->cobVar->value, strlen(hVar->cobVar->value) + 1);
+        mbstowcs(wcharString, hVar->cobVar->value, wideCharSize);
         #endif
         int lenVar = wcslen(wcharString);
-        if(lenVar>len) lenVar=len;
-        size=lenVar+2;
-        if(size+posx>VIEW_COLS){
-            posx= VIEW_COLS - size - 4;
-        }
+        if (lenVar > len) lenVar = len;
+        size = lenVar + 2;
+        if (size + posx > VIEW_COLS)
+            posx = VIEW_COLS - size - 4;
     }
     print_colorBK(fcollor, bkg);
-    if(hVar->cobVar->parent!=NULL && strcmp(hVar->cobVar->parent->cobolName, hVar->cobVar->cobolName)!=0){
-        char name[500];
-        sprintf(name,"%s%c%s",hVar->cobVar->parent->cobolName, '.', hVar->cobVar->cobolName);
-        int sizen=strlen(name);
-        size=(sizen>size)?sizen:size;
-        if(size+posx>=VIEW_COLS){
-            posx= VIEW_COLS - size - 4;
+    // Draw variable name box
+    {
+        char *name = hVar->cobVar->cobolName;
+        char fullname[512];
+        if (hVar->cobVar->parent && strcmp(hVar->cobVar->parent->cobolName, name) != 0)
+        {
+            snprintf(fullname, sizeof(fullname), "%s.%s", hVar->cobVar->parent->cobolName, name);
+            name = fullname;
         }
-        draw_box_first(posx,posy++,size,name);
-    }else{
-        int sizen=strlen(hVar->cobVar->cobolName);
-        size=(sizen>size)?sizen:size;
-        if(size+posx>=VIEW_COLS){
-            posx= VIEW_COLS - size - 4;
-        }
-        draw_box_first(posx,posy++,size,hVar->cobVar->cobolName);
+        int namelen = strlen(name);
+        if (namelen > size) size = namelen;
+        if (size + posx >= VIEW_COLS)
+            posx = VIEW_COLS - size - 4;
+        draw_box_first(posx, posy++, size, name);
     }
     draw_box_border(posx, posy);
-    int to_move=wcslen(wcharString);
-    if(to_move>size) to_move=size;
-    #if defined(_WIN32)
-    wcsncpy(wcBuffer, wcharString, to_move);
-    wcBuffer[to_move]='\0';
-    printf("%*ls",size,wcBuffer);
-    #else
-    swprintf(wcBuffer, sizeof(wcBuffer) / sizeof(wcBuffer[0]), L"%*lc", size, L' ');
-    wcsncpy(wcBuffer, wcharString, to_move);
-    wcBuffer[size]='\0';
-    printf("%*ls",size,wcBuffer);
-    #endif
-    draw_box_border(posx+size+1, posy++);
+    // Wide char print area
+    {
+        int to_move = wcslen(wcharString);
+        if (to_move > size) to_move = size;
+        wcsncpy(wcBuffer, wcharString, to_move);
+        wcBuffer[to_move] = L'\0';
+        printf("%*ls", size, wcBuffer);
+    }
+    draw_box_border(posx + size + 1, posy++);
     draw_box_last(posx, posy, size);
-    if(wcharString!=NULL) free(wcharString);
+end:
+    if (wcharString) free(wcharString);
     return TRUE;
 }
 
