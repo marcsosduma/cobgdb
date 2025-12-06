@@ -427,7 +427,7 @@ void save_cfg_value(int value)
     home = getenv("HOME");
     #endif
     if (!home) {
-        fprintf(stderr, "Error: could not determine HOME directory.\n");
+        showCobMessage("Error: could not determine HOME directory.",1);
         return;
     }
     char path[512];
