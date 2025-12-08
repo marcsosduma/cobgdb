@@ -1,11 +1,10 @@
 # Project: cobgdb
 # Makefile originally  created by Dev-C++ 5.11
 
-# detect if running under unix by finding 'rm' in $PATH :
-#ifeq ($(wildcard $(addsuffix /rm,$(subst :, ,$(PATH)))),)
 ifeq ($(OS),Windows_NT)
     WINMODE = 1
 else
+    # detect if running under unix by finding 'rm' in $PATH :
     ifeq ($(wildcard $(addsuffix /rm,$(subst :, ,$(PATH)))),)
         WINMODE = 1
     else

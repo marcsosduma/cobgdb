@@ -9,20 +9,103 @@ on:
 jobs:
 
   build:
-
     runs-on: ubuntu-latest
-
+    timeout-minutes: 4
+    
     steps:
     - uses: actions/checkout@v4
 
-    - name: make
-      run: make
+    - name: make (term only)
+      run: |
+        which gcc
+        gcc --version
+        make -j2
 
     - name: make dist
       run: make dist
+
+    - name: make (x11)
+      run: |
+          make clean
+          sudo apt install -y libx11-dev
+          make -j2
+          cp cobgdb $(ls -d cobgdb-*)/cobgdb-x11
 
     - name: Upload dist package
       uses: actions/upload-artifact@v4
       with:
         name: cobgdb nightly dist
-        path: dist**
+        path: cobgdb-**
+
+
+  build-mingw:
+    runs-on: windows-latest
+    timeout-minutes: 8
+
+    env:
+      MSYS_ROOT: C:\MinGW
+      MSYS_BIN: C:\MinGW\msys\1.0\bin
+
+      MSYSTEM: MINGW32
+      MSYSPKGS: msys-coreutils msys-patch pthreads
+
+      # we use the MinGW backup as its upstream mirror is down
+      MSYS_URL:  https://www.arnoldtrembley.com/MinGW-bkup02.7z
+
+    defaults:
+      run:
+        shell: cmd
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: make (MinGW-Builds project GCC)
+      run: |
+        where gcc
+        gcc --version
+        make DIST_DIR=cobgdb-nightly
+
+    - name: make dist
+      run: make dist DIST_DIR=cobgdb-nightly CP=cp SLASH=/
+        
+    - name: Restore MSYS1 cache
+      id: restore-msys
+      uses: actions/cache/restore@v4
+      with:
+        key: cache-msys
+        path: ${{ env.MSYS_ROOT }}
+
+    - name: Install MSYS1
+      if: steps.restore-msys.outputs.cache-hit != 'true'
+      run: |
+        curl -L %MSYS_URL% -o msys.7z
+        7z x msys.7z -o%MSYS_ROOT%
+
+    - name: Cleanup MSYS1 env
+      if: steps.restore-msys.outputs.cache-hit != 'true'
+      run: |
+        rmdir /Q /S %MSYS_ROOT%\docs
+        rmdir /Q /S %MSYS_ROOT%\var
+        rem the old version of GDB does not work with cobgdb - if needed, use a newer multiarch GDB
+        del /Q %MSYS_ROOT%\bin\gdb*
+
+    - name: Save MSYS1 cache
+      if: steps.restore-msys.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        key: cache-msys
+        path: ${{ env.MSYS_ROOT }}
+
+    - name: make (MinGW GCC)
+      run: |
+        make DIST_DIR=cobgdb-nightly clean
+        %MSYS_BIN%\bash -lc "echo PATH is $PATH"
+        %MSYS_BIN%\bash -lc "printf \"GCC in $(cd $(dirname $(which gcc)); pwd -W):\n$(gcc --version)\""
+        %MSYS_BIN%\bash -lc "pushd \"%CD%\"; make DIST_DIR=cobgdb-nightly"
+        copy cobgdb.exe cobgdb-nightly\cobgdb-mingw.exe
+
+    - name: Upload dist package
+      uses: actions/upload-artifact@v4
+      with:
+        name: cobgdb nightly dist mingw
+        path: cobgdb-nightly
