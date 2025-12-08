@@ -52,6 +52,8 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *),
                    char * functionName){
     int bkg;
+    void (*fprint_colorBK)() = print_colorBK;
+
     (*notShow)--;
     if(*notShow<0 && strcmp(var->functionName,functionName)==0 && lin<VIEW_LINES-3){
         gotoxy(1,lin+2);
@@ -72,10 +74,11 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
         printBK(" ", color_white, color_frame);  
         bkg=color_black;
         if(line_pos==lin){
-            bkg = color_gray;
+            fprint_colorBK = print_colorBK256c;
+            bkg = color_dark_gray;
             currentVar = var;
         }
-        print_colorBK(color_pink, bkg);
+        fprint_colorBK(color_pink, bkg);
         int nm = strlen(varcobol)-start_linex_x;
         int start_linex_x2=0;
         if(nm>0){
@@ -86,12 +89,7 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
             start_linex_x2=-1 * nm;
         }
         if(var->value!=NULL){
-            wchar_t *wcharString = (wchar_t *)malloc((strlen(var->value) + 1) * sizeof(wchar_t));           
-            #if defined(_WIN32)
-            MultiByteToWideChar(CP_UTF8, 0, var->value, -1, wcharString,(strlen(var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
-            #else
-            mbstowcs(wcharString, var->value, strlen(var->value) + 1);
-            #endif
+            wchar_t *wcharString = to_wide(var->value);
             int lenVar = wcslen(wcharString);
             if(start_linex_x2<lenVar){
                 nm = lenVar-start_linex_x2;
@@ -189,6 +187,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
     int start_linex_x = 0;      
     expand = FALSE;
     int bkg;
+    void (*fprint_colorBK)() = print_colorBK;
 
     currentVar= NULL;
     char input_character= ' ';
@@ -218,8 +217,14 @@ int show_variables(int (*sendCommandGdb)(char *)){
             while(var==NULL && lin<VIEW_LINES-3){
                 gotoxy(1,lin+2);
                 print_colorBK(color_black, color_frame); printf(" ");
-                bkg=(line_pos==lin)?color_gray:color_black;
-                print_colorBK(color_black, bkg);
+                if (line_pos==lin){
+                    bkg = color_dark_gray;
+                    fprint_colorBK = print_colorBK256c;
+                } else {
+                    bkg = color_black;
+                    fprint_colorBK = print_colorBK;
+                }
+                fprint_colorBK(color_black, bkg);
                 printf("%*s",VIEW_COLS-2," ");
                 print_colorBK(color_black, color_frame); printf(" ");
                 lin++;
@@ -319,7 +324,8 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
     int var_color = color_yellow;
     int value_color = color_green;
     int bcolor = bkg;
-
+    void (*fprint_colorBK)() = print_colorBK;
+    
     if(lin<VIEW_LINES-3){
         gotoxy(10,lin+2);
         if(cob.ctlVar!=var->ctlVar){
@@ -333,12 +339,13 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
         sprintf(varcobol,"%.*s%c%s: ",level*2," ",'-',var->cobolName);
         bcolor=bkg;
         if(line_pos==lin){
-            bcolor = color_gray;
+            bcolor = color_m_gray;
             currentVar = var;
+            fprint_colorBK = print_colorBK256c;
         }
-        print_colorBK(color_white, bkg);
+        fprint_colorBK(color_white, bkg);
         draw_box_border(10,lin+2);
-        print_colorBK(var_color, bcolor);
+        fprint_colorBK(var_color, bcolor);
         int nm = strlen(varcobol)-start_linex_x;
         int start_linex_x2=0;
         if(nm>0){
@@ -348,17 +355,12 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
             start_linex_x2=-1 * nm;
         }
         if(var->value!=NULL){
-            wchar_t *wcharString = (wchar_t *)malloc((strlen(var->value) + 1) * sizeof(wchar_t));           
-            #if defined(_WIN32)
-            MultiByteToWideChar(CP_UTF8, 0, var->value, -1, wcharString,(strlen(var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
-            #else
-            mbstowcs(wcharString, var->value, strlen(var->value) + 1);
-            #endif
+            wchar_t *wcharString = to_wide(var->value);
             int lenVar = wcslen(wcharString);
             if(start_linex_x2<lenVar){
                 nm = lenVar-start_linex_x2;
                 if(nm>linW) nm=linW;
-                print_colorBK(value_color, bcolor);
+                fprint_colorBK(value_color, bcolor);
                 wcsncpy(wcBuffer, &wcharString[start_linex_x2], nm);
                 wcBuffer[nm]='\0';
                 printf("%ls",wcBuffer);
@@ -366,14 +368,14 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
             }
             free(wcharString);
         }
-        print_colorBK(value_color, bcolor);
+        fprint_colorBK(value_color, bcolor);
         if(linW>0){
             printf("%*ls",linW+1,L" ");
-            print_colorBK(color_white, bkg);
+            fprint_colorBK(color_white, bkg);
             draw_box_border(72,lin+2);
         }else{
             printf("%ls",L" ");  
-            print_colorBK(color_white, bkg);
+            fprint_colorBK(color_white, bkg);
             draw_box_border(72,lin+2);
         }
         lin++;
@@ -808,19 +810,147 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
     if(wcharString!=NULL) free(wcharString);
 }
 
+int check_hover(struct st_hoverer_var *hVar, int start_window_line, int start_line_x, int posx, int posy){
+    int ret = FALSE;
+    Lines * line = cob.lines;
+    int tmp_posy = posy;
+    int tmp_posx = posx+start_line_x;
+    if(line!=NULL){
+        while(line->file_line<=start_window_line){
+            if(line->line_after!=NULL) line=line->line_after;
+        }
+        tmp_posy--;
+        while(line!=NULL && (tmp_posy--)>0){
+            if(line->line_after!=NULL) line=line->line_after;
+        }
+        if(line!=NULL){
+            struct st_highlt * h = line->high;
+            int acc = 2+cob.num_dig;
+            while(h!=NULL && (acc+h->size)<tmp_posx){
+                acc += h->size;
+                h=h->next;
+            }
+            if(h!=NULL && h->size<100){
+                wcstombs(hVar->hover_var,h->token, h->size);
+                hVar->hover_var[h->size]='\0';
+                if(isVariableByCobol(hVar->hover_var)==TRUE){
+                        hVar->hover_x = posx;
+                        hVar->hover_y = posy;
+                        hVar->isHoverVar = TRUE;
+                        hVar->cobVar = NULL;
+                        cob.showFile = TRUE;
+                        ret = TRUE;
+                }
+            }
+        }
+    }
+    return ret;
+}
+
+
+int show_hover_var(int (*sendCommandGdb)(char *), struct st_hoverer_var *hVar)
+{
+    int fcollor = color_blue;
+    int bkg = color_light_gray;
+    int size = 10;
+    int len = 60;
+    int posy = (hVar->hover_y > 1) ? hVar->hover_y : hVar->hover_y + 1;
+    int posx = hVar->hover_x;    
+    wchar_t *wcharString = NULL;
+    wchar_t wcBuffer[512];
+
+    char *functionName = MI2getCurrentFunctionName(sendCommandGdb);
+    if (!functionName) {
+        hVar->isHoverVar = FALSE;
+        return FALSE;
+    }
+    hVar->cobVar = findFieldVariableByCobol(functionName, hVar->hover_var, DebuggerVariable);
+    if (!hVar->cobVar) {
+        hVar->isHoverVar = FALSE;
+        return FALSE;
+    }
+    MI2evalVariable(sendCommandGdb, hVar->cobVar, 0, 0);
+    hVar->cobVar->value = EspecialTrim(hVar->cobVar->value);
+    // Allocate base wchar buffer
+    size_t wideCharSize = 500;
+    wcharString = malloc((wideCharSize + 1) * sizeof(wchar_t));
+    if (!wcharString) return FALSE;
+    wcharString[0] = L'\0';
+    if (hVar->cobVar->value != NULL)
+    {
+        #if defined(_WIN32)
+        int needed = MultiByteToWideChar(CP_UTF8, 0,  hVar->cobVar->value, -1, NULL, 0);
+        if (needed <= 0) goto end;
+        if ((size_t)needed > wideCharSize) {
+            wchar_t *newbuf = realloc(wcharString, (needed + 1) * sizeof(wchar_t));
+            if (!newbuf) goto end;
+            wcharString = newbuf;
+            wideCharSize = needed;
+        }
+        MultiByteToWideChar(CP_UTF8, 0, hVar->cobVar->value, -1, wcharString, (int)wideCharSize);
+        #else
+        size_t needed = mbstowcs(NULL, hVar->cobVar->value, 0);
+        if (needed == (size_t)-1) goto end;
+        if (needed > wideCharSize) {
+            wchar_t *newbuf = realloc(wcharString, (needed + 1) * sizeof(wchar_t));
+            if (!newbuf) goto end;
+            wcharString = newbuf;
+            wideCharSize = needed;
+        }
+        mbstowcs(wcharString, hVar->cobVar->value, wideCharSize);
+        #endif
+        int lenVar = wcslen(wcharString);
+        if (lenVar > len) lenVar = len;
+        size = lenVar + 2;
+        if (size + posx > VIEW_COLS)
+            posx = VIEW_COLS - size - 4;
+    }
+    print_colorBK(fcollor, bkg);
+    // Draw variable name box
+    {
+        char *name = hVar->cobVar->cobolName;
+        char fullname[512];
+        if (hVar->cobVar->parent && strcmp(hVar->cobVar->parent->cobolName, name) != 0)
+        {
+            snprintf(fullname, sizeof(fullname), "%s.%s", hVar->cobVar->parent->cobolName, name);
+            name = fullname;
+        }
+        int namelen = strlen(name);
+        if (namelen > size) size = namelen;
+        if (size + posx >= VIEW_COLS)
+            posx = VIEW_COLS - size - 4;
+        draw_box_first(posx, posy++, size, name);
+    }
+    draw_box_border(posx, posy);
+    // Wide char print area
+    {
+        int to_move = wcslen(wcharString);
+        if (to_move > size) to_move = size;
+        wcsncpy(wcBuffer, wcharString, to_move);
+        wcBuffer[to_move] = L'\0';
+        printf("%*ls", size, wcBuffer);
+    }
+    draw_box_border(posx + size + 1, posy++);
+    draw_box_last(posx, posy, size);
+end:
+    if (wcharString) free(wcharString);
+    return TRUE;
+}
+
 #define MAX_FILES 100
 void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     char input_character=-1;
     int bkgr = color_dark_red;
     int bkg;
     int frg = color_white;
-    int csel = color_light_gray;
+    int csel = color_m_gray;
     int line_pos=0;
     char files[MAX_FILES][512];
     int qtd_files=0;
     int start_file=0;
     int file_sel = -1;
     boolean show = TRUE;
+    void (*fprint_colorBK)() = print_colorBK;
 
     qtd_files = MI2sourceFiles(sendCommandGdb,files);
     if(mustParse){
@@ -852,8 +982,8 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     while(input_character!=-100){
         disableEcho();
         gotoxy(1,1);
-        int lin = 7;
-        int col = 9;
+        int lin = (VIEW_LINES-12)/2;
+        int col = (VIEW_COLS-60)/2;
         int size = 60;
         if(show){
             gotoxy(col,lin);
@@ -865,13 +995,19 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
             while(pos<10){
                 print_colorBK(frg, bkgr);
                 draw_box_border(col, lin);
-                bkg=(line_pos==pos)?csel:bkgr;
-                print_colorBK(frg, bkg);
+                if(line_pos==pos){
+                    bkg = csel;
+                    fprint_colorBK = print_colorBK256c;
+                } else {
+                    bkg = bkgr;
+                    fprint_colorBK = print_colorBK;
+                }
+                fprint_colorBK(frg, bkg);
                 if(f<qtd_files){
                     int len = strlen(files[f]);
                     if(len>60){
                         int start=len-56;
-                        printf("...%-60s",&files[f][start]);
+                        printf("...%-57s",&files[f][start]);
                     }else{
                         printf("%-60s",files[f]);
                     }
@@ -962,7 +1098,7 @@ void load_file(){
     int bkgr = color_dark_red;
     int bkg;
     int frg = color_white;
-    int csel = color_light_gray;
+    int csel = color_m_gray;
     int line_pos=0;
     char files[MAX_FILES][512];
     char cwd[512];
@@ -978,7 +1114,8 @@ void load_file(){
     char str1[512];
     int i=0;
     DIR *d;
-    
+    void (*fprint_colorBK)() = print_colorBK;
+
     str[0] = '\0';
     str1[0] = '\0';
     getPathName(cwd, cob.first_file);
@@ -1008,8 +1145,8 @@ void load_file(){
         while(input_character!=-100){
             disableEcho();
             gotoxy(1,1);
-            int lin = 7;
-            int col = 9;
+            int lin = (VIEW_LINES-12)/2;
+            int col = (VIEW_COLS-60)/2;
             int size = 60;
             if(show){
                 gotoxy(col,lin);
@@ -1021,13 +1158,19 @@ void load_file(){
                 while(pos<10){
                     print_colorBK(frg, bkgr);
                     draw_box_border(col, lin);
-                    bkg=(line_pos==pos)?csel:bkgr;
-                    print_colorBK(frg, bkg);
+                    if(line_pos==pos){
+                        bkg = csel;
+                        fprint_colorBK = print_colorBK256c;
+                    } else {
+                        bkg = bkgr;
+                        fprint_colorBK = print_colorBK;
+                    }
+                    fprint_colorBK(frg, bkg);
                     if(f<qtd_files){
                         int len = strlen(files[f]);
                         if(len>60){
                             int start=len-56;
-                            printf("...%-60s",&files[f][start]);
+                            printf("...%-57s",&files[f][start]);
                         }else{
                             printf("%-60s",files[f]);
                         }
@@ -1043,7 +1186,7 @@ void load_file(){
                 draw_box_last(col, lin, size);
             }
             strcpy(str1,str);
-            gotoxy(1,24); 
+            gotoxy(1,VIEW_LINES); 
             print_colorBK(color_gray, color_black);
             if(strlen(str)>0)
                 printf("Search: %-60s\r", str);
@@ -1141,12 +1284,13 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
     int bkgr = color_dark_red;
     int bkg;
     int frg = color_white;
-    int csel = color_light_gray;
+    int csel = color_m_gray;
     int line_pos=0;
     int start_file=0;
     int lmax=VIEW_LINES/2+3;
     //int file_sel = -1;
     boolean show = TRUE;
+    void (*fprint_colorBK)() = print_colorBK;
 
     disableEcho();
     while(input_character!=-100){
@@ -1164,8 +1308,15 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
                 print_colorBK(frg, bkgr);
                 draw_box_border(col, lin);
                 if(f<qtt_lines){
-                    bkg=(line_pos==pos)?csel:bkgr;
-                    print_colorBK(ctext[f], bkg);
+                    if(line_pos==pos){
+                        bkg = csel;
+                        fprint_colorBK = print_colorBK256c;
+                    } else {
+                        bkg = bkgr;
+                        fprint_colorBK = print_colorBK;
+                    }
+                    fprint_colorBK(ctext[f], bkg);
+                    //print_colorBK(ctext[f], bkg);
                     printf("%-70s",text[f]);
                 }else{
                     print_colorBK(color_white, bkgr);
@@ -1266,7 +1417,10 @@ void show_help(int is_popup){
         "O - Changes the focus to the window where the debugging code is being",
         "    displayed (Windows or X11 only).",
         "CTRL-F - Find: search for text in the source code.",
-        "CTRL-L - Go to: Go to Line.",
+        "CTRL-G - Go to: Go to Line.",
+        "CTRL-S - Save breakpoints.",
+        "CTRL-B - Load saved breakpoints.",
+        "+/- - Can be used to change the highlight color of the line.",
         "Q - Quit: quits the program.",
         "  ",
         "CobGDB takes one or more programs with COB/CBL extension as parameters",
@@ -1305,7 +1459,8 @@ void show_help(int is_popup){
         color_white, color_white, color_white, color_white, color_white, color_white,
         color_white, color_white, color_white, color_white, color_white, color_white, 
         color_white, color_white, color_white, color_white, color_white, color_white,
-        color_white, color_white, color_white, color_white, color_white, 
+        color_white, color_white, color_white, color_white, color_white, color_white, 
+        color_white,color_white,
         color_yellow, color_white, color_white, color_yellow,
         color_white, color_white, color_white, color_white, color_white, color_white, 
         color_yellow, color_white, color_yellow,color_white,color_white, color_yellow,

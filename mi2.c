@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 #if defined(__linux__)
 #include <unistd.h>
 #endif
@@ -41,7 +42,8 @@ enum GDB_STATUS {
     GDB_STEP_OUT_END,
     GDB_SIGNAL_STOP,
     GDB_STOPPED,
-    GDB_CONNECTED
+    GDB_CONNECTED,
+    GDB_ERROR
 };
 
 #pragma GCC diagnostic push
@@ -119,11 +121,12 @@ int couldBeOutput(char * line) {
 }
 
 void loadLibrary(char * file){
-    char baseName[256];
+    char temp[256];
     char nameCFile[1024];
-    fileNameWithoutExtension(file, &baseName[0]);
-    normalizePath(baseName);
-    strcpy(baseName,getFileNameFromPath(baseName));
+    char baseName[256]; 
+    fileNameWithoutExtension(file, &temp[0]);
+    normalizePath(temp);
+    strcpy(baseName,getFileNameFromPath(temp));
     // C File
     snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
     if(file_exists(nameCFile)){
@@ -152,7 +155,7 @@ int loadCobSourceFile(char * atualFile, char * newFile){
 ST_Line * hasLineCobol(ST_MIInfo * parsed){
     boolean find=FALSE;
     ST_Line * hasLine = NULL;
-    if(parsed->outOfBandRecord->output->next!=NULL){
+    if(parsed->outOfBandRecord!=NULL && parsed->outOfBandRecord->output!=NULL && parsed->outOfBandRecord->output->next!=NULL){
         ST_TableValues * search1=parseMIvalueOf(parsed->outOfBandRecord->output, "frame.fullname", NULL, &find);
         if(search1==NULL) return NULL;
         find=FALSE;
@@ -225,7 +228,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                 ST_MIInfo * parsed = parseMI(line);
                 if (parsed->resultRecords!=NULL){
                     if(strcmp(parsed->resultRecords->resultClass,"error")==0 || strcmp(parsed->resultRecords->resultClass,"done")==0 ) {
-                        *status=GDB_STEP_END;
+                        *status=(strcmp(parsed->resultRecords->resultClass,"error")==0)?GDB_ERROR:GDB_STEP_END;
                         cob.waitAnswer=FALSE;
                         cob.running=FALSE;
                         cob.showFile=TRUE;
@@ -236,6 +239,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                         }
                     }else if(strcmp(parsed->resultRecords->resultClass,"connected")==0){
                         *status=GDB_CONNECTED;
+                        sendCommandGdb("exec-continue\n");
                     }
                 }
                 if(parsed!=NULL && parsed->outOfBandRecord!=NULL){
@@ -560,17 +564,21 @@ int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNu
     return TRUE;
 }
 
+void MI2removeAllBreakPoint(int (*sendCommandGdb)(char *) ){
+    int status=0;
+    char command[256];
+    strcpy(command,"break-delete\n");
+    sendCommandGdb(command);
+    do{
+        sendCommandGdb("");
+        MI2onOuput(sendCommandGdb, -1, &status);
+    }while(status==GDB_RUNNING);
+}
+
 int MI2removeBreakPoint (int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
     ST_Line * line = getLineC(fileCobol, lineNumber);
-    int status=0;
     if(line!=NULL){
-        char command[256];
-        strcpy(command,"break-delete\n");
-        sendCommandGdb(command);
-        do{
-            sendCommandGdb("");
-            MI2onOuput(sendCommandGdb, -1, &status);
-        }while(status==GDB_RUNNING);
+        MI2removeAllBreakPoint (sendCommandGdb);
         ST_bk * search = BPList;
         ST_bk * before = NULL;
         ST_bk * remove = NULL;
@@ -795,85 +803,163 @@ char* cleanRawValueWithEscape(const char* rawValue) {
     return out;
 }
 
-
-int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, int thread, int frame){
-    int status;
-    char command[512];
-    char st[100];
+int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable *var, int thread, int frame){
+    if (var == NULL) return FALSE;
+    int status = 0;
+    const size_t CMD_CAP = 1024;
+    char command[CMD_CAP];
     int type = 1;
-    
-    //hasCobGetFieldStringFunction = FALSE;    
-    if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
-        strcpy(command,"data-evaluate-expression ");
-        if (thread != 0) {
-            sprintf(st,"--thread %d --frame %d ",thread, frame);
-            strcat(command,st);
-        }
-        sprintf(st,"\"(char *)cob_get_field_str_buffered(&%s)\"\n", var->cName);
-        strcat(command,st);
-    } else if (strncmp(var->cName,"f_",2)==0) {
-        sprintf(st,"%s.data", var->cName);
-        sprintf(command,"data-read-memory %s u 1 1 %d\n", st, var->size);
-    } else {
-        if (var->size<=0) var->size=500;
-        sprintf(command,"data-read-memory %s u 1 1 %d\n", var->cName, var->size);
-        type = 2;
+
+    if (var->value != NULL) {
+        free(var->value);
+        var->value = NULL;
     }
-    int tk=sendCommandGdb(command);
-    ST_MIInfo * parsed=NULL;
-    do{
-        sendCommandGdb("");
-        parsed=MI2onOuput(sendCommandGdb, tk, &status);
-    }while(status==GDB_RUNNING);
-    //ST_MIInfo * parsed=MI2onOuput(sendCommandGdb, tk, &status);
-    if (hasCobGetFieldStringFunction && type!=2){
-        if(parsed!=NULL){
-                if(parsed->resultRecords!=NULL && strcmp(parsed->resultRecords->resultClass,"error")==0){
-                    hasCobGetFieldStringFunction=FALSE;
-                    freeParsed(parsed); 
-                    MI2evalVariable(sendCommandGdb, var, thread, frame);
-                }else{
-                    int find=FALSE;
-                    ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "value", NULL, &find);
-                    if(search!=NULL && search->value!=NULL){
-                        var->value= parseUsage(search->value);
-                    }
-                    freeParsed(parsed);
+    if (var->size <= 0) var->size = 500;
+    if (var->size > 1000000) var->size = 1000000; /* Max size */
+    int attempts = 0;
+    const int MAX_ATTEMPTS = 2;
+    while (attempts < MAX_ATTEMPTS) {
+        attempts++;
+        command[0] = '\0';
+        if (hasCobGetFieldStringFunction && var->cName != NULL && strncmp(var->cName, "f_", 2) == 0) {
+            /* data-evaluate-expression "(char *)cob_get_field_str_buffered(&<var>)" */
+            if (thread != 0) {
+                if (snprintf(command, CMD_CAP, "data-evaluate-expression --thread %d --frame %d \"(char *)cob_get_field_str_buffered(&%s)\"\n",
+                             thread, frame, var->cName) >= (int)CMD_CAP) {
+                    return FALSE;
                 }
-        }
-    }else{
-        if(parsed!=NULL){
-            int find=FALSE;
-            ST_TableValues * search=parseMIvalueOf(parsed->resultRecords->results, "data", NULL, &find);
-            if(search!=NULL && search->key!=NULL){
-                ST_TableValues * data = search->array;
-                char * temp=malloc(var->size+500);
-                int pos=0;
-                while (data != NULL) {
-                    int num = strtol(data->value, NULL, 10);
-                    if (num < 0 || num > 255) {
-                        data = data->next;
-                        continue;
-                    }
-                    if (strcmp(var->attribute->type,"group")==0 && (num < 32 || num == 92 || (num > 126 && num < 256))) { 
-                        temp[pos++] = '\\';
-                        // Escape octal to temp
-                        temp[pos++] = (char)('0' + ((num >> 6) & 7));
-                        temp[pos++] = (char)('0' + ((num >> 3) & 7));
-                        temp[pos++] = (char)('0' + (num & 7));
-                    } else {
-                        temp[pos++] = (char)num;
-                    }
-                    data = data->next;
+            } else {
+                if (snprintf(command, CMD_CAP, "data-evaluate-expression \"(char *)cob_get_field_str_buffered(&%s)\"\n",
+                             var->cName) >= (int)CMD_CAP) {
+                    return FALSE;
                 }
-                temp[pos]='\0';
-                var->value=debugParseBuilIn(temp, var->size, var->attribute->scale, var->attribute->type, var->attribute->flags, var->attribute->digits);
-                free(temp);
             }
-            freeParsed(parsed);
+            type = 1;
+        } else if (var->cName != NULL && strncmp(var->cName, "f_", 2) == 0) {
+            /* data-read-memory <name>.data u 1 1 <size> */
+            if (snprintf(command, CMD_CAP, "data-read-memory %s.data u 1 1 %d\n", var->cName, var->size) >= (int)CMD_CAP) {
+                return FALSE;
+            }
+            type = 2;
+        } else {
+            /* data-read-memory <cName> u 1 1 <size> */
+            if (snprintf(command, CMD_CAP, "data-read-memory %s u 1 1 %d\n", var->cName ? var->cName : "", var->size) >= (int)CMD_CAP) {
+                return FALSE;
+            }
+            type = 2;
         }
-    } 
-    return TRUE;
+        int tk = sendCommandGdb(command);
+        ST_MIInfo *parsed = NULL;
+        do {
+            sendCommandGdb("");
+            parsed = MI2onOuput(sendCommandGdb, tk, &status);
+            if (parsed == NULL && status == GDB_RUNNING) {
+                /* continue; */
+            }
+        } while (status == GDB_RUNNING);
+
+        if (parsed == NULL) {
+            if (attempts >= MAX_ATTEMPTS) return FALSE;
+            else continue;
+        }
+        if (hasCobGetFieldStringFunction && type != 2 && var->cName != NULL && strncmp(var->cName, "f_", 2) == 0) {
+            if (parsed->resultRecords != NULL && parsed->resultRecords->resultClass != NULL &&
+                strcmp(parsed->resultRecords->resultClass, "error") == 0) {
+                hasCobGetFieldStringFunction = FALSE;
+                freeParsed(parsed);
+                continue;
+            } else {
+                int find = FALSE;
+                ST_TableValues *search = parseMIvalueOf(parsed->resultRecords ? parsed->resultRecords->results : NULL, "value", NULL, &find);
+                if (search != NULL && search->value != NULL) {
+                    char *tmp = parseUsage(search->value);
+                    if (tmp != NULL) {
+                        var->value = tmp;
+                    }
+                }
+                freeParsed(parsed);
+                return TRUE;
+            }
+        } else {
+            if (parsed->resultRecords != NULL) {
+                int find = FALSE;
+                ST_TableValues *search = parseMIvalueOf(parsed->resultRecords->results, "data", NULL, &find);
+                if (search != NULL && search->key != NULL) {
+                    ST_TableValues *data = search->array;
+                    size_t tempCap = (size_t)var->size + 512;
+                    char *temp = (char*)malloc(tempCap);
+                    if (temp == NULL) {
+                        freeParsed(parsed);
+                        return FALSE;
+                    }
+                    size_t pos = 0;
+                    while (data != NULL) {
+                        errno = 0;
+                        long num = strtol(data->value, NULL, 10);
+                        if (errno != 0) {
+                            data = data->next;
+                            continue;
+                        }
+                        if (num < 0 || num > 255) {
+                            data = data->next;
+                            continue;
+                        }
+                        if (var->attribute != NULL && var->attribute->type != NULL &&
+                            strcmp(var->attribute->type, "group") == 0 &&
+                            (num < 32 || num == 92 || (num > 126 && num < 256))) {
+                            if (pos + 4 >= tempCap) {
+                                size_t newCap = tempCap + 512;
+                                char *nt = (char*)realloc(temp, newCap);
+                                if (nt == NULL) break;
+                                temp = nt; tempCap = newCap;
+                            }
+                            temp[pos++] = '\\';
+                            temp[pos++] = (char)('0' + ((num >> 6) & 7));
+                            temp[pos++] = (char)('0' + ((num >> 3) & 7));
+                            temp[pos++] = (char)('0' + (num & 7));
+                        } else {
+                            if (pos + 1 >= tempCap) {
+                                size_t newCap = tempCap + 512;
+                                char *nt = (char*)realloc(temp, newCap);
+                                if (nt == NULL) break;
+                                temp = nt; tempCap = newCap;
+                            }
+                            temp[pos++] = (char)num;
+                        }
+                        data = data->next;
+                    }
+                    if (pos >= tempCap) {
+                        char *nt = (char*)realloc(temp, tempCap + 1);
+                        if (nt != NULL) {
+                            temp = nt; tempCap += 1;
+                        }
+                    }
+                    temp[pos] = '\0';
+                    char *parsedValue = debugParseBuilIn(temp, var->size,
+                                                         var->attribute ? var->attribute->scale : 0,
+                                                         var->attribute ? var->attribute->type : NULL,
+                                                         var->attribute ? var->attribute->flags : 0,
+                                                         var->attribute ? var->attribute->digits : 0);
+                    free(temp);
+                    if (parsedValue != NULL) {
+                        var->value = parsedValue;
+                        freeParsed(parsed);
+                        return TRUE;
+                    } else {
+                        freeParsed(parsed);
+                        return FALSE;
+                    }
+                } else {
+                    freeParsed(parsed);
+                    return FALSE;
+                }
+            } else {
+                freeParsed(parsed);
+                return FALSE;
+            }
+        }
+    }
+    return FALSE;
 }
 
 void binaryDataToHexString(const unsigned char *binary_data, size_t dataSize, char *hexString, size_t hexStringSize) {
@@ -883,64 +969,107 @@ void binaryDataToHexString(const unsigned char *binary_data, size_t dataSize, ch
     }
 }
 
-int MI2editVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable * var, char * rawValue){
-    int status, tk=0;
-    char aux[256];
-
-    //hasCobGetFieldStringFunction = FALSE;
-    if(gdbOutput!=NULL){
+int MI2editVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable *var, char *rawValue)
+{
+    if (var == NULL || rawValue == NULL || sendCommandGdb == NULL)
+        return FALSE;
+    int status = 0;
+    int tk = 0;
+    if (gdbOutput != NULL) {
         free(gdbOutput);
-        gdbOutput=NULL;
+        gdbOutput = NULL;
     }
-    if (var->attribute!=NULL && strcmp(var->attribute->type,"integer")==0){
+    if (var->attribute != NULL && var->attribute->type != NULL && strcmp(var->attribute->type, "integer") == 0)
+    {
+        char *cleaned = cleanRawValue(rawValue);
+        if (!cleaned) return FALSE;
         char command[512];
-        char * cleanedRawValue = cleanRawValue(rawValue);
-        sprintf(command,"gdb-set var %s=%s\n", var->variablesByC, cleanedRawValue);
+        int n = snprintf(command, sizeof(command), "gdb-set var %s=%s\n", var->variablesByC ? var->variablesByC : "", cleaned);
+        free(cleaned);
+        if (n < 0 || n >= (int)sizeof(command))
+            return FALSE;
         sendCommandGdb(command);
-        do{
-           sendCommandGdb("");
-           MI2onOuput(sendCommandGdb, tk, &status);
-        }while(status==GDB_RUNNING);
-        free(cleanedRawValue);
-    }else if (hasCobGetFieldStringFunction && strncmp(var->cName,"f_",2)==0) {
-        char * cleanedRawValue = cleanRawValueWithEscape(rawValue);
-        int q = 200 + strlen(cleanedRawValue);
-        char command[q];
-        sprintf(command,"data-evaluate-expression \"(int)cob_put_field_str(&%s,\\\"%s\\\")\"\n", var->cName, cleanedRawValue);
+        do {
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, tk, &status);
+        } while (status == GDB_RUNNING);
+        return TRUE;
+    }
+    if (hasCobGetFieldStringFunction && var->cName != NULL && strncmp(var->cName, "f_", 2) == 0)
+    {
+        char *cleaned = cleanRawValueWithEscape(rawValue);
+        if (!cleaned) return FALSE;
+        size_t len = strlen(cleaned);
+        size_t cmdCap = 300 + 4*len;
+        char *command = malloc(cmdCap);
+        if (!command) {
+            free(cleaned);
+            return FALSE;
+        }
+        int n = snprintf(command, cmdCap, "data-evaluate-expression \"(int)cob_put_field_str(&%s,\\\"%s\\\")\"\n", var->cName, cleaned);
+        free(cleaned);
+        if (n < 0 || (size_t)n >= cmdCap) {
+            free(command);
+            return FALSE;
+        }
         sendCommandGdb(command);
-        do{
-           sendCommandGdb("");
-           MI2onOuput(sendCommandGdb, tk, &status);
-        }while(status==GDB_RUNNING);
-        free(cleanedRawValue);
-    } else{
-        char * cleanedRawValue = cleanRawValue(rawValue);
-        strcpy(aux, var->cName);
-        if(strncmp(var->cName,"f_",2)==0) strcat(aux, ".data");
-        char * finalValue = NULL;
-        if(var->attribute!=NULL){
-            finalValue=formatValueVar(cleanedRawValue, var->size, var->attribute->scale, var->attribute->type, var->attribute->flags);
+        free(command);
+        do {
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, tk, &status);
+        } while (status == GDB_RUNNING);
+        return TRUE;
+    }
+    char *cleaned = cleanRawValue(rawValue);
+    if (!cleaned) return FALSE;
+    char aux[256];
+    aux[0] = '\0';
+    if (var->cName)
+        snprintf(aux, sizeof(aux), "%s", var->cName);
+    else
+        strcpy(aux, "");
+    if (strncmp(aux, "f_", 2) == 0)
+        strncat(aux, ".data", sizeof(aux) - strlen(aux) - 1);
+    if (var->attribute)
+    {
+        char *finalValue = formatValueVar(cleaned, var->size, var->attribute->scale, var->attribute->type, var->attribute->flags);
             //finalValue = convertStrToCobField(cleanedRawValue, var->size, var->attribute->scale, var->attribute->type);
             //sprintf(command,"interpreter-exec console \"set %s = \\\"%s\\\"\"\n", aux, finalValue);
             //sprintf(command,"data-evaluate-expression \"(void)memcpy(%s,\\\"%s\\\",%d)\"\n", aux, finalValue, var->size);
             //sprintf(command,"data-evaluate-expression \"(void)strncpy(%s,\\\"%s\\\",%d)\"\n", aux, finalValue, var->size);
-            int qtt=strlen(finalValue);
-            if(qtt>var->size) qtt=var->size;
-            int q = 2 * var->size + 1;
-            char hexString[q];
-            binaryDataToHexString((const unsigned char *)finalValue, var->size, hexString, q);
-            char command[200 + q];
-            sprintf(command, "data-write-memory-bytes %s \"%*s\"\n", aux, q-1, hexString);
-            sendCommandGdb(command);
-            do{
-                sendCommandGdb("");
-                MI2onOuput(sendCommandGdb, tk, &status);
-            }while(status==GDB_RUNNING);
+        free(cleaned);
+        if (!finalValue)
+            return FALSE;
+        size_t hexCap = (size_t)var->size * 2 + 1;
+        char *hexString = malloc(hexCap);
+        if (!hexString) {
             free(finalValue);
+            return FALSE;
         }
-        free(cleanedRawValue);
+        binaryDataToHexString( (const unsigned char *)finalValue, var->size, hexString, hexCap);
+        free(finalValue);
+        size_t cmdCap = 400 + hexCap;
+        char *command = malloc(cmdCap);
+        if (!command) {
+            free(hexString);
+            return FALSE;
+        }
+        int n = snprintf(command, cmdCap, "data-write-memory-bytes %s \"%s\"\n", aux, hexString);
+        free(hexString);
+        if (n < 0 || (size_t)n >= cmdCap) {
+            free(command);
+            return FALSE;
+        }
+        sendCommandGdb(command);
+        free(command);
+        do {
+            sendCommandGdb("");
+            MI2onOuput(sendCommandGdb, tk, &status);
+        } while (status == GDB_RUNNING);
+        return TRUE;
     }
-    return TRUE;
+    free(cleaned);
+    return FALSE;
 }
 
 #define MAX_FILES 100
@@ -1054,7 +1183,7 @@ int MI2attach(int (*sendCommandGdb)(char *)){
         print_colorBK(color_green, bkg);
         fflush(stdout);
         gotoxy(12+strlen(aux),lin+2);
-        readchar(aux,55);  
+        if(readchar(aux,55)==FALSE) return 0;  
     }else{
         strcpy(aux,cob.connect);
     }
@@ -1064,40 +1193,91 @@ int MI2attach(int (*sendCommandGdb)(char *)){
     if(strstr(aux,":")!=NULL){
         snprintf(command, 300, "target-select remote %s\n", aux);
         sendCommandGdb(command);
-        #if defined(_WIN32)
-        Sleep(2000);
-        #else
-        usleep(4000000);
-        #endif
-        int total=0;
+        double check_start = getCurrentTime();
         do{
+            double end_time = getCurrentTime();
+            double elapsed_time = end_time - check_start;
+            if (elapsed_time > 10) {
+                break;
+            }
             sendCommandGdb("");
+            //printf("%s\n", gdbOutput);
             MI2onOuput(sendCommandGdb, tk, &status);
-        }while(status!=GDB_CONNECTED && total++<3); 
+        }while(status!=GDB_CONNECTED); 
         tocontinue=(status==GDB_CONNECTED)?TRUE:FALSE;
+        if(tocontinue){
+            double check_start = getCurrentTime();
+            do{
+                if(gdbOutput!=NULL){
+                    free(gdbOutput);
+                    gdbOutput=NULL;
+                }
+                double end_time = getCurrentTime();
+                double elapsed_time = end_time - check_start;
+                if (elapsed_time > 10) {
+                    break;
+                }
+                MI2getStack(sendCommandGdb,1);
+            }while(cob.debug_line == -1);
+        }
     }else{
         snprintf(command, 300, "target-attach %s\n", aux);
         sendCommandGdb(command);
+        double check_start = getCurrentTime();
         do{
+            double end_time = getCurrentTime();
+            double elapsed_time = end_time - check_start;
+            if (elapsed_time > 10) {
+                break;
+            }
             sendCommandGdb("");
+            //printf("%s\n", gdbOutput);
             MI2onOuput(sendCommandGdb, tk, &status);
-        }while(strcmp(gdbOutput,"")!=0); 
-        tocontinue=TRUE;
+        }while(status!=2);
+        if(status==2) {
+        #if defined(__linux__)
+            double check_start = getCurrentTime();
+            do{
+                if(gdbOutput!=NULL){
+                    free(gdbOutput);
+                    gdbOutput=NULL;
+                }
+                double end_time = getCurrentTime();
+                double elapsed_time = end_time - check_start;
+                if (elapsed_time > 50) {
+                    break;
+                }
+                MI2getStack(sendCommandGdb,1);
+            }while(cob.debug_line == -1);
+        #else
+            /*
+            double check_start = getCurrentTime();
+            do{
+                if(gdbOutput!=NULL){
+                    free(gdbOutput);
+                    gdbOutput=NULL;
+                }
+                double end_time = getCurrentTime();
+                double elapsed_time = end_time - check_start;
+                if (elapsed_time > 120) {
+                    break;
+                }
+                strcpy(lastComand,"exec-next\n");
+                MI2onOuput(sendCommandGdb, tk, &status);
+                sendCommandGdb("stack-list-frames --thread 0 0 0\n");
+                sendCommandGdb("");
+                printf("%s\n", gdbOutput);
+                MI2onOuput(sendCommandGdb, tk, &status);
+            }while(cob.debug_line == -1);
+            */
+            sendCommandGdb("exec-continue\n");
+            cob.running=TRUE;
+            cob.waitAnswer=TRUE;
+            cob.changeLine=FALSE;
+        #endif
+        }
     }
     strcpy(cob.connect,"");
-    if(gdbOutput!=NULL){
-        free(gdbOutput);
-        gdbOutput=NULL;
-    }
-    if(tocontinue){
-        strcpy(lastComand,"exec-next\n"); 
-        strcpy(command,"exec-continue\n");
-        sendCommandGdb(command);
-        do{
-            sendCommandGdb("");
-            MI2onOuput(sendCommandGdb, tk, &status);
-        }while(status==GDB_RUNNING); 
-    }
     return 0;
 }
 
@@ -1105,7 +1285,7 @@ int MI2attach(int (*sendCommandGdb)(char *)){
 int MI2lineToJump(int (*sendCommandGdb)(char *)){
     char aux[500];
     int bkg= color_dark_red;
-    int ret=TRUE;    
+    int ret=2;    
 
     int lin=VIEW_LINES/2-2;
     gotoxy(10,lin);
@@ -1124,13 +1304,13 @@ int MI2lineToJump(int (*sendCommandGdb)(char *)){
     print_colorBK(color_green, bkg);
     fflush(stdout);
     gotoxy(11+strlen(aux),readLine);
-    readchar(aux,50);
+    if(readnum(aux,50) == FALSE) return 1;
     int line = atoi(aux);
     int check=hasCobolLine(line);
     if(check>0){
         MI2goToCursor(sendCommandGdb, cob.name_file, line);
     }else{
-        ret = FALSE;
+        ret = 0;
     } 
     return ret;
 }

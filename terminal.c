@@ -13,6 +13,9 @@
  * Much of the information about the Windows Console interface was obtained from:
  * https://learn.microsoft.com/en-us/windows/console/
  *
+ * ANSI Escape Codes: 
+ * https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+ * 
  * License:
  * This program is provided without any warranty, express or implied.
  * You may modify and distribute it at your own risk.
@@ -65,6 +68,41 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 
 char color[200];
 extern struct st_cobgdb cob;
+int g_supports_256 = 0;
+static int current_fg = -1;
+static int current_bg = -1;
+static char escbuf[32];
+
+// Color tables
+static const int ansi16_fg_code[18] = {
+    30, 34, 32, 36,
+    31, 35, 33, 37,
+    90, 94, 92, 96,
+    91, 95, 93, 97,
+    100, 100
+};
+static const int ansi16_bg_code[18] = {
+    40, 44, 42, 46,
+    41, 45, 43, 47,
+    100, 104, 102, 106,
+    101, 105, 103, 107,
+    100, 100
+};
+static const int ansi256_fg_map[18] = {
+     0,  4,  2,  6,
+     1,  5,  3,  7,
+     8, 12, 10, 14,
+     9, 13, 11, 15,
+     52, 242
+};
+static int ansi256_bg_map[18] = {
+     0,  4,  2,  6,
+     1,  5,  3,  7,
+     8, 12, 10, 14,
+     9, 13, 11, 15,
+     52, 242
+};
+// 103, 138, 175, 202, 137, 115, 109, 74, 75, 172, 246
 
 void cursorON();
 void cursorOFF();
@@ -129,29 +167,20 @@ int readKeyLinux(int type) {
     ssize_t nread;
 
     if ((nread = read(STDIN_FILENO, buf, sizeof(buf))) <= 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) 
             return 0;
-        }
         return -1;
     }
-
     if (buf[0] == TM_ESCAPE && buf[1] == TM_CSI) {
         if (nread >= 3) {
             switch (buf[2]) {
-                case '3':
-                    return VKEY_DEL;
-                case '5':
-                    return VKEY_PGUP;
-                case '6':
-                    return VKEY_PGDOWN;
-                case 'A':
-                    return VKEY_UP;
-                case 'B':
-                    return VKEY_DOWN;
-                case 'C':
-                    return VKEY_RIGHT;
-                case 'D':
-                    return VKEY_LEFT;
+                case '3': return VKEY_DEL;
+                case '5': return VKEY_PGUP;
+                case '6': return VKEY_PGDOWN;
+                case 'A': return VKEY_UP;
+                case 'B': return VKEY_DOWN;
+                case 'C': return VKEY_RIGHT;
+                case 'D': return VKEY_LEFT;
             }
         }
         if (buf[2] == TM_MOUSE) {
@@ -183,23 +212,31 @@ int readKeyLinux(int type) {
             return 0;
         }
     } else {
-        // Ctrl+F = ASCII 6
-        if (buf[0] == 6) {
-            return VKEY_CTRLF;
-        }
-        // Ctrl+L = ASCII 12
-        if (buf[0] == 12) {
-            return VKEY_CTRLL;
+        switch (buf[0]) {
+            case 2:  return VKEY_CTRLB;   // Ctrl+B
+            case 6:  return VKEY_CTRLF;   // Ctrl+F
+            case 7: return VKEY_CTRLG;    // Ctrl+G
+            case 19: return VKEY_CTRLS;   // Ctrl+S
         }
         wchar_t wc;
-        if (mbtowc(&wc, (const char *)buf, nread) <= 0) {
+        if (mbtowc(&wc, (const char *)buf, nread) <= 0)
             return buf[0];
-        }
         return (int)wc;
     }
     return 0;
 }
 #endif
+
+int modifyBarColor(int a){
+    ansi256_bg_map[16]+= (a);
+    if(ansi256_bg_map[16]<1) ansi256_bg_map[16]=255;
+    if(ansi256_bg_map[16]>255) ansi256_bg_map[16]=1;
+    return ansi256_bg_map[16];
+}
+
+void setBarColor(int color){
+    ansi256_bg_map[16]=color;
+}
 
 void mouseCobHover(int col, int line){
     cob.mouse = 0;
@@ -208,8 +245,8 @@ void mouseCobHover(int col, int line){
     if(col<cob.num_dig+2 && line>0 && line<VIEW_LINES-2) cob.mouse=3;
     if(col==VIEW_COLS-17 && line==0) cob.mouse=10;
     if(col==VIEW_COLS-15 && line==0) cob.mouse=20;
-    if(col==VIEW_COLS-13  && line==0) cob.mouse=30;
-    if(col==VIEW_COLS-11  && line==0) cob.mouse=40;
+    if(col==VIEW_COLS-13 && line==0) cob.mouse=30;
+    if(col==VIEW_COLS-11 && line==0) cob.mouse=40;
     if(col==VIEW_COLS-9  && line==0) cob.mouse=50;    
     if(col==VIEW_COLS-7  && line==0) cob.mouse=60;    
     if(col==VIEW_COLS-5  && line==0) cob.mouse=70;    
@@ -217,53 +254,24 @@ void mouseCobHover(int col, int line){
 }
 
 int mouseCobAction(int col, int line, int type){
-    int action=-1;
+    int action=0;
     cob.mouseButton = 1;
-    switch (cob.mouse){
-            case 1:
-                action = VKEY_PGUP;
-                break;
-            case 2:
-                action = VKEY_PGDOWN;
-                break;
-            case 10:
-                action = 'R';
-                break;
-            case 20:
-                action = 'N';
-                break;
-            case 30:
-                action = 'S';
-                break;
-            case 40:
-                action = 'G';
-                break;
-            case 50:
-                action = 'Q';
-                break;
-            case 60:
-                action = 'O';
-                break;
-            case 70:
-                action = 'D';
-                break;
-            case 80:
-                action = '?';
-                break;
-            default:
-                action = -1;
-                break;
+    int type_mouse[] = {0 , 1        , 2          , 10 , 20 ,  30,  40,  50,  60,  70,  80};
+    int type_act[]   = {-1, VKEY_PGUP, VKEY_PGDOWN, 'R', 'N', 'S', 'G', 'Q', 'O', 'D', '?'};
+    action = type_act[0];
+    int size = sizeof(type_mouse) / sizeof(type_mouse[0]);
+    for (int idx = 0; idx < size; idx++) {
+        if (cob.mouse == type_mouse[idx]) {
+            action = type_act[idx];
+            break; 
+        }
     }
     if(action == -1 && line>0 && line<VIEW_LINES-2){
         if(type>1){
             cob.line_pos = line-1;
             cob.showFile = TRUE;
         }
-        if(col<cob.num_dig+2){
-            action = 'B';
-        }else{
-            action=VKEY_ENTER;
-        }
+        action = (col < cob.num_dig + 2) ? 'B' : VKEY_ENTER;
     }
     return action;
 }
@@ -305,7 +313,6 @@ void freeInputBuffer(){
 #endif
 }
 
-
 int key_press(int type){
 #if defined(_WIN32)
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -332,43 +339,42 @@ int key_press(int type){
                 }
                 if (inp.Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
                     int delta = GET_WHEEL_DELTA_WPARAM(inp.Event.MouseEvent.dwButtonState);
-                    if (delta > 0) 
-                        return VKEY_UP;
-                    else
-                        return VKEY_DOWN;
+                    return (delta > 0)? VKEY_UP: VKEY_DOWN;
                 }                
                 //printf("Mouse X: %d, Y: %d\n", mouseX, mouseY);
             }
             DWORD ctrlState = inp.Event.KeyEvent.dwControlKeyState;
             virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
             if ((ctrlState & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) && inp.Event.KeyEvent.bKeyDown ){
-                     virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
-                     if(virtualKeyCode == 'F'){
-                        FlushConsoleInputBuffer(hIn);                        
-                        return VKEY_CTRLF;
-                     }else if(virtualKeyCode == 'L'){
-                        FlushConsoleInputBuffer(hIn);                        
-                        return VKEY_CTRLL;
-                     }
+                virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
+                switch (virtualKeyCode) {
+                    case 'F': FlushConsoleInputBuffer(hIn); return VKEY_CTRLF;
+                    case 'G': FlushConsoleInputBuffer(hIn); return VKEY_CTRLG;
+                    case 'B': FlushConsoleInputBuffer(hIn); return VKEY_CTRLB;
+                    case 'S': FlushConsoleInputBuffer(hIn); return VKEY_CTRLS;
+                }
             } else if(inp.Event.KeyEvent.bKeyDown && inp.Event.KeyEvent.uChar.UnicodeChar != 0) {
-                    WCHAR key = inp.Event.KeyEvent.uChar.UnicodeChar;
-                    FlushConsoleInputBuffer(hIn);
-                    return (int)key;
+                WCHAR key = inp.Event.KeyEvent.uChar.UnicodeChar;
+                FlushConsoleInputBuffer(hIn);
+                return (int)key;
             } else if (inp.Event.KeyEvent.bKeyDown) { 
                 //virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
-                if(virtualKeyCode==VKEY_PGUP || virtualKeyCode==VKEY_PGDOWN || virtualKeyCode==VKEY_UP ||
-                   virtualKeyCode==VKEY_DOWN || virtualKeyCode==VKEY_RIGHT || virtualKeyCode==VKEY_LEFT){
-                    return virtualKeyCode;
-                }
-                if (virtualKeyCode == VK_DELETE) {
-                    return VKEY_DEL;
+                switch (virtualKeyCode) {
+                    case VKEY_PGUP:
+                    case VKEY_PGDOWN:
+                    case VKEY_UP:
+                    case VKEY_DOWN:
+                    case VKEY_RIGHT:
+                    case VKEY_LEFT:
+                        return virtualKeyCode;
+                    case VK_DELETE:
+                        return VKEY_DEL;
                 }
                 FlushConsoleInputBuffer(hIn);
                 return 0;
             }
         }
     }
-    
     return 0;      
 #elif defined(__linux__)
   enableRawMode();
@@ -379,20 +385,27 @@ int key_press(int type){
 #endif // Windows/Linux
 }
 
-int readchar(char * str, int size) {
+int readalpha(char * str, int size, int isNumber) {
     char c =' ';
     int i = 0;
     str[0] = '\0';
+    int ret=TRUE;
     cursorON();
     while (1) {
         do{
             c = key_press(MOUSE_OFF);
             fflush(stdout);
         }while(c<=0);
+        if (c==VKEY_UP || c==VKEY_PGDOWN || c==VKEY_DOWN || c==VKEY_PGDOWN || (c==VKEY_LEFT && i==0)) 
+                continue;
         if (c == 13) {
             break;
         }
-        if ((c == VKEY_BACKSPACE || c==37) && i > 0) {
+        if (c == VKEY_ESCAPE) {
+            ret = FALSE;
+            break;
+        }
+        if ((c == VKEY_BACKSPACE || c==VKEY_LEFT) && i > 0) {
             putchar(8);
             putchar(' ');
             putchar(8);
@@ -402,7 +415,7 @@ int readchar(char * str, int size) {
             putchar(' ');
             str[i++]=' ';
             str[i]='\0';
-        } else if (strlen(str) < (size_t) size && c >= 32) {
+        } else if (strlen(str) < (size_t) size && c >= 32 && ((!isNumber) || (c>='0' && c<='9'))) {
             str[i] = c;
             putchar(c);
             i++;
@@ -410,7 +423,16 @@ int readchar(char * str, int size) {
         }
     }
     cursorOFF();
-    return 0;
+    return ret;
+}
+
+int readchar(char * str, int size) {
+    return readalpha(str, size, FALSE);
+}
+
+
+int readnum(char * str, int size) {
+    return readalpha(str, size, TRUE);
 }
 
 int updateStr(char *value, int size, int x, int y) {
@@ -440,20 +462,20 @@ int updateStr(char *value, int size, int x, int y) {
         }
     }
     wcBuffer = malloc(256);
-
     int lt = (len > size) ? size : len;
     int startChar = 0;
     int isPrint = TRUE;
     print_colorBK(color_green, color_red);
-    cursorON();
     i = 0;
     while (1) {
         if (isPrint) {
+            cursorOFF();
             wcsncpy(wcBuffer, &str[startChar], lt);
             wcBuffer[lt]=L'\0';
             gotoxy(x, y);
             printf("%*ls\r", lt, wcBuffer);
             fflush(stdout);
+            cursorON();
             isPrint = FALSE;
         }
         gotoxy(x + i, y);
@@ -469,8 +491,9 @@ int updateStr(char *value, int size, int x, int y) {
             result = FALSE;
             break;
         }
+        if ( c == VKEY_CTRLF || c == VKEY_CTRLB || c == VKEY_CTRLG || c == VKEY_CTRLS) continue;
         if (c == VKEY_DEL) c = L' ';
-        if (c == VKEY_LEFT && i >= 0) {
+        if ((c == VKEY_LEFT || c == VKEY_UP || c == VKEY_PGUP) && i >= 0) {
             i--;
             if (i < 0) {
                 startChar = (startChar > 0) ? startChar - 1 : startChar;
@@ -486,7 +509,7 @@ int updateStr(char *value, int size, int x, int y) {
             } else {
                 str[startChar + i] = L' ';
             }
-        } else if (c == VKEY_RIGHT) {
+        } else if (c == VKEY_RIGHT || c == VKEY_DOWN || c == VKEY_PGDOWN) {
             i++;
             if (i >= lt) {
                 startChar = (str[i + startChar] != L'\0') ? startChar + 1 : startChar;
@@ -531,14 +554,23 @@ void get_terminal_size(int *width, int *height) {
 #endif // Windows/Linux
 }
 
+static int last_w = -1;
+static int last_h = -1;
+
 #if defined(_WIN32)
-int win_size_verify(int showFile, int *check_size){
+int win_size_verify(int showFile){
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     BOOL isMaximized = IsZoomed(hConsole);
-    *check_size=FALSE;
-    GetConsoleScreenBufferInfo(hConsole, &csbi);
-    //GetLargestConsoleWindowSize(hConsole);
+    if (!GetConsoleScreenBufferInfo(hConsole, &csbi))
+        return showFile;
+    int cols = csbi.srWindow.Right  - csbi.srWindow.Left + 1;
+    int rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+    if (cols != last_w || rows != last_h || isMaximized) {
+        last_w = cols;
+        last_h = rows;
+        return showFile;
+    }
     if (isMaximized==TRUE || csbi.dwSize.X != TERM_WIDTH || csbi.dwSize.Y != TERM_HEIGHT) {
         if (isMaximized) {
             ShowWindow(hConsole, SW_RESTORE); 
@@ -555,33 +587,26 @@ int win_size_verify(int showFile, int *check_size){
     return showFile;
 }
 #else
-boolean show_message=TRUE;
-
-int win_size_verify(int showFile, int *check_size){
+int win_size_verify(int showFile)
+{
     struct winsize w;
-    int ret=showFile;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    if(w.ws_row != TERM_HEIGHT || w.ws_col != TERM_WIDTH) {
+    if (w.ws_row != last_h || w.ws_col != last_w) {
+        last_h = w.ws_row;
+        last_w = w.ws_col;
+        return showFile;
+    }
+    if (w.ws_row != TERM_HEIGHT || w.ws_col != TERM_WIDTH) {
         w.ws_row = TERM_HEIGHT;
         w.ws_col = TERM_WIDTH;
         ioctl(STDOUT_FILENO, TIOCSWINSZ, &w);
         printf("\033[8;%d;%dt", TERM_HEIGHT, TERM_WIDTH);
-        if(show_message){
-            print_colorBK(color_dark_red, color_black);
-            printf("%s\r", "Resizing the screen.");
-            show_message=FALSE;
-        }
         fflush(stdout);
-        *check_size=*check_size+1;
-        usleep(1500);
-        ret=1;
-    }else{
-        *check_size = 0;
+        return 1;
     }
-    return ret;
+    return showFile;
 }
 #endif
-
 
 #if defined(_WIN32)
 void DisableMaxWindow(){
@@ -664,7 +689,6 @@ Window find_window_by_title(Display *display, Window root, const char *title) {
             }
             XFree(window_name);
         }
-
         // Recurse
         Window child = find_window_by_title(display, children[i], title);
         if (child) return child;
@@ -729,7 +753,6 @@ void focusOnCobgdb() {
     #endif
 }
 
-
 void focus_window_by_title(const char *window_title) {
     #if defined(_WIN32)
     HWND hwnd = FindWindowA(NULL, window_title);
@@ -766,22 +789,22 @@ void gotoxy(int x, int y){
 
 void clearScreen() {
 #ifdef _WIN32
-    HANDLE hStdOut;
-    hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD mode = 0;
-    GetConsoleMode(hStdOut, &mode);
-    DWORD originalMode = mode;
-    mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(hStdOut, mode);
+    PCWSTR sequence =  L"\x1b[0m"     // reset
+                        "\x1b[40m"    // Black
+                        "\x1b[2J"     // clear screen
+                        "\x1b[3J"     // clear scrollback
+                        "\x1b[H";     // move cursor to home
     DWORD written = 0;
-    PCWSTR sequence = L"\x1b[2J";
-    WriteConsoleW(hStdOut, sequence, (DWORD)wcslen(sequence), &written, NULL);
-    SetConsoleMode(hStdOut, originalMode);
+    WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), sequence, (DWORD)wcslen(sequence), &written, NULL);
     return;
 #else
-    //printf("\033[H\033[J");
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
+    const char *seq =
+        "\x1b[0m"     // reset
+        "\x1b[40m"    // Black
+        "\x1b[2J"     // clear screen
+        "\x1b[3J"     // clear scrollback
+        "\x1b[H";     // move cursor to home
+    write(STDOUT_FILENO, seq, strlen(seq));
 #endif
 }
 
@@ -895,103 +918,250 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows )
 }
 #endif
 
-char * get_textcolor_code(const int textcolor) { // Linux only
-    switch(textcolor) {
-        case  0: return "30"; // color_black      0
-        case  1: return "34"; // color_dark_blue  1
-        case  2: return "32"; // color_dark_green 2
-        case  3: return "36"; // color_light_blue 3
-        case  4: return "31"; // color_dark_red   4
-        case  5: return "35"; // color_magenta    5
-        case  6: return "33"; // color_orange     6
-        case  7: return "37"; // color_light_gray 7
-        case  8: return "90"; // color_gray       8
-        case  9: return "94"; // color_blue       9
-        case 10: return "92"; // color_green     10
-        case 11: return "96"; // color_cyan      11
-        case 12: return "91"; // color_red       12
-        case 13: return "95"; // color_pink      13
-        case 14: return "93"; // color_yellow    14
-        case 15: return "97"; // color_white     15
-        default: return "37";
+//////////////////////////////////////////////////////////////////
+////              Functions for Screen Coloring               ////
+//////////////////////////////////////////////////////////////////
+static inline char *put_int(char *p, int x)
+{
+    if (x >= 100) {
+        *p++ = '0' + x / 100;
+        x %= 100;
+        *p++ = '0' + x / 10;
+        *p++ = '0' + x % 10;
+    } else if (x >= 10) {
+        *p++ = '0' + x / 10;
+        *p++ = '0' + x % 10;
+    } else {
+        *p++ = '0' + x;
+    }
+    return p;
+}
+
+const char *ansi_fg(int c)
+{
+    int v = ansi16_fg_code[c];
+    char *p = escbuf;
+    *p++ = 27;  // ESC
+    *p++ = '[';
+    p = put_int(p, v);
+    *p++ = 'm';
+    *p = 0;
+    return escbuf;
+}
+
+const char *ansi_bg(int c)
+{
+    int v = ansi16_bg_code[c];
+    char *p = escbuf;
+    *p++ = 27;
+    *p++ = '[';
+    p = put_int(p, v);
+    *p++ = 'm';
+    *p = 0;
+    return escbuf;
+}
+
+const char *ansi256_fg(int c)
+{
+    char *p = escbuf;
+    *p++ = 27;
+    *p++ = '[';
+    *p++ = '3';
+    *p++ = '8';
+    *p++ = ';';
+    *p++ = '5';
+    *p++ = ';';
+    p = put_int(p, c);
+    *p++ = 'm';
+    *p = 0;
+    return escbuf;
+}
+
+const char *ansi256_bg(int c)
+{
+    char *p = escbuf;
+    *p++ = 27;
+    *p++ = '[';
+    *p++ = '4';
+    *p++ = '8';
+    *p++ = ';';
+    *p++ = '5';
+    *p++ = ';';
+    p = put_int(p, c);
+    *p++ = 'm';
+    *p = 0;
+    return escbuf;
+}
+
+// Detect 256-color support
+int detect_256_colors()
+{
+#if defined(_WIN32)
+    HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD mode = 0;
+
+    if (GetConsoleMode(h, &mode)) {
+        if (!(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+            SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+
+        GetConsoleMode(h, &mode);
+        return (mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) ? 1 : 0;
+    }
+    return 0;
+#else
+    const char *ct = getenv("COLORTERM");
+    if (ct && (strstr(ct, "256") || strstr(ct, "truecolor")))
+        return 1;
+    const char *term = getenv("TERM");
+    if (term) {
+        if (strstr(term, "xterm") ||
+            strstr(term, "terminator") ||
+            strstr(term, "rxvt") ||
+            strstr(term, "screen") ||
+            strstr(term, "tmux") ||
+            strstr(term, "256"))
+            return 1;
+    }
+    return 0;
+#endif
+}
+
+void init_terminal_colors()
+{
+    g_supports_256 = detect_256_colors();
+    //g_supports_256 = 0;
+}
+
+// write colored text
+static void fast_write(const char *s)
+{
+#if defined(_WIN32)
+    DWORD wr;
+    WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), s, strlen(s), &wr, NULL);
+#else
+    fwrite(s, 1, strlen(s), stdout);
+#endif
+}
+
+// COLOR SETTING (16 colors)
+void print_color(int fg)
+{
+    if (current_fg == fg) return;
+
+    current_fg = fg;
+    fast_write(ansi_fg(fg));
+}
+
+void print_colorBK(int fg, int bg)
+{
+    if (current_fg != fg) {
+        current_fg = fg;
+        fast_write(ansi_fg(fg));
+    }
+    if (current_bg != bg) {
+        current_bg = bg;
+        fast_write(ansi_bg(bg));
     }
 }
-char * get_backgroundcolor_code(const int backgroundcolor) { // Linux only
-    switch(backgroundcolor) {
-        case  0: return  "40"; // color_black      0
-        case  1: return  "44"; // color_dark_blue  1
-        case  2: return  "42"; // color_dark_green 2
-        case  3: return  "46"; // color_light_blue 3
-        case  4: return  "41"; // color_dark_red   4
-        case  5: return  "45"; // color_magenta    5
-        case  6: return  "43"; // color_orange     6
-        case  7: return  "47"; // color_light_gray 7
-        case  8: return "100"; // color_gray       8
-        case  9: return "104"; // color_blue       9
-        case 10: return "102"; // color_green     10
-        case 11: return "106"; // color_cyan      11
-        case 12: return "101"; // color_red       12
-        case 13: return "105"; // color_pink      13
-        case 14: return "103"; // color_yellow    14
-        case 15: return "107"; // color_white     15
-        default: return  "40";
+
+// 256-COLOR SETTING
+void print_color256c(int fg)
+{
+    if (!g_supports_256) {
+        print_color(fg);
+        return;
+    }
+    if (current_fg == fg) return;
+    current_fg = fg;
+    fast_write(ansi256_fg(fg));
+}
+
+void print_colorBK256c(int fg, int bg)
+{
+    if (!g_supports_256) {
+        print_colorBK(fg, bg);
+        return;
+    }
+    if (current_fg != fg) {
+        current_fg = fg;
+        fast_write(ansi256_fg(ansi256_fg_map[fg]));
+    }
+    if (current_bg != bg) {
+        current_bg = bg;
+        fast_write(ansi256_bg(ansi256_bg_map[bg]));
     }
 }
-char * get_print_color(const int textcolor) { // Linux only
-    sprintf(color,"\033[%sm",get_textcolor_code(textcolor) );
-    return color;
+
+// RESET
+void print_color_reset()
+{
+    current_fg = -1;
+    current_bg = -1;
+    fast_write("\033[0m");
 }
 
-char * get_print_colorBK(int textcolor, int backgroundcolor) { // Linux only
-    sprintf(color,"\033[%s;%sm",get_textcolor_code(textcolor),  get_backgroundcolor_code(backgroundcolor));
-    return color;
-}
-
-void print_color(int textcolor) {
-#if defined(_WIN32)
-    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(handle, textcolor);
-#elif defined(__linux__)
-    printf("%s",get_print_color(textcolor));
-#endif // Windows/Linux
-}
-void print_colorBK(const int textcolor, const int backgroundcolor) {
-#if defined(_WIN32)
-    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(handle, backgroundcolor<<4|textcolor);
-#elif defined(__linux__)
-    printf("%s", get_print_colorBK(textcolor, backgroundcolor));
-#endif // Windows/Linux
-}
-void print_color_reset() {
-#if defined(_WIN32)
-    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(handle, 7); // reset color
-#elif defined(__linux__)
-    printf("%s", "\033[0m"); // reset color
-#endif // Windows/Linux
-}
-
-void print(char * s, int textcolor) {
-    print_color(textcolor);
-    printf("%s", s);
+// Function Wrappers
+void print(char *s, int c)
+{
+    print_color(c);
+    fast_write(s);
     print_color_reset();
 }
-void printBK(char * s, int textcolor, int backgroundcolor) {
-    print_colorBK(textcolor, backgroundcolor);
-    printf("%s", s);
+
+void printBK(char *s, int fg, int bg)
+{
+    print_colorBK(fg, bg);
+    fast_write(s);
     print_color_reset();
 }
-void print_no_reset(char * s, int textcolor) { // print with color, but don't reset color afterwards (faster)
-    print_color(textcolor);
-    printf("%s", s);
-}
-void print_no_resetBK(char * s, int textcolor, int backgroundcolor) { // print with color, but don't reset color afterwards (faster)
-    print_colorBK(textcolor, backgroundcolor);
-    printf("%s", s);
+
+void print_no_reset(char *s, int c)
+{
+    print_color(c);
+    fast_write(s);
 }
 
+void print_no_resetBK(char *s, int fg, int bg)
+{
+    print_colorBK(fg, bg);
+    fast_write(s);
+}
+
+void print256c(char *s, int c)
+{
+    print_color256c(c);
+    fast_write(s);
+    print_color_reset();
+}
+
+void printBK256c(char *s, int fg, int bg)
+{
+    print_colorBK256c(fg, bg);
+    fast_write(s);
+    print_color_reset();
+}
+
+void print_no_reset256c(char *s, int c)
+{
+    print_color256c(c);
+    fast_write(s);
+}
+
+void print_no_resetBK256c(char *s, int fg, int bg)
+{
+    print_colorBK256c(fg, bg);
+    fast_write(s);
+}
+
+void print_underlined(const char *text) {
+    printf(ANSI_UNDERLINE "%s" ANSI_RESET, text);
+    current_fg = -1;
+    current_bg = -1;
+}
+
+//////////////////////////////////////////////////////
 // BOX
+//////////////////////////////////////////////////////
 void draw_utf8_text(const char* text) {
     #ifdef _WIN32
         HANDLE hStdOut;
@@ -1057,20 +1227,9 @@ int draw_box_border(int posx, int posy) {
     return TRUE;
 }
 
-void print_underlined(const char *text) {
-    #ifdef _WIN32
-       HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-        if (hOut == INVALID_HANDLE_VALUE) return;
-        DWORD dwMode = 0;
-        GetConsoleMode(hOut, &dwMode);
-        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-        SetConsoleMode(hOut, dwMode);
-        printf(ANSI_UNDERLINE "%s" ANSI_RESET, text);
-    #else
-        printf(ANSI_UNDERLINE "%s" ANSI_RESET, text);
-    #endif
-}
-
+/////////////////////////////////////////////////
+// Message Display Function
+/////////////////////////////////////////////////
 int showCobMessage(char * message, int type){
     char aux[500];
     int bkg= color_dark_red;

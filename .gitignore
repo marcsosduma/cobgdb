@@ -8,6 +8,7 @@ tmp
 *gdb.py
 *.DAT
 *.DAT.*
+*.bkp
 cobgdb
 cobgdb.exe
 simple

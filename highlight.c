@@ -134,35 +134,65 @@ int parseDigitOrAlpha(wchar_t * ch,struct st_highlt * h){
 
 int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
     struct st_highlt * h = hight;
-    wchar_t wcBuffer[512];
+    wchar_t wcBuffer[512];    
     int qtdMove=0;
     int tot=total;
-
+    int fg=-1;
+    void (*fprint_colorBK)(int,int);
     int st = start;
+    #if defined(_WIN32)
+    static HANDLE hConsole = NULL;
+    if (!hConsole)
+        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    #else
+    char    utf8buf[2048];
+    mbstate_t mbst = {0};
+    #endif
+
     while (st > 0 && h != NULL) {
         if (st < h->size) break;
         st -= h->size;
         h = h->next;
     }
-    bkg=(bkg>0)?bkg:color_black;
-    print_colorBK(bkg, bkg);
-    while(h!=NULL && tot>0){
-        qtdMove = (tot < h->size - st)? tot : h->size - st;
-        if(qtdMove>0){
-            if(qtdMove>512) qtdMove=512;
-            print_colorBK(h->color,bkg);
-            wcsncpy(wcBuffer, &h->token[st], qtdMove);
-            wcBuffer[qtdMove]='\0';
-            printf("%*ls",qtdMove,wcBuffer);
-            //printf("%*.*ls",qtdMove,qtdMove,&h->token[st]);
+    bkg = (bkg > 0) ? bkg : color_black;
+    fprint_colorBK = (bkg == color_dark_gray ? print_colorBK256c : print_colorBK);
+    fprint_colorBK(bkg, bkg);
+    fg = bkg;
+    while (h != NULL && tot > 0) {
+        qtdMove = (tot < h->size - st) ? tot : h->size - st;
+        if (qtdMove > 0) {
+            if (qtdMove > 512) qtdMove = 512;
+            if (h->color != fg) {
+                fprint_colorBK(h->color, bkg);
+                fg = h->color;
+            }
+            wmemcpy(wcBuffer, &h->token[st], qtdMove);
+            wcBuffer[qtdMove] = L'\0';
+            #if defined(_WIN32)
+            DWORD written;
+            WriteConsoleW(hConsole, wcBuffer, qtdMove, &written, NULL);
+            #else
+            const wchar_t *src = wcBuffer;
+            size_t out = wcsrtombs(utf8buf, &src, sizeof(utf8buf), &mbst);
+            if (out != (size_t)-1)
+                fwrite(utf8buf, 1, out, stdout);
+            //printf("%*ls", qtdMove, wcBuffer);
+            #endif
         }
-        tot-=qtdMove;
-        h=h->next;
-        st=0;
+        tot -= qtdMove;
+        h = h->next;
+        st = 0;
     }
-    if(tot>0){
+    if (tot > 0) {
         print_colorBK(color_black, bkg);
-        printf("%*ls", tot, L" ");
+        if (tot > 511) tot = 511;
+        wmemset(wcBuffer, L' ', tot);
+        #if defined(_WIN32)
+        DWORD written;
+        WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), wcBuffer, tot, &written, NULL);
+        #else
+        fwrite(wcBuffer, sizeof(wchar_t), tot, stdout);
+        #endif
     }
     print_color_reset();
     return TRUE;
@@ -239,9 +269,6 @@ int highlightParse(){
     Lines * lines = cob.lines;
     int pos=1;
     int tp_before=-1;
-    clearScreen();
-    gotoxy(1,1);
-    printf("\n");
     while(lines!=NULL){
         isProc=0;
         if(lines->line!=NULL){
@@ -249,13 +276,7 @@ int highlightParse(){
             free(lines->line);
             lines->line=newValue;
         }
-        int lenLine=strlen(lines->line);
-        wchar_t *wcharString = (wchar_t *)malloc((lenLine + 1) * sizeof(wchar_t));
-        #if defined(_WIN32)
-        MultiByteToWideChar(CP_UTF8, 0, lines->line, -1, wcharString,(lenLine + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
-        #else
-        mbstowcs(wcharString, lines->line, strlen(lines->line) + 1);
-        #endif
+        wchar_t *wcharString = to_wide(lines->line);
         struct st_highlt * tk_before = NULL;
         struct st_highlt * high = NULL;
         pos=0;
