@@ -124,11 +124,11 @@ In this example, p0.cob is the source code of the executable, and p1.cob is the 
 - `A` - Attach: attach to GDBSERVER or Application PID.
 - `W` - Window Size: switches between window sizes: 80x24 and 132x34.
 - `O` - Changes the focus to the window where the debugging code is being displayed (Windows or X11 only).
-- `CTRL-F` - Find: search for text in the source code.
-- `CTRL-G` - Go to: Go to Line.
-- `CTRL-S` - Save breakpoints.
+- `CTRL-F` - Find: ask for some text and search in the source code.
+- `CTRL-G` - Go to: ask for a line number and move the cursor in the source code.
+- `CTRL-S` - Save breakpoints from current session.
 - `CTRL-B` - Load saved breakpoints.
-- `+/-` - Can be used to change the highlight color of the current line.
+- `+/-` - Can be used to change the background color of the current line.
 - `Q` - Quit: quits the program.
 
 ## 💡 Tip for Windows 11
