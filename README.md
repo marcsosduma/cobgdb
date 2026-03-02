@@ -2,7 +2,7 @@
 
 It is a full screen animator application, programmed in C, designed to assist in debugging GnuCOBOL code using GDB. The application is based on the extension for Visual Studio Code (VSCode) created by Oleg Kunitsyn, which can be found on GitHub: https://github.com/OlegKunitsyn/gnucobol-debug. 
 
-CDBGDB is still under development; however, it can already be used and can help you debug your applications.
+CobGDB is still under development; however, it can already be used and can help you debug your applications.
 
 ## 🛠️ Requirements
 
