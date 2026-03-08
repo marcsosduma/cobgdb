@@ -783,9 +783,8 @@ char* cleanRawValueWithEscape(const char* rawValue) {
         free(tmp);
         return NULL;
     }
-    // Reconstrói string escapando aspas
-    size_t ri = 0; // índice de leitura em tmp
-    size_t wi = 0; // índice de escrita em out
+    size_t ri = 0;
+    size_t wi = 0;
     while (ri < len) {
         if (tmp[ri] == '\"') {
             out[wi++] = '\\';

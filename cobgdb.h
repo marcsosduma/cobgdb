@@ -16,6 +16,7 @@
 #define VKEY_CTRLG 251
 #define VKEY_CTRLB 252
 #define VKEY_CTRLS 253
+#define DRAG_MOUSE 249
 typedef HANDLE thread_t;
 typedef CRITICAL_SECTION mutex_t;
 #elif defined(__linux__)
@@ -38,6 +39,7 @@ typedef pthread_mutex_t mutex_t;
 #define VKEY_CTRLG 251
 #define VKEY_CTRLB 252
 #define VKEY_CTRLS 253
+#define DRAG_MOUSE 249
 #endif // Windows/Linux
 #ifndef boolean 
 #define boolean int
@@ -288,7 +290,11 @@ struct st_cobgdb {
     int mouse;
     int mouseX;
     int mouseY;
-    int mouseButton;	
+    int mouseButton;
+    int dragLine;
+    int dragSize;
+    int dragY;	
+    int dragY1;	
     int line_pos;
     int input_character;
     int showVariables;

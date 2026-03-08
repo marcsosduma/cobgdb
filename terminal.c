@@ -144,6 +144,10 @@ void disableRawMode() {
 	  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
           die("tcsetattr");
       tcflush(STDIN_FILENO, TCIFLUSH);
+      /* disable mouse tracking */
+    printf("\033[?1003l");  // desativa all-motion
+    printf("\033[?1006l");  // desativa SGR
+    fflush(stdout);
 }
 
 void enableRawMode() {
@@ -159,71 +163,77 @@ void enableRawMode() {
     raw.c_cc[VTIME] = 1;
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
+    /* REAL DRAG */
+    printf("\033[?1003h");  // all motion tracking
+    printf("\033[?1006h");  // SGR mouse mode
+    fflush(stdout);
 }
 
-
-int readKeyLinux(int type) {
-    unsigned char buf[32];
+int readKeyLinux(int type)
+{
+    unsigned char buf[64];
     ssize_t nread;
-
-    if ((nread = read(STDIN_FILENO, buf, sizeof(buf))) <= 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) 
+    if ((nread = read(STDIN_FILENO, buf, sizeof(buf) - 1)) <= 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
             return 0;
         return -1;
     }
-    if (buf[0] == TM_ESCAPE && buf[1] == TM_CSI) {
-        if (nread >= 3) {
-            switch (buf[2]) {
-                case '3': return VKEY_DEL;
-                case '5': return VKEY_PGUP;
-                case '6': return VKEY_PGDOWN;
-                case 'A': return VKEY_UP;
-                case 'B': return VKEY_DOWN;
-                case 'C': return VKEY_RIGHT;
-                case 'D': return VKEY_LEFT;
-            }
-        }
-        if (buf[2] == TM_MOUSE) {
-            // Mouse
-            struct {
-                unsigned char button;
-                unsigned char x;
-                unsigned char y;
-            } mouseEvent;
-
-            if (type > 0 && nread >= (ssize_t) sizeof(mouseEvent)) {
-                memcpy(&mouseEvent, buf + 3, sizeof(mouseEvent)); 
-                if (mouseEvent.button == 96) {
-                    return VKEY_UP;
+    buf[nread] = '\0';
+    /*  SPECIAL KEYS */
+    if (buf[0] == 27 && buf[1] == '[') {
+        /* --------- MOUSE SGR --------- */
+        if (buf[2] == '<') {
+            int button, x, y;
+            char state;
+            if (sscanf((char*)buf, "\033[<%d;%d;%d%c",
+                       &button, &x, &y, &state) == 4) {
+                x--; y--;
+                cob.mouseX = x;
+                cob.mouseY = y;
+                mouseCobHover(x, y);
+                /* Scroll */
+                if (button == 64) return VKEY_UP;
+                if (button == 65) return VKEY_DOWN;
+                /* LEFT BUTTON */
+                if ((button & 3) == 0) {
+                    if (state == 'M') { /* press or drag */
+                        return mouseCobAction(x, y, type);
+                    }
+                    if (state == 'm') { /* release */
+                        cob.dragY = -1;
+                        return 0;
+                    }
                 }
-                if (mouseEvent.button == 97) {
-                    return VKEY_DOWN;
-                }
-                mouseCobHover(mouseEvent.x - 33, mouseEvent.y - 33);
-                cob.mouseX = mouseEvent.x - 33;
-                cob.mouseY = mouseEvent.y - 33;
-                if (mouseEvent.button == 32) {
-                    return mouseCobAction(mouseEvent.x - 33, mouseEvent.y - 33, type);
-                }
-                if (mouseEvent.button == 34) {
-                    return mouseCobRigthAction(mouseEvent.x - 33, mouseEvent.y - 33);
+                /* RIGHT BUTTON */
+                if ((button & 3) == 2 && state == 'M') {
+                    return mouseCobRigthAction(x, y);
                 }
             }
             return 0;
         }
-    } else {
-        switch (buf[0]) {
-            case 2:  return VKEY_CTRLB;   // Ctrl+B
-            case 6:  return VKEY_CTRLF;   // Ctrl+F
-            case 7: return VKEY_CTRLG;    // Ctrl+G
-            case 19: return VKEY_CTRLS;   // Ctrl+S
+        /* --------- ARROWS / PGUP / PGDN --------- */
+        switch (buf[2]) {
+            case 'A': return VKEY_UP;
+            case 'B': return VKEY_DOWN;
+            case 'C': return VKEY_RIGHT;
+            case 'D': return VKEY_LEFT;
+            case '5': return VKEY_PGUP;
+            case '6': return VKEY_PGDOWN;
+            case '3': return VKEY_DEL;
         }
-        wchar_t wc;
-        if (mbtowc(&wc, (const char *)buf, nread) <= 0)
-            return buf[0];
-        return (int)wc;
     }
-    return 0;
+    /* CTRL */
+    switch (buf[0]) {
+        case 2:  return VKEY_CTRLB;
+        case 6:  return VKEY_CTRLF;
+        case 7:  return VKEY_CTRLG;
+        case 19: return VKEY_CTRLS;
+    }
+    /* UTF-8 */
+    wchar_t wc;
+    if (mbtowc(&wc, (const char *)buf, nread) > 0)
+        return (int)wc;
+    return buf[0];
 }
 #endif
 
@@ -240,17 +250,26 @@ void setBarColor(int color){
 
 void mouseCobHover(int col, int line){
     cob.mouse = 0;
-    if(col==VIEW_COLS-1  && line<VIEW_LINES/2-1) cob.mouse=1;
-    if(col==VIEW_COLS-1  && line>=VIEW_LINES/2-1) cob.mouse=2;
-    if(col<cob.num_dig+2 && line>0 && line<VIEW_LINES-2) cob.mouse=3;
-    if(col==VIEW_COLS-17 && line==0) cob.mouse=10;
-    if(col==VIEW_COLS-15 && line==0) cob.mouse=20;
-    if(col==VIEW_COLS-13 && line==0) cob.mouse=30;
-    if(col==VIEW_COLS-11 && line==0) cob.mouse=40;
-    if(col==VIEW_COLS-9  && line==0) cob.mouse=50;    
-    if(col==VIEW_COLS-7  && line==0) cob.mouse=60;    
-    if(col==VIEW_COLS-5  && line==0) cob.mouse=70;    
-    if(col==VIEW_COLS-3  && line==0) cob.mouse=80;    
+
+    if(col==VIEW_COLS-1 && line==0) {
+        cob.mouse=1;
+    }
+    else if(col==VIEW_COLS-1 && line==VIEW_LINES-2) {
+        cob.mouse=2;
+    }
+    else if(col<cob.num_dig+2 && line>0 && line<VIEW_LINES-2) {
+        cob.mouse=3;
+    }
+    else if(line==0) {
+        if(col==VIEW_COLS-17) cob.mouse=10;
+        else if(col==VIEW_COLS-15) cob.mouse=20;
+        else if(col==VIEW_COLS-13) cob.mouse=30;
+        else if(col==VIEW_COLS-11) cob.mouse=40;
+        else if(col==VIEW_COLS-9)  cob.mouse=50;    
+        else if(col==VIEW_COLS-7)  cob.mouse=60;    
+        else if(col==VIEW_COLS-5)  cob.mouse=70;    
+        else if(col==VIEW_COLS-3)  cob.mouse=80;    
+    }
 }
 
 int mouseCobAction(int col, int line, int type){
@@ -262,10 +281,24 @@ int mouseCobAction(int col, int line, int type){
     int size = sizeof(type_mouse) / sizeof(type_mouse[0]);
     for (int idx = 0; idx < size; idx++) {
         if (cob.mouse == type_mouse[idx]) {
-            action = type_act[idx];
+            if(line==0 || line==(VIEW_LINES-2)){
+                action = type_act[idx];
+            }else{
+                if(col==VIEW_COLS-1 && (cob.dragY>0 || (line>=cob.dragLine && line<=(cob.dragLine+cob.dragSize)))){
+                    if(cob.dragY<=0){
+                        cob.dragY = line;
+                        action = 0;
+                    }else if(line!=cob.dragY){
+                        cob.dragY1 = line;
+                        return DRAG_MOUSE;
+                    }
+                }
+            }
+            if(col==VIEW_COLS-1 && line!=0 && line!=VIEW_LINES-2) return -1;
             break; 
         }
     }
+    if(cob.dragY>0) return -1;
     if(action == -1 && line>0 && line<VIEW_LINES-2){
         if(type>1){
             cob.line_pos = line-1;
@@ -334,6 +367,10 @@ int key_press(int type){
                 if(mer.dwButtonState == FROM_LEFT_1ST_BUTTON_PRESSED){
                     return mouseCobAction(cob.mouseX, cob.mouseY, type);
                 }
+                if (mer.dwEventFlags == 0 && mer.dwButtonState == 0) {
+                    if(cob.dragY>0)
+                        cob.dragY=-1;
+                }
                 if(mer.dwButtonState == RIGHTMOST_BUTTON_PRESSED && type){
                     return mouseCobRigthAction(cob.mouseX, cob.mouseY);                        
                 }
@@ -341,7 +378,8 @@ int key_press(int type){
                     int delta = GET_WHEEL_DELTA_WPARAM(inp.Event.MouseEvent.dwButtonState);
                     return (delta > 0)? VKEY_UP: VKEY_DOWN;
                 }                
-                //printf("Mouse X: %d, Y: %d\n", mouseX, mouseY);
+                //gotoxy(20,24);
+                //printf("Mouse X: %d, Y: %d    %d    \r", cob.mouseX, cob.mouseY, cob.dragY);
             }
             DWORD ctrlState = inp.Event.KeyEvent.dwControlKeyState;
             virtualKeyCode = inp.Event.KeyEvent.wVirtualKeyCode;
@@ -1009,6 +1047,9 @@ int detect_256_colors()
     }
     return 0;
 #else
+    printf("\033[?1002h");  // mouse
+    printf("\033[?1006h");  // mouse
+    fflush(stdout);
     const char *ct = getenv("COLORTERM");
     if (ct && (strstr(ct, "256") || strstr(ct, "truecolor")))
         return 1;
