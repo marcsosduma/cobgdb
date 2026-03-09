@@ -26,7 +26,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.2.4"
+#define COBGDB_VERSION "2.2.5"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -1256,8 +1256,12 @@ int loadfile(char * nameCobFile) {
             line=line->line_after;
         }
     }
-    cob.dragSize = (VIEW_LINES-3)/cob.qtd_lines;
-    if(cob.dragSize<1) cob.dragSize = 3;
+    if(cob.qtd_lines < (VIEW_LINES - 3)){
+        cob.dragSize = cob.qtd_lines;
+    }else{
+        cob.dragSize = (VIEW_LINES - 3) - ((cob.qtd_lines + VIEW_LINES - 3) / (VIEW_LINES - 3));
+        if(cob.dragSize<1) cob.dragSize = 3;
+    }
     return TRUE;
 }
 
