@@ -171,6 +171,7 @@ void enableRawMode() {
 
 int readKeyLinux(int type)
 {
+
     unsigned char buf[64];
     ssize_t nread;
     if ((nread = read(STDIN_FILENO, buf, sizeof(buf) - 1)) <= 0) {
@@ -185,8 +186,7 @@ int readKeyLinux(int type)
         if (buf[2] == '<') {
             int button, x, y;
             char state;
-            if (sscanf((char*)buf, "\033[<%d;%d;%d%c",
-                       &button, &x, &y, &state) == 4) {
+            if (sscanf((char*)buf, "\033[<%d;%d;%d%c",&button, &x, &y, &state) == 4){
                 x--; y--;
                 cob.mouseX = x;
                 cob.mouseY = y;
@@ -223,11 +223,13 @@ int readKeyLinux(int type)
         }
     }
     /* CTRL */
-    switch (buf[0]) {
-        case 2:  return VKEY_CTRLB;
-        case 6:  return VKEY_CTRLF;
-        case 7:  return VKEY_CTRLG;
-        case 19: return VKEY_CTRLS;
+    if (buf[0] > 0 && buf[0] < 32 && buf[0] != 13 && buf[0] != 27) {
+        switch (buf[0]) {
+            case 2:  return VKEY_CTRLB;
+            case 6:  return VKEY_CTRLF;
+            case 7:  return VKEY_CTRLG;
+            case 19: return VKEY_CTRLS;
+        }
     }
     /* UTF-8 */
     wchar_t wc;
@@ -248,63 +250,65 @@ void setBarColor(int color){
     ansi256_bg_map[16]=color;
 }
 
-void mouseCobHover(int col, int line){
-    cob.mouse = 0;
-
-    if(col==VIEW_COLS-1 && line==0) {
-        cob.mouse=1;
+void mouseCobHover(int col, int line) {
+    cob.mouse = 0; // Default
+    if (col == VIEW_COLS - 1) {
+        if (line == 0 || line==1)   { cob.mouse = 1; return; }
+        if (line == VIEW_LINES - 2 || line == VIEW_LINES - 3) { cob.mouse = 2; return; }
     }
-    else if(col==VIEW_COLS-1 && line==VIEW_LINES-2) {
-        cob.mouse=2;
+    if (line > 0 && line < VIEW_LINES - 2 && col < cob.num_dig + 2) {
+        cob.mouse = 3;
+        return;
     }
-    else if(col<cob.num_dig+2 && line>0 && line<VIEW_LINES-2) {
-        cob.mouse=3;
-    }
-    else if(line==0) {
-        if(col==VIEW_COLS-17) cob.mouse=10;
-        else if(col==VIEW_COLS-15) cob.mouse=20;
-        else if(col==VIEW_COLS-13) cob.mouse=30;
-        else if(col==VIEW_COLS-11) cob.mouse=40;
-        else if(col==VIEW_COLS-9)  cob.mouse=50;    
-        else if(col==VIEW_COLS-7)  cob.mouse=60;    
-        else if(col==VIEW_COLS-5)  cob.mouse=70;    
-        else if(col==VIEW_COLS-3)  cob.mouse=80;    
+    if (line == 0) {
+        int offset = VIEW_COLS - col;
+        if (offset >= 3 && offset <= 17 && (offset % 2 != 0)) {
+            cob.mouse = ((17 - offset) / 2 + 1) * 10;
+        }
     }
 }
 
-int mouseCobAction(int col, int line, int type){
-    int action=0;
+int mouseCobAction(int col, int line, int type) {
     cob.mouseButton = 1;
-    int type_mouse[] = {0 , 1        , 2          , 10 , 20 ,  30,  40,  50,  60,  70,  80};
-    int type_act[]   = {-1, VKEY_PGUP, VKEY_PGDOWN, 'R', 'N', 'S', 'G', 'Q', 'O', 'D', '?'};
-    action = type_act[0];
-    int size = sizeof(type_mouse) / sizeof(type_mouse[0]);
-    for (int idx = 0; idx < size; idx++) {
-        if (cob.mouse == type_mouse[idx]) {
-            if(line==0 || line==(VIEW_LINES-2)){
-                action = type_act[idx];
-            }else{
-                if(col==VIEW_COLS-1 && (cob.dragY>0 || (line>=cob.dragLine && line<=(cob.dragLine+cob.dragSize)))){
-                    if(cob.dragY<=0){
-                        cob.dragY = line;
-                        action = 0;
-                    }else if(line!=cob.dragY){
-                        cob.dragY1 = line;
-                        return DRAG_MOUSE;
-                    }
-                }
+    int action = -1;
+    /* 1. Handle Scrollbar Dragging logic */
+    if (col == VIEW_COLS - 1 && line > 1 && line < VIEW_LINES - 3) {
+        int inDragZone = (line >= cob.dragLine && line <= (cob.dragLine + cob.dragSize));       
+        if (cob.dragY > 0 || inDragZone) {
+            if (cob.dragY <= 0) {
+                cob.dragY = line; /* Start drag session */
+                return 0;
+            } else if (line != cob.dragY) {
+                cob.dragY1 = line; /* Update drag position */
+                return DRAG_MOUSE;
             }
-            if(col==VIEW_COLS-1 && line!=0 && line!=VIEW_LINES-2) return -1;
-            break; 
         }
+        return -1; 
     }
-    if(cob.dragY>0) return -1;
-    if(action == -1 && line>0 && line<VIEW_LINES-2){
-        if(type>1){
-            cob.line_pos = line-1;
-            cob.showFile = TRUE;
-        }
-        action = (col < cob.num_dig + 2) ? 'B' : VKEY_ENTER;
+    if (cob.dragY > 0) return -1;
+    /* 2. Map UI Button IDs to Actions */
+    switch (cob.mouse) {
+        case 1:  action = VKEY_PGUP;   break;
+        case 2:  action = VKEY_PGDOWN; break;
+        case 10: action = 'R'; break;
+        case 20: action = 'N'; break;
+        case 30: action = 'S'; break;
+        case 40: action = 'G'; break;
+        case 50: action = 'Q'; break;
+        case 60: action = 'O'; break;
+        case 70: action = 'D'; break;
+        case 80: action = '?'; break;
+        default:
+            /* 3. Handle clicks in the text body or gutter */
+            if (line > 0 && line < VIEW_LINES - 2) {
+                if (type > 1) {
+                    cob.line_pos = line - 1;
+                    cob.showFile = 1;
+                }
+                /* Return 'B' if clicking the gutter, otherwise Enter */
+                action = (col < cob.num_dig + 2) ? 'B' : VKEY_ENTER;
+            }
+            break;
     }
     return action;
 }
@@ -467,7 +471,6 @@ int readalpha(char * str, int size, int isNumber) {
 int readchar(char * str, int size) {
     return readalpha(str, size, FALSE);
 }
-
 
 int readnum(char * str, int size) {
     return readalpha(str, size, TRUE);

@@ -26,7 +26,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.2.5"
+#define COBGDB_VERSION "2.2.6"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -491,14 +491,14 @@ int show_opt() {
     if (cob.mouse > 9) show_button();
     gotoxy(VIEW_COLS,1);
     print_colorBK(color_light_gray, color_frame);
-    draw_utf8_text("\u25B2");
+    draw_utf8_text(" ");
     gotoxy(1, VIEW_LINES - 1);
     const char *filename = (cob.file_cobol ? cob.file_cobol : "");
     snprintf(aux, sizeof(aux), "%-*.*s\r", VIEW_COLS - 1, VIEW_COLS - 1, filename);
     printBK(aux, color_white, color_frame);
     gotoxy(VIEW_COLS, VIEW_LINES - 1);
     print_colorBK(color_light_gray, color_frame);
-    draw_utf8_text("\u25BC");
+    draw_utf8_text(" ");
     return TRUE;
 }
 
@@ -593,7 +593,13 @@ int show_file(Lines * lines_file, int line_pos, Lines ** line_debug){
             print_no_resetBK(" ",color_white, color_frame);
             print_colorBK(color_white,color_black);
             printf("%*s",VIEW_COLS-2," ");
-            if(i>=cob.dragLine && i<=(cob.dragLine+cob.dragSize))
+            if(i==0 ){
+                print_colorBK(color_light_gray, color_frame);
+                draw_utf8_text("\u25B2");
+            }else if(i==(VIEW_LINES-4)){
+                print_colorBK(color_light_gray, color_frame);
+                draw_utf8_text("\u25BC");
+            }else if(i>cob.dragLine && i<=(cob.dragLine+cob.dragSize))
                 print_no_resetBK(" ",color_white, color_white);
             else
                 print_no_resetBK("\u2591",color_white, color_frame);
@@ -644,10 +650,17 @@ int show_file(Lines * lines_file, int line_pos, Lines ** line_debug){
         show_line = show_line->line_after;
         if(!show_line && line_pos>i)
             line_pos=i-1;
-        if(i>=cob.dragLine && i<=(cob.dragLine+cob.dragSize))
+        if(i==0 ){
+            print_colorBK(color_light_gray, color_frame);
+            draw_utf8_text("\u25B2");
+        }else if(i==(VIEW_LINES-4)){
+            print_colorBK(color_light_gray, color_frame);
+            draw_utf8_text("\u25BC");
+        }else if(i>cob.dragLine && i<=(cob.dragLine+cob.dragSize)){
             print_no_resetBK(" ",color_white, color_white);
-        else
+        }else{
             print_no_resetBK("\u2591",color_white, color_frame);
+        }
     }      
     return line_pos;
 }
@@ -777,10 +790,10 @@ int debug(int (*sendCommandGdb)(char *)){
         if(cob.showFile){
             line_debug=NULL;
             disableEcho();
-            cob.dragLine=start_window_line * (VIEW_LINES-3-cob.dragSize) / (cob.qtd_lines+VIEW_LINES);
+            cob.dragLine=start_window_line * (VIEW_LINES-5-cob.dragSize) / (cob.qtd_lines+VIEW_LINES-5);
             //cob.dragLine=start_window_line / maxScroll;
             cob.dragLine = (cob.dragLine<0)?0:cob.dragLine;
-            cob.dragLine = ((cob.dragLine+cob.dragSize)>(VIEW_LINES-4))?(VIEW_LINES-4)-cob.dragSize:cob.dragLine;
+            cob.dragLine = ((cob.dragLine+cob.dragSize)>(VIEW_LINES-5))?(VIEW_LINES-5)-cob.dragSize:cob.dragLine;
             show_opt();
             cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
             int aux1=cob.debug_line;
@@ -1173,9 +1186,9 @@ int debug(int (*sendCommandGdb)(char *)){
                 int delta = cob.dragY1 - cob.dragY;
                 cob.dragLine += delta;
                 cob.dragLine = (cob.dragLine < 0) ? 0 : cob.dragLine;
-                int max_drag = (VIEW_LINES - 3) - cob.dragSize;
+                int max_drag = (VIEW_LINES - 5) - cob.dragSize;
                 cob.dragLine = (cob.dragLine > max_drag) ? max_drag : cob.dragLine;
-                int target_start = cob.dragLine * (cob.qtd_lines + VIEW_LINES - 3) / (VIEW_LINES - 3 - cob.dragSize);
+                int target_start = cob.dragLine * (cob.qtd_lines + VIEW_LINES - 5) / (VIEW_LINES - 5 - cob.dragSize);
                 if (target_start >= 0) {
                     while (start_window_line > target_start && lines->line_before != NULL) {
                         lines = lines->line_before;
@@ -1256,10 +1269,10 @@ int loadfile(char * nameCobFile) {
             line=line->line_after;
         }
     }
-    if(cob.qtd_lines < (VIEW_LINES - 3)){
+    if(cob.qtd_lines < (VIEW_LINES - 5)){
         cob.dragSize = cob.qtd_lines;
     }else{
-        cob.dragSize = (VIEW_LINES - 3) - ((cob.qtd_lines + VIEW_LINES - 3) / (VIEW_LINES - 3));
+        cob.dragSize = (VIEW_LINES - 5) - ((cob.qtd_lines + VIEW_LINES - 5) / (VIEW_LINES - 5));
         if(cob.dragSize<1) cob.dragSize = 3;
     }
     return TRUE;
