@@ -718,12 +718,12 @@ void td_check_screen_size(void *arg){
     cob.showFile=win_size_verify(cob.showFile);
     if(!cob.showFile) sleep_ms(1000);
     (void)arg;
-    CHECKING_SCR_SIZE=FALSE;
     #if defined(_WIN32)
     Sleep(500);
     #else
     usleep(50500);
     #endif
+    CHECKING_SCR_SIZE=FALSE;
 }    
 
 void td_check_hover_var(void *arg) {
@@ -751,12 +751,12 @@ void td_check_hover_var(void *arg) {
             mousey = -9999;
         }
     }
-    CHECKING_HOVER = FALSE;
     #if defined(_WIN32)
     Sleep(500);
     #else
     usleep(50500);
     #endif
+    CHECKING_HOVER = FALSE;
 }
 
 int debug(int (*sendCommandGdb)(char *)){
