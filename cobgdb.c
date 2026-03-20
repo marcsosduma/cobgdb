@@ -26,7 +26,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.2.6"
+#define COBGDB_VERSION "2.2.7"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -1183,13 +1183,14 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case DRAG_MOUSE: {
                 static double last_render_time = 0; 
+                static int last_target_start = -1;
                 int delta = cob.dragY1 - cob.dragY;
                 cob.dragLine += delta;
                 cob.dragLine = (cob.dragLine < 0) ? 0 : cob.dragLine;
                 int max_drag = (VIEW_LINES - 5) - cob.dragSize;
                 cob.dragLine = (cob.dragLine > max_drag) ? max_drag : cob.dragLine;
-                int target_start = cob.dragLine * (cob.qtd_lines + VIEW_LINES - 5) / (VIEW_LINES - 5 - cob.dragSize);
-                if (target_start >= 0) {
+                double target_start = cob.dragLine * (cob.qtd_lines + VIEW_LINES - 5) / (VIEW_LINES - 5 - cob.dragSize);
+                if (target_start >= 0 && last_target_start!=target_start) {
                     while (start_window_line > target_start && lines->line_before != NULL) {
                         lines = lines->line_before;
                         start_window_line--;
@@ -1198,6 +1199,7 @@ int debug(int (*sendCommandGdb)(char *)){
                         lines = lines->line_after;
                         start_window_line++;
                     }
+                    last_target_start = target_start;
                 }
                 double current_time = getCurrentTime();
                 if (current_time - last_render_time > 0.016) { // ~60 FPS
@@ -1205,7 +1207,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     cob.line_pos = show_file(lines, cob.line_pos, &line_debug);
                     enableEcho();
                     last_render_time = current_time;
-                    cob.dragY = -1; // Reset
+                    cob.dragY = cob.dragY1;  // Reset
                 }
                 CHECKING_HOVER = FALSE;
                 break;
