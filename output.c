@@ -155,6 +155,7 @@ void createTerminal(char * sleepVal, const char *target) {
         NULL
     };
     createTerminalProcess(xterm_args);
+    sleep(1);
 }
 
 // Open a KDE terminal (Konsole) if necessary.
@@ -174,6 +175,7 @@ void createKDETerminal(char *sleepVal, const char *target) {
         NULL
     };
     createTerminalProcess(konsole_args);    
+    sleep(1);
 }
 
 // Open a GNOME terminal if necessary.
@@ -190,6 +192,7 @@ void createGNOMETerminal(char *sleepVal, const char *target) {
         NULL
     };
     createTerminalProcess(gnome_terminal_args);
+    sleep(1);
 }
 
 // Function to check the availability of a terminal
@@ -318,6 +321,8 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
         }
         setenv("TERM","xterm",1);
         free(xterm_device);
+    }else{
+        exit(1);
     }
     free(sleepVal);
     //enableEcho();
