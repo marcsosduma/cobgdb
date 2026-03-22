@@ -51,6 +51,7 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #include <errno.h>
 #include <stdlib.h>
 #include <wchar.h>
+#include <poll.h>
 #if __has_include(<X11/Xlib.h>)
 #ifndef HAVE_X11
 #define HAVE_X11
@@ -169,9 +170,7 @@ void enableRawMode() {
     fflush(stdout);
 }
 
-int readKeyLinux(int type)
-{
-
+int readKeyLinux(int type) {
     unsigned char buf[64];
     ssize_t nread;
     if ((nread = read(STDIN_FILENO, buf, sizeof(buf) - 1)) <= 0) {
@@ -180,50 +179,59 @@ int readKeyLinux(int type)
         return -1;
     }
     buf[nread] = '\0';
-    /*  SPECIAL KEYS */
-    if (buf[0] == 27 && buf[1] == '[') {
+    if (buf[0] == 27) {
+        if (nread == 1) {
+            struct pollfd pfd = { STDIN_FILENO, POLLIN, 0 };
+            if (poll(&pfd, 1, 20) <= 0) {
+                return 27;
+            }
+            int extra = read(STDIN_FILENO, buf + 1, sizeof(buf) - 2);
+            if (extra > 0) nread += extra;
+            buf[nread] = '\0';
+        }
         /* --------- MOUSE SGR --------- */
-        if (buf[2] == '<') {
+        if (buf[1] == '[' && buf[2] == '<') {
             int button, x, y;
             char state;
-            if (sscanf((char*)buf, "\033[<%d;%d;%d%c",&button, &x, &y, &state) == 4){
+            if (sscanf((char*)buf, "\033[<%d;%d;%d%c", &button, &x, &y, &state) == 4) {
                 x--; y--;
                 cob.mouseX = x;
                 cob.mouseY = y;
                 mouseCobHover(x, y);
-                /* Scroll */
+                /* Scroll Wheel */
                 if (button == 64) return VKEY_UP;
                 if (button == 65) return VKEY_DOWN;
-                /* LEFT BUTTON */
+                /* Left Button Logic */
                 if ((button & 3) == 0) {
-                    if (state == 'M') { /* press or drag */
-                        return mouseCobAction(x, y, type);
-                    }
-                    if (state == 'm') { /* release */
-                        cob.dragY = -1;
-                        return 0;
+                    if (state == 'M') return mouseCobAction(x, y, type);
+                    if (state == 'm') { 
+                        cob.dragY = -1; 
+                        return 0; 
                     }
                 }
-                /* RIGHT BUTTON */
+                /* Right Button Logic */
                 if ((button & 3) == 2 && state == 'M') {
                     return mouseCobRigthAction(x, y);
                 }
             }
             return 0;
         }
-        /* --------- ARROWS / PGUP / PGDN --------- */
-        switch (buf[2]) {
-            case 'A': return VKEY_UP;
-            case 'B': return VKEY_DOWN;
-            case 'C': return VKEY_RIGHT;
-            case 'D': return VKEY_LEFT;
-            case '5': return VKEY_PGUP;
-            case '6': return VKEY_PGDOWN;
-            case '3': return VKEY_DEL;
-        }
+        /* --------- ARROWS / PGUP / PGDN / DEL  --------- */
+        if (buf[1] == '[') {
+            switch (buf[2]) {
+                case 'A': return VKEY_UP;
+                case 'B': return VKEY_DOWN;
+                case 'C': return VKEY_RIGHT;
+                case 'D': return VKEY_LEFT;
+                case '5': return VKEY_PGUP;
+                case '6': return VKEY_PGDOWN;
+                case '3': return VKEY_DEL;
+            }
+        }        
+        return 27;
     }
-    /* CTRL */
-    if (buf[0] > 0 && buf[0] < 32 && buf[0] != 13 && buf[0] != 27) {
+    // CTRL KEYS 
+    if (buf[0] > 0 && buf[0] < 32 && buf[0] != 13) {
         switch (buf[0]) {
             case 2:  return VKEY_CTRLB;
             case 6:  return VKEY_CTRLF;
@@ -231,7 +239,7 @@ int readKeyLinux(int type)
             case 19: return VKEY_CTRLS;
         }
     }
-    /* UTF-8 */
+    // UTF-8
     wchar_t wc;
     if (mbtowc(&wc, (const char *)buf, nread) > 0)
         return (int)wc;
@@ -253,8 +261,10 @@ void setBarColor(int color){
 void mouseCobHover(int col, int line) {
     cob.mouse = 0; // Default
     if (col == VIEW_COLS - 1) {
-        if (line == 0 || line==1)   { cob.mouse = 1; return; }
-        if (line == VIEW_LINES - 2 || line == VIEW_LINES - 3) { cob.mouse = 2; return; }
+        if (cob.dragY==-1 && (line == 0 || line==1))   { cob.mouse = 1; return; }
+        if (cob.dragY==-1 && (line == VIEW_LINES - 2 || line == VIEW_LINES - 3)) { cob.mouse = 2; return; }
+        if (cob.dragY==-1 && line>1 && line<=(cob.dragLine+1)) { cob.mouse = 4; return; }
+        if (cob.dragY==-1 && line>1 && line> (cob.dragLine + cob.dragSize + 1)) { cob.mouse = 5; return; }
     }
     if (line > 0 && line < VIEW_LINES - 2 && col < cob.num_dig + 2) {
         cob.mouse = 3;
@@ -272,11 +282,11 @@ int mouseCobAction(int col, int line, int type) {
     cob.mouseButton = 1;
     int action = -1;
     /* 1. Handle Scrollbar Dragging logic */
-    if (col == VIEW_COLS - 1 && line > 1 && line < VIEW_LINES - 3) {
+    if (col == VIEW_COLS - 1 && line > 1 && line < VIEW_LINES - 3 && cob.mouse!=1 && cob.mouse!=2 && cob.mouse!=4 && cob.mouse!=5) {
         int inDragZone = (line >= cob.dragLine && line <= (cob.dragLine + cob.dragSize));       
         if (cob.dragY > 0 || inDragZone) {
             if (cob.dragY <= 0) {
-                cob.dragY = line; /* Start drag session */
+                cob.dragY = line;  /* Start drag session */
                 return 0;
             } else if (line != cob.dragY) {
                 cob.dragY1 = line; /* Update drag position */
@@ -288,8 +298,10 @@ int mouseCobAction(int col, int line, int type) {
     if (cob.dragY > 0) return -1;
     /* 2. Map UI Button IDs to Actions */
     switch (cob.mouse) {
-        case 1:  action = VKEY_PGUP;   break;
-        case 2:  action = VKEY_PGDOWN; break;
+        case 1:  action = VKEY_UP;     break;
+        case 2:  action = VKEY_DOWN;   break;
+        case 4:  action = VKEY_PGUP;   break;
+        case 5:  action = VKEY_PGDOWN; break;
         case 10: action = 'R'; break;
         case 20: action = 'N'; break;
         case 30: action = 'S'; break;
@@ -299,7 +311,7 @@ int mouseCobAction(int col, int line, int type) {
         case 70: action = 'D'; break;
         case 80: action = '?'; break;
         default:
-            /* 3. Handle clicks in the text body or gutter */
+                /* 3. Handle clicks in the text body or gutter */
             if (line > 0 && line < VIEW_LINES - 2) {
                 if (type > 1) {
                     cob.line_pos = line - 1;

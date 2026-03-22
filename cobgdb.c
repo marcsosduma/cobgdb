@@ -26,7 +26,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.2.8"
+#define COBGDB_VERSION "2.2.9"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -40,6 +40,7 @@ struct st_cobgdb cob ={
     .num_dig = 4,
     .showVariables = FALSE,
     .status_bar = 0,
+    .dragY = -1
 };
 
 typedef struct {
@@ -493,7 +494,7 @@ int show_opt() {
     print_colorBK(color_light_gray, color_frame);
     draw_utf8_text(" ");
     gotoxy(1, VIEW_LINES - 1);
-    const char *filename = (cob.file_cobol ? cob.file_cobol : "");
+    const char *filename = (cob.file_cobol[0] ? cob.file_cobol : "");
     snprintf(aux, sizeof(aux), "%-*.*s\r", VIEW_COLS - 1, VIEW_COLS - 1, filename);
     printBK(aux, color_white, color_frame);
     gotoxy(VIEW_COLS, VIEW_LINES - 1);
@@ -531,9 +532,11 @@ int show_info() {
     } else if (cob.mouse != 0) {
         fg = color_green;
         switch (cob.mouse) {
-            case 1:  msg = "page up"; break;
-            case 2:  msg = "page down"; break;
+            case 1:  msg = "up"; break;
+            case 2:  msg = "down"; break;
             case 3:  msg = "breakpoint"; break;
+            case 4:  msg = "page up"; break;
+            case 5:  msg = "page down"; break;
             case 10: msg = "run"; break;
             case 20: msg = "next"; break;
             case 30: msg = "step"; break;
@@ -790,20 +793,31 @@ int debug(int (*sendCommandGdb)(char *)){
         if(cob.showFile){
             line_debug=NULL;
             disableEcho();
-            cob.dragLine=start_window_line * (VIEW_LINES-5-cob.dragSize) / (cob.qtd_lines+VIEW_LINES-5);
-            //cob.dragLine=start_window_line / maxScroll;
-            cob.dragLine = (cob.dragLine<0)?0:cob.dragLine;
-            cob.dragLine = ((cob.dragLine+cob.dragSize)>(VIEW_LINES-5))?(VIEW_LINES-5)-cob.dragSize:cob.dragLine;
+            int available_space = VIEW_LINES - 5;
+            int scroll_range = cob.qtd_lines + available_space;
+            if (scroll_range > 0) {
+                cob.dragLine = (start_window_line * (available_space - cob.dragSize)) / scroll_range;
+            } else {
+                cob.dragLine = 0;
+            }
+            if (cob.dragLine == 0 && start_window_line>1) cob.dragLine++;                
+            int max_drag_pos = available_space - cob.dragSize;
+            if (cob.dragLine < 0) cob.dragLine = 0;
+            if (cob.dragLine > max_drag_pos) cob.dragLine = max_drag_pos;
             show_opt();
             cob.line_pos=show_file(lines, cob.line_pos, &line_debug);
-            int aux1=cob.debug_line;
-            int aux2=cob.running;
-            if(!cob.waitAnswer){
-                if(line_debug!=NULL && cob.showVariables) var_watching(line_debug, sendCommandGdb, cob.waitAnswer, cob.line_pos);
-                if(hVar.isHoverVar) show_hover_var(sendCommandGdb, &hVar);
+            if (!cob.waitAnswer) {
+                int original_debug_line = cob.debug_line;
+                int original_running_status = cob.running;
+                if (line_debug != NULL && cob.showVariables) {
+                    var_watching(line_debug, sendCommandGdb, cob.waitAnswer, cob.line_pos);
+                }
+                if (hVar.isHoverVar) {
+                    show_hover_var(sendCommandGdb, &hVar);
+                }
+                cob.debug_line = original_debug_line;
+                cob.running = original_running_status;
             }
-            cob.debug_line=aux1;
-            cob.running=aux2;
             print_color_reset();
             fflush(stdout);
             cob.showFile=FALSE;
@@ -1182,15 +1196,19 @@ int debug(int (*sendCommandGdb)(char *)){
                 cob.debug_line = tempValue;
                 break;
             case DRAG_MOUSE: {
-                static double last_render_time = 0; 
+                static double last_render_time = 0;
                 static int last_target_start = -1;
                 int delta = cob.dragY1 - cob.dragY;
                 cob.dragLine += delta;
-                cob.dragLine = (cob.dragLine < 0) ? 0 : cob.dragLine;
-                int max_drag = (VIEW_LINES - 5) - cob.dragSize;
-                cob.dragLine = (cob.dragLine > max_drag) ? max_drag : cob.dragLine;
-                double target_start = cob.dragLine * (cob.qtd_lines + VIEW_LINES - 5) / (VIEW_LINES - 5 - cob.dragSize);
-                if (target_start >= 0 && last_target_start!=target_start) {
+                cob.dragY = cob.dragY1; 
+                int available_space = VIEW_LINES - 5;
+                int max_drag = available_space - cob.dragSize;
+                if (max_drag < 1) max_drag = 1;
+                if (cob.dragLine < 0) cob.dragLine = 0;
+                if (cob.dragLine > max_drag) cob.dragLine = max_drag;
+                int total_scroll_range = cob.qtd_lines + available_space;
+                int target_start = (int)((double)cob.dragLine * total_scroll_range / max_drag);
+                if (target_start >= 0 && last_target_start != target_start) {
                     while (start_window_line > target_start && lines->line_before != NULL) {
                         lines = lines->line_before;
                         start_window_line--;
@@ -1202,16 +1220,16 @@ int debug(int (*sendCommandGdb)(char *)){
                     last_target_start = target_start;
                 }
                 double current_time = getCurrentTime();
-                if (current_time - last_render_time > 0.016) { // ~60 FPS
+                if (current_time - last_render_time > 0.016) { 
                     disableEcho();
                     cob.line_pos = show_file(lines, cob.line_pos, &line_debug);
+                    fflush(stdout); 
                     enableEcho();
                     last_render_time = current_time;
-                    cob.dragY = cob.dragY1;  // Reset
                 }
-                CHECKING_HOVER = FALSE;
+                CHECKING_HOVER = FALSE; 
                 break;
-            }                                
+            }
             default: 
                 if(cob.waitAnswer){
                     WAIT_GDB++;
@@ -1277,6 +1295,7 @@ int loadfile(char * nameCobFile) {
         cob.dragSize = (VIEW_LINES - 5) - ((cob.qtd_lines + VIEW_LINES - 5) / (VIEW_LINES - 5));
         if(cob.dragSize<1) cob.dragSize = 3;
     }
+    //cob.dragSize = 3;
     return TRUE;
 }
 
