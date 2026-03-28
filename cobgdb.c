@@ -1218,6 +1218,7 @@ int debug(int (*sendCommandGdb)(char *)){
                         start_window_line++;
                     }
                     last_target_start = target_start;
+                    cob.line_pos=0;
                 }
                 double current_time = getCurrentTime();
                 if (current_time - last_render_time > 0.016) { 
