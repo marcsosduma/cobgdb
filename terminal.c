@@ -154,7 +154,6 @@ void disableRawMode() {
 void enableRawMode() {
     if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
     atexit(disableRawMode);
-
     struct termios raw = E.orig_termios;
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     raw.c_oflag &= ~(OPOST);
@@ -162,7 +161,6 @@ void enableRawMode() {
     raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
     raw.c_cc[VMIN] = 0;
     raw.c_cc[VTIME] = 1;
-
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
     /* REAL DRAG */
     printf("\033[?1003h");  // all motion tracking
@@ -178,15 +176,19 @@ int readKeyLinux(int type) {
             return 0;
         return -1;
     }
+    if (nread >= (ssize_t)sizeof(buf) - 1)
+        nread = sizeof(buf) - 2;
     buf[nread] = '\0';
     if (buf[0] == 27) {
         if (nread == 1) {
             struct pollfd pfd = { STDIN_FILENO, POLLIN, 0 };
-            if (poll(&pfd, 1, 20) <= 0) {
+            if (poll(&pfd, 1, 50) <= 0) {
                 return 27;
             }
             int extra = read(STDIN_FILENO, buf + 1, sizeof(buf) - 2);
             if (extra > 0) nread += extra;
+            if (nread >= (ssize_t)sizeof(buf) - 1)
+                nread = sizeof(buf) - 2;
             buf[nread] = '\0';
         }
         /* --------- MOUSE SGR --------- */
@@ -241,7 +243,9 @@ int readKeyLinux(int type) {
     }
     // UTF-8
     wchar_t wc;
-    if (mbtowc(&wc, (const char *)buf, nread) > 0)
+    mbstate_t state;
+    memset(&state, 0, sizeof(state));
+    if (mbrtowc(&wc, (const char *)buf, nread, &state) > 0)
         return (int)wc;
     return buf[0];
 }

@@ -52,7 +52,7 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *),
                    char * functionName){
     int bkg;
-    void (*fprint_colorBK)() = print_colorBK;
+    void (*fprint_colorBK)(int, int) = print_colorBK;
 
     (*notShow)--;
     if(*notShow<0 && strcmp(var->functionName,functionName)==0 && lin<VIEW_LINES-3){
@@ -187,7 +187,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
     int start_linex_x = 0;      
     expand = FALSE;
     int bkg;
-    void (*fprint_colorBK)() = print_colorBK;
+    void (*fprint_colorBK)(int, int) = print_colorBK;
 
     currentVar= NULL;
     char input_character= ' ';
@@ -324,7 +324,7 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
     int var_color = color_yellow;
     int value_color = color_green;
     int bcolor = bkg;
-    void (*fprint_colorBK)() = print_colorBK;
+    void (*fprint_colorBK)(int, int) = print_colorBK;
     
     if(lin<VIEW_LINES-3){
         gotoxy(10,lin+2);
@@ -950,7 +950,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     int start_file=0;
     int file_sel = -1;
     boolean show = TRUE;
-    void (*fprint_colorBK)() = print_colorBK;
+    void (*fprint_colorBK)(int, int) = print_colorBK;
 
     qtd_files = MI2sourceFiles(sendCommandGdb,files);
     if(mustParse){
@@ -1114,7 +1114,7 @@ void load_file(){
     char str1[512];
     int i=0;
     DIR *d;
-    void (*fprint_colorBK)() = print_colorBK;
+    void (*fprint_colorBK)(int, int) = print_colorBK;
 
     str[0] = '\0';
     str1[0] = '\0';
@@ -1290,7 +1290,7 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
     int lmax=VIEW_LINES/2+3;
     //int file_sel = -1;
     boolean show = TRUE;
-    void (*fprint_colorBK)() = print_colorBK;
+    void (*fprint_colorBK)(int, int) = print_colorBK;
 
     disableEcho();
     while(input_character!=-100){
