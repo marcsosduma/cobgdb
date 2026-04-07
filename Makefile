@@ -29,7 +29,7 @@ OBJ     += realpath.o
 RM       = del
 CP       = copy
 COMP     = comp.bat
-LIBS	 = -static
+LIBS	 = -static -lwinmm
 COBGDB_VERSION := $(shell $(SRCDIR)/get_version.bat "$(SRCDIR)/cobgdb.c")
 else
 #

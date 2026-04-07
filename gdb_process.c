@@ -198,7 +198,11 @@ int sendCommandGdb(char * command)
    }
 
    strcpy(chBuf, "");
+   DWORD dwAvailable = 0;
    for (;;) {
+      if (!PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &dwAvailable, NULL)) break;
+      if (dwAvailable <=0)  
+         break;
       bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
       #ifdef DEBUG
       bSuccess = WriteFile(hParentStdOut, chBuf, dwRead, &dwWritten, NULL);
@@ -224,6 +228,7 @@ int sendCommandGdb(char * command)
          return -1;
       }
    }
+   return TRUE;
 }
 
 void ErrorExit(char *msg)
@@ -284,7 +289,7 @@ int sendCommandGdb(char * command)
 
       struct timeval timeout;
       timeout.tv_sec = 0;
-      timeout.tv_usec = 0;
+      timeout.tv_usec = 1000;
 
       // Use select para verificar se há dados disponíveis
       int dwRead = select(stInPid + 1, &read_fds, NULL, NULL, &timeout);

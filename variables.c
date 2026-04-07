@@ -657,16 +657,20 @@ ST_Watch * new_watching(ST_Line * debug, ST_DebuggerVariable * var){
     return wnew;
 }
 
+#define MAX_WCHAR_BUFFER 1024
 void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser , int debug_line){
-    expand = FALSE;
-    int bkg= color_light_gray; //color_dark_red;
-    int fnew = color_blue;
-    int fgc= color_dark_blue;
+    if (!exe_line || cob.file_cobol[0] == '\0') return;
+    static wchar_t wcharString[MAX_WCHAR_BUFFER];
+    static int bkg= color_light_gray; //color_dark_red;
+    static int fnew = color_blue;
+    static int fgc= color_dark_blue;
+    time_t now = time(NULL);
     int pos_y = VIEW_LINES - 4;
 
     ST_Line * debug = getLineC(cob.file_cobol, exe_line->file_line);
+    if (!debug) return;
     struct st_show_var* show_var = debug->show_var;
-    if(show_var!=NULL && strstr(show_var->var->cName,"b_")!=NULL){
+    if(show_var!=NULL &&  show_var->var != NULL && strstr(show_var->var->cName,"b_")!=NULL){
         if(show_var->var->first_children!=NULL && strcmp(show_var->var->cobolName,show_var->var->first_children->cobolName)==0){
             show_var->var = show_var->var->first_children;
         }
@@ -680,20 +684,15 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
             insert = FALSE;
         }else{
             if(wt->start_time<0 && !waitAnser){
-                wt->start_time= time(NULL);
+                wt->start_time= now;
                 wt->status=2;
                 wt->new = FALSE;
             }else if(wt->status==2 && wt->start_time>0){
-                time_t end_time = time(NULL);
-                double elapsed_time = difftime(end_time, wt->start_time);
-                if(elapsed_time>0){
-                    if(wt_before!=NULL){
-                        wt_before->next=wt->next;
-                    }else{
-                        Watching=wt->next;
-                    }
+                if (now - wt->start_time > 0) { 
                     ST_Watch * to_free = wt;
-                    wt=wt->next;
+                    if (wt_before != NULL) wt_before->next = wt->next;
+                    else Watching = wt->next;                    
+                    wt = wt->next;
                     free(to_free);
                     continue;
                 }
@@ -704,62 +703,49 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
         wt = wt->next;
     }
     // The line has not been processed yet; we need to check the variables
-    if(insert){
-        while(show_var!=NULL){
-            wt = Watching;
-            while(wt!=NULL){
-                if(strcmp(wt->var->cobolName,show_var->var->cobolName)==0) break;
-                wt=wt->next;
-            }
-            if(wt!=NULL){
-                wt->line= debug;
-                wt->start_time= -1;
-                wt->status=0;
-            }else{
-                if(strstr( show_var->var->cobolName, "Implicit")==NULL){
-                    ST_Watch * wnew = new_watching(debug, show_var->var);                        
+    if (insert) {
+        struct st_show_var* curr_sv = show_var;
+        while (curr_sv != NULL) {
+            if (strstr(curr_sv->var->cobolName, "Implicit") == NULL) {
+                ST_Watch * existing = Watching;
+                while (existing != NULL) {
+                    if (strcmp(existing->var->cobolName, curr_sv->var->cobolName) == 0) break;
+                    existing = existing->next;
+                }
+                if (existing != NULL) {
+                    existing->line = debug;
+                    existing->start_time = -1;
+                    existing->status = 0;
+                } else {
+                    ST_Watch * wnew = new_watching(debug, curr_sv->var);                        
                     wnew->posy = pos_y;
-                    wnew->posy1 = pos_y+2;
-                    if(Watching==NULL){
+                    wnew->posy1 = pos_y + 2;
+                    if (Watching == NULL) {
                         Watching = wnew;
-                    }else{
-                        wt = Watching;
-                        while(wt->next!=NULL) wt=wt->next;
-                        wt->next=wnew;
+                    } else {
+                        ST_Watch * last = Watching;
+                        while (last->next != NULL) last = last->next;
+                        last->next = wnew;
                     }
                 }
             }
-            show_var=show_var->next;
+            curr_sv = curr_sv->next;
         }
     }
     wt = Watching;
-    wchar_t * wcharString = (wchar_t*)malloc((500 + 1) * sizeof(wchar_t));
-    int wideCharSize = 500;
     while(wt!=NULL){
-        if(wt->status==0 || wt->status==2)
-            if(!waitAnser){
-                MI2evalVariable(sendCommandGdb,wt->var,0,0);
-                wt->var->value=EspecialTrim(wt->var->value);
-            }
+       if ((wt->status == 0 || wt->status == 2) && !waitAnser) {
+            MI2evalVariable(sendCommandGdb, wt->var, 0, 0);
+            wt->var->value = EspecialTrim(wt->var->value);
+        }
         int len = strlen(wt->var->cobolName)+2;
-        if(wt->var->parent!=NULL && strcmp(wt->var->parent->cobolName, wt->var->cobolName)!=0) len += strlen(wt->var->parent->cobolName)+1;
+        if(wt->var->parent!=NULL && strcmp(wt->var->parent->cobolName, wt->var->cobolName)!=0)
+             len += strlen(wt->var->parent->cobolName)+1;
         if(wt->var->value!=NULL){
             #if defined(_WIN32)
-            int new_size = MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, NULL, 0);
-            if(new_size>wideCharSize){
-                wideCharSize = new_size;
-                free(wcharString);
-                wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
-            }
-            MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, wcharString,(strlen(wt->var->value) + 1) * sizeof(wchar_t) / sizeof(wcharString[0]));
+            MultiByteToWideChar(CP_UTF8, 0, wt->var->value, -1, wcharString, MAX_WCHAR_BUFFER);
             #else
-            size_t new_size = mbstowcs(NULL, wt->var->value, 0);
-            if(new_size>(size_t)wideCharSize){
-                wideCharSize = new_size;
-                free(wcharString);
-                wcharString = (wchar_t*)malloc((wideCharSize + 1) * sizeof(wchar_t));
-            }
-            mbstowcs(wcharString, wt->var->value, strlen(wt->var->value) + 1);
+            mbstowcs(wcharString, wt->var->value, MAX_WCHAR_BUFFER - 1);
             #endif
             int lenVar = wcslen(wcharString);
             if(lenVar>len) len=lenVar;
@@ -807,7 +793,6 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
         draw_box_last(wt->posx, posy, wt->size);
         wt=wt->next;
     }
-    if(wcharString!=NULL) free(wcharString);
 }
 
 int check_hover(struct st_hoverer_var *hVar, int start_window_line, int start_line_x, int posx, int posy){

@@ -142,18 +142,24 @@ void die(const char *s) {
 }
 
 void disableRawMode() {
-	  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
-          die("tcsetattr");
-      tcflush(STDIN_FILENO, TCIFLUSH);
-      /* disable mouse tracking */
-    printf("\033[?1003l");  // desativa all-motion
-    printf("\033[?1006l");  // desativa SGR
-    fflush(stdout);
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
+        die("tcsetattr");
+    tcflush(STDIN_FILENO, TCIFLUSH);
+    /* disable mouse tracking */
+    const char *mouse_off = "\033[?1003l\033[?1006l";
+    write(STDOUT_FILENO, mouse_off, 16);
+}
+
+void handle_signal(int sig) {
+    (void)sig;
+    exit(1);
 }
 
 void enableRawMode() {
     if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
     atexit(disableRawMode);
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
     struct termios raw = E.orig_termios;
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     raw.c_oflag &= ~(OPOST);
@@ -163,17 +169,15 @@ void enableRawMode() {
     raw.c_cc[VTIME] = 1;
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
     /* REAL DRAG */
-    printf("\033[?1003h");  // all motion tracking
-    printf("\033[?1006h");  // SGR mouse mode
-    fflush(stdout);
+    const char *mouse_on = "\033[?1003h\033[?1006h";
+    write(STDOUT_FILENO, mouse_on, 16);
 }
 
 int readKeyLinux(int type) {
     unsigned char buf[64];
-    ssize_t nread;
-    if ((nread = read(STDIN_FILENO, buf, sizeof(buf) - 1)) <= 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return 0;
+    ssize_t nread = read(STDIN_FILENO, buf, sizeof(buf) - 1);
+    if (nread <= 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
         return -1;
     }
     if (nread >= (ssize_t)sizeof(buf) - 1)

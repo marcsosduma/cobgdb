@@ -23,6 +23,7 @@
 #include <io.h>
 #define access _access
 #define F_OK 0
+#include <mmsystem.h>
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
@@ -227,7 +228,7 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
         param_count++;
     }
 
-    char compiler[512] = "cobc ";
+    char compiler[2048] = "cobc ";
     
     for (int a = 0; a < param_count; a++) {
         strcat(compiler, param[a]);
@@ -830,7 +831,14 @@ int debug(int (*sendCommandGdb)(char *)){
             if(!cob.waitAnswer){
                 disableEcho();
                 cob.input_character = key_press(MOUSE_EXT);
-                if(cob.input_character!=DRAG_MOUSE){
+                if (cob.input_character <= 0) {
+                    #if defined(__linux__)
+                    usleep(1000);
+                    #else
+                    Sleep(5);
+                    #endif
+                }
+                if(cob.input_character==0){
                     if(CHECKING_SCR_SIZE==FALSE){
                         CHECKING_SCR_SIZE=TRUE;
                         thread_create(&t1, td_check_screen_size, (void*)1);
@@ -1501,6 +1509,9 @@ int main(int argc, char **argv) {
     int arg_init=1;
     setup_locale();
     init_terminal_colors();
+    #if defined(__win32__)
+    timeBeginPeriod(1);
+    #endif
 
     if(handle_connect_args(argc, argv)){
         arg_init=3;
@@ -1518,6 +1529,8 @@ int main(int argc, char **argv) {
     #if defined(__linux__)
     printf("\033[?1002l");
     printf("\033[?1006l");
+    #else
+    timeEndPeriod(1);
     #endif
     printf("The end of the CobGDB execution.\n");
     fflush(stdout);
