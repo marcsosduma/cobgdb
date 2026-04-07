@@ -291,7 +291,7 @@ int sendCommandGdb(char * command)
       timeout.tv_sec = 0;
       timeout.tv_usec = 1000;
 
-      // Use select para verificar se há dados disponíveis
+      // SELECT to check if there is data available
       int dwRead = select(stInPid + 1, &read_fds, NULL, NULL, &timeout);
       if (dwRead == -1) {
          break;
