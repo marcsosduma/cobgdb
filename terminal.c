@@ -239,6 +239,7 @@ int readKeyLinux(int type) {
     // CTRL KEYS 
     if (buf[0] > 0 && buf[0] < 32 && buf[0] != 13) {
         switch (buf[0]) {
+            case 1:  return VKEY_CTRLA;
             case 2:  return VKEY_CTRLB;
             case 6:  return VKEY_CTRLF;
             case 7:  return VKEY_CTRLG;
@@ -412,6 +413,7 @@ int key_press(int type){
                 switch (virtualKeyCode) {
                     case 'F': FlushConsoleInputBuffer(hIn); return VKEY_CTRLF;
                     case 'G': FlushConsoleInputBuffer(hIn); return VKEY_CTRLG;
+                    case 'A': FlushConsoleInputBuffer(hIn); return VKEY_CTRLA;
                     case 'B': FlushConsoleInputBuffer(hIn); return VKEY_CTRLB;
                     case 'S': FlushConsoleInputBuffer(hIn); return VKEY_CTRLS;
                 }

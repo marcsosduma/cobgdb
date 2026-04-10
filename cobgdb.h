@@ -12,6 +12,7 @@
 #define VKEY_DEL 3
 #define VKEY_LEFT 37
 #define VKEY_RIGHT 39
+#define VKEY_CTRLA 248
 #define VKEY_CTRLF 250
 #define VKEY_CTRLG 251
 #define VKEY_CTRLB 252
@@ -35,6 +36,7 @@ typedef pthread_mutex_t mutex_t;
 #define VKEY_ENTER 13
 #define VKEY_ESCAPE 27
 #define VKEY_DEL 3
+#define VKEY_CTRLA 248
 #define VKEY_CTRLF 250
 #define VKEY_CTRLG 251
 #define VKEY_CTRLB 252
@@ -298,6 +300,7 @@ struct st_cobgdb {
     int line_pos;
     int input_character;
     int showVariables;
+    int auto_step;
 };
 
 struct st_hoverer_var {

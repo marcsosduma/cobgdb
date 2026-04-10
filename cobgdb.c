@@ -27,7 +27,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.2.9"
+#define COBGDB_VERSION "2.3.0"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -41,7 +41,8 @@ struct st_cobgdb cob ={
     .num_dig = 4,
     .showVariables = FALSE,
     .status_bar = 0,
-    .dragY = -1
+    .dragY = -1,
+    .auto_step = FALSE
 };
 
 typedef struct {
@@ -145,7 +146,7 @@ void freeBKList()
 }
 
 void show_version(){
-    printf("CobGDB - GnuCOBOL GDB Interpreter - version %s\n", COBGDB_VERSION);
+    printf("CobGDB - GnuCOBOL Debugger - version %s\n", COBGDB_VERSION);
     printf("Copyright (C) 2025 Free Software Foundation, Inc.\n");
     printf("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n");
     printf("This is free software: you are free to change and redistribute it.\n");
@@ -466,14 +467,14 @@ void set_title_layout() {
     int button_width=20;
     headerLayout.left_label_len = strlen("CobGDB");
     headerLayout.version_len    = strlen(COBGDB_VERSION);
-    headerLayout.title_len      = strlen("GnuCOBOL GDB Interpreter");
+    headerLayout.title_len      = strlen("GnuCOBOL Debugger");
     headerLayout.total_fixed =
         1 +                                 // " "
         headerLayout.left_label_len +       // "CobGDB"
         2 +                                 // " v"
         headerLayout.version_len +          // version
         1 +                                 // " "
-        headerLayout.title_len +            // "GnuCOBOL GDB Interpreter"
+        headerLayout.title_len +            // "GnuCOBOL Debugger"
         1;                                  // " "
     int free_space = VIEW_COLS - headerLayout.total_fixed - button_width;
     if (free_space < 2) free_space = 2;
@@ -484,7 +485,7 @@ void set_title_layout() {
 int show_opt() {
     char aux[512];
     const char *leftLabel = "CobGDB";
-    const char *title     = "GnuCOBOL GDB Interpreter";
+    const char *title     = "GnuCOBOL Debugger";
 
     snprintf(aux, sizeof(aux), " %s v%s %*s %s %*s\r", leftLabel, COBGDB_VERSION,
              headerLayout.pad_left, " ", title, headerLayout.pad_right, " ");
@@ -837,6 +838,16 @@ int debug(int (*sendCommandGdb)(char *)){
                     #else
                     Sleep(5);
                     #endif
+                }else if(cob.auto_step &&  cob.input_character==27){
+                    cob.auto_step = FALSE;
+                }
+                if(cob.input_character==0 && cob.auto_step==TRUE){
+                    cob.input_character = 's';
+                    #if defined(__linux__)
+                        usleep(500000);  // 1/2s
+                    #else
+                        Sleep(500);      // 1/2s
+                    #endif
                 }
                 if(cob.input_character==0){
                     if(CHECKING_SCR_SIZE==FALSE){
@@ -855,6 +866,9 @@ int debug(int (*sendCommandGdb)(char *)){
                 if (elapsed_time > 0.5) {
                     disableEcho();
                     cob.input_character = key_press(MOUSE_EXT);
+                    if(cob.auto_step && cob.input_character==27){
+                        cob.auto_step = FALSE;
+                    }
                     enableEcho();
                 }
             }
@@ -1202,6 +1216,12 @@ int debug(int (*sendCommandGdb)(char *)){
                 cob.showFile = TRUE;
                 cob.status_bar = 0;
                 cob.debug_line = tempValue;
+                break;
+            case VKEY_CTRLA:
+                if(cob.debug_line>0){
+                    cob.auto_step = TRUE;                
+                    cob.showFile = TRUE;
+                }
                 break;
             case DRAG_MOUSE: {
                 static double last_render_time = 0;

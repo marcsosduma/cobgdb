@@ -275,6 +275,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.running=FALSE;
                                         cob.showFile=TRUE;
                                         cob.isStepOver=-1;
+                                        cob.auto_step = FALSE;
                                     }
                                 }else if(strcmp(reason->value,"end-stepping-range")==0){
                                     ST_Line * hasLine=hasLineCobol(parsed);
