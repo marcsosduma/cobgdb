@@ -116,7 +116,7 @@ In this example, p0.cob is the source code of the executable, and p1.cob is the 
 - `J` - Jump: runs the program until it reaches the specified line.
 - `N` - Next: runs the program until the next line but does not enter a subroutine executed by CALL or PERFORM.
 - `S` - Step: runs the program until the next line.
-- `G` - GO: continues the program execution until it encounters a stopping point: breakpoint, end of the program, or the return from a subroutine - PERFORM/CALL.
+- `G` - Go: continues the program execution until it encounters a stopping point: breakpoint, end of the program, or the return from a subroutine - PERFORM/CALL.
 - `V` - Variables: displays the set of variables for the running program.
 - `H` - Show: shows the values of variables for the selected line (right-click also functions).
 - `D` - Display of variables: set the automatic display during debugging/animation ON or OFF (default is OFF).
@@ -124,12 +124,12 @@ In this example, p0.cob is the source code of the executable, and p1.cob is the 
 - `A` - Attach: attach to GDBSERVER or Application PID.
 - `W` - Window Size: switches between window sizes: 80x24 and 132x34.
 - `O` - Changes the focus to the window where the debugging code is being displayed (Windows or X11 only).
-- `Ctrl-A` - Auto-step - automatically executes the “S” command until it reaches the next breakpoint.
-- `CTRL-F` - Find: ask for some text and search in the source code.
-- `CTRL-G` - Go to: ask for a line number and move the cursor in the source code.
-- `CTRL-S` - Save breakpoints from current session.
-- `CTRL-B` - Load saved breakpoints.
-- `+/-` - Can be used to change the background color of the current line.
+- `Ctrl-A` - Autostep: automatically executes the “S” command until next breakpoint or press ESC.
+- `CTRL-F` - Find text: ask for some text and search in the source code.
+- `CTRL-G` - Go to line: ask for a line number and move the cursor in the source code.
+- `CTRL-S` - Save all breakpoints from current session.
+- `CTRL-B` - Load all saved breakpoints.
+- `+/-` - Change the background color of the current line.
 - `Q` - Quit: quits the program.
 
 ## 💡 Tip for Windows 11
