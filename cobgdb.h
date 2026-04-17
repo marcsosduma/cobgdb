@@ -301,6 +301,7 @@ struct st_cobgdb {
     int input_character;
     int showVariables;
     int auto_step;
+    int auto_step_delay;
 };
 
 struct st_hoverer_var {

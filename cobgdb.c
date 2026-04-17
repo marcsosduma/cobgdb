@@ -42,7 +42,8 @@ struct st_cobgdb cob ={
     .showVariables = FALSE,
     .status_bar = 0,
     .dragY = -1,
-    .auto_step = FALSE
+    .auto_step = FALSE,
+    .auto_step_delay = 500
 };
 
 typedef struct {
@@ -843,11 +844,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 if(cob.input_character==0 && cob.auto_step==TRUE){
                     cob.input_character = 's';
-                    #if defined(__linux__)
-                        usleep(500000);  // 1/2s
-                    #else
-                        Sleep(500);      // 1/2s
-                    #endif
+                    sleep_ms(cob.auto_step_delay);
                 }
                 if(cob.input_character==0){
                     if(CHECKING_SCR_SIZE==FALSE){
@@ -955,14 +952,24 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 break;
             case '+':  
-                highlight_bar= modifyBarColor(1);
-                sava_cfg=TRUE;
-                cob.showFile=TRUE;
+                if(cob.auto_step){
+                    cob.auto_step_delay+=200;
+                    showCobMessage("Increased delay",1);
+                }else{
+                    highlight_bar= modifyBarColor(1);
+                    sava_cfg=TRUE;
+                    cob.showFile=TRUE;
+                }
                 break;
             case '-':    
-                highlight_bar= modifyBarColor(-1);
-                sava_cfg=TRUE;
-                cob.showFile=TRUE;
+                if(cob.auto_step){
+                    cob.auto_step_delay=(cob.auto_step_delay>=200)?cob.auto_step_delay-200:0;
+                    showCobMessage("Reduced delay",1);
+                }else{
+                    highlight_bar= modifyBarColor(-1);
+                    sava_cfg=TRUE;
+                    cob.showFile=TRUE;
+                }
                 break;
             case 'b':    
             case 'B':    
