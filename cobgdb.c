@@ -798,6 +798,8 @@ int debug(int (*sendCommandGdb)(char *)){
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
     cob.line_pos=set_first_break(sendCommandGdb);
     lines = set_window_pos(&cob.line_pos);
+    static double last_check = 0;
+    static double last_check_high = 0;
     while(cob.lines!=NULL && !bstop){       
         if(cob.showFile){
             line_debug=NULL;
@@ -839,12 +841,8 @@ int debug(int (*sendCommandGdb)(char *)){
             if(!cob.waitAnswer){
                 disableEcho();
                 cob.input_character = key_press(MOUSE_EXT);
-                if (cob.input_character <= 0) {
-                    #if defined(__linux__)
-                    usleep(1000);
-                    #else
-                    Sleep(5);
-                    #endif
+                if (!cob.auto_step && cob.input_character <= 0) {
+                    sleep_ms(1);
                 }else if(cob.auto_step &&  cob.input_character==27){
                     cob.auto_step = FALSE;
                 }
@@ -852,14 +850,17 @@ int debug(int (*sendCommandGdb)(char *)){
                     cob.input_character = 's';
                     sleep_ms(step_speed[cob.auto_step_delay]);
                 }
-                if(cob.input_character==0){
-                    if(CHECKING_SCR_SIZE==FALSE){
+                if(cob.input_character==0 ){
+                    double now = getCurrentTime();
+                    if(CHECKING_SCR_SIZE==FALSE && (now - last_check) > 0.5){
                         CHECKING_SCR_SIZE=TRUE;
                         thread_create(&t1, td_check_screen_size, (void*)1);
+                        last_check = now;
                     } 
-                    if(CHECKING_HOVER==FALSE){
+                    if(CHECKING_HOVER==FALSE && (now - last_check_high) > 0.5){
                         CHECKING_HOVER=TRUE;
                         thread_create(&t2, td_check_hover_var, (void *) &hVar );
+                        last_check_high = now;
                     }
                     check_start = getCurrentTime();
                 }
