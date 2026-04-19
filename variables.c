@@ -236,6 +236,13 @@ int show_variables(int (*sendCommandGdb)(char *)){
         expand = FALSE;
         var = NULL;
         input_character =  key_press(MOUSE_NORMAL);
+        if (cob.input_character <= 0) {
+            #if defined(__linux__)
+            usleep(1000);
+            #else
+            Sleep(5);
+            #endif
+        }
         switch (input_character)
         {
             case VKEY_UP:
@@ -464,6 +471,13 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
         enableEcho();
         if(qtd==0) break;
         input_character =  key_press(MOUSE_NORMAL);
+        if (cob.input_character <= 0) {
+            #if defined(__linux__)
+            usleep(1000);
+            #else
+            Sleep(5);
+            #endif
+        }
         if(cob.mouseButton==2) input_character='e';
         switch (input_character)
         {
@@ -1012,6 +1026,13 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
         gotoxy(1,1);
         enableEcho();
         input_character =  key_press(MOUSE_NORMAL);
+        if (cob.input_character <= 0) {
+            #if defined(__linux__)
+            usleep(1000);
+            #else
+            Sleep(5);
+            #endif
+        }
         switch (input_character)
         {
             case VKEY_UP:
@@ -1182,6 +1203,13 @@ void load_file(){
             gotoxy(1,1);
             enableEcho();
             input_character =  key_press(MOUSE_NORMAL);
+            if (cob.input_character <= 0) {
+                #if defined(__linux__)
+                usleep(1000);
+                #else
+                Sleep(5);
+                #endif
+            }
             switch (input_character)
             {
                 case VKEY_UP:
@@ -1319,6 +1347,13 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
         fflush(stdout);
         gotoxy(1,1);
         input_character =  key_press(MOUSE_NORMAL);
+        if (cob.input_character <= 0) {
+            #if defined(__linux__)
+            usleep(1000);
+            #else
+            Sleep(5);
+            #endif
+        }
         switch (input_character)
         {
             case VKEY_UP:

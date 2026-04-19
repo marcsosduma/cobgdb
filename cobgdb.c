@@ -27,7 +27,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.3.0"
+#define COBGDB_VERSION "2.3.1"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -43,7 +43,7 @@ struct st_cobgdb cob ={
     .status_bar = 0,
     .dragY = -1,
     .auto_step = FALSE,
-    .auto_step_delay = 500
+    .auto_step_delay = 6
 };
 
 typedef struct {
@@ -82,6 +82,7 @@ ST_Watch * Watching=NULL;
 Lines * lines = NULL;
 struct st_cfiles * parsed_cfiles = NULL;
 int start_gdb(char * name, char * cwd);
+int step_speed[]={1600, 1500, 1300, 1100, 900, 700, 500, 300, 200, 1};
 
 void free_memory()
 {
@@ -560,6 +561,11 @@ int show_info() {
             } else {
                 fg = color_green;
                 msg = "Debugging";
+                if(cob.auto_step){
+                    char step_msg[50];
+                    snprintf(step_msg, sizeof(step_msg), "Debugging - Autostep speed: %d", cob.auto_step_delay+1);
+                    msg = step_msg;
+                }
             }
         } else {
             fg = color_yellow;
@@ -844,7 +850,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 if(cob.input_character==0 && cob.auto_step==TRUE){
                     cob.input_character = 's';
-                    sleep_ms(cob.auto_step_delay);
+                    sleep_ms(step_speed[cob.auto_step_delay]);
                 }
                 if(cob.input_character==0){
                     if(CHECKING_SCR_SIZE==FALSE){
@@ -953,8 +959,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case '+':  
                 if(cob.auto_step){
-                    cob.auto_step_delay+=200;
-                    showCobMessage("Increased delay",1);
+                    cob.auto_step_delay=(cob.auto_step_delay==9)?cob.auto_step_delay:cob.auto_step_delay+1;
                 }else{
                     highlight_bar= modifyBarColor(1);
                     sava_cfg=TRUE;
@@ -963,8 +968,9 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case '-':    
                 if(cob.auto_step){
-                    cob.auto_step_delay=(cob.auto_step_delay>=200)?cob.auto_step_delay-200:0;
-                    showCobMessage("Reduced delay",1);
+                    if (cob.auto_step_delay > 0) {
+                       cob.auto_step_delay--;
+                    }
                 }else{
                     highlight_bar= modifyBarColor(-1);
                     sava_cfg=TRUE;
