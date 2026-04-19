@@ -144,7 +144,7 @@ void die(const char *s) {
 void disableRawMode() {
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
         die("tcsetattr");
-    tcflush(STDIN_FILENO, TCIFLUSH);
+    //tcflush(STDIN_FILENO, TCIFLUSH);
     /* disable mouse tracking */
     const char *mouse_off = "\033[?1003l\033[?1006l";
     write(STDOUT_FILENO, mouse_off, 16);
@@ -166,8 +166,8 @@ void enableRawMode() {
     raw.c_cflag |= (CS8);
     raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
     raw.c_cc[VMIN] = 0;
-    raw.c_cc[VTIME] = 1;
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
+    raw.c_cc[VTIME] = (cob.auto_step)?0:1;
+    if (tcsetattr(STDIN_FILENO, TCSADRAIN, &raw) == -1) die("tcsetattr");
     /* REAL DRAG */
     const char *mouse_on = "\033[?1003h\033[?1006h";
     write(STDOUT_FILENO, mouse_on, 16);
@@ -186,7 +186,7 @@ int readKeyLinux(int type) {
     if (buf[0] == 27) {
         if (nread == 1) {
             struct pollfd pfd = { STDIN_FILENO, POLLIN, 0 };
-            if (poll(&pfd, 1, 50) <= 0) {
+            if (poll(&pfd, 1, 10) <= 0) {
                 return 27;
             }
             int extra = read(STDIN_FILENO, buf + 1, sizeof(buf) - 2);
