@@ -27,7 +27,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.3.2"
+#define COBGDB_VERSION "2.3.3"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -843,7 +843,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }else if(cob.auto_step &&  cob.input_character==27){
                     cob.auto_step = FALSE;
                 }
-                if(cob.input_character==0 && cob.auto_step==TRUE){
+                if(cob.input_character<=0 && cob.auto_step==TRUE){
                     cob.input_character = 's';
                     sleep_ms(step_speed[cob.auto_step_delay]);
                 }
