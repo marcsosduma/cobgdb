@@ -415,7 +415,7 @@ struct st_bkpoint *load_breakpoints(int (*sendCommandGdb)(char *), struct st_bkp
     return head;
 }
 
-void save_cfg_value(int value)
+void save_cfg_value(int color, int speed_delay)
 {
     char *home = NULL;
     char msg[1024];
@@ -441,9 +441,10 @@ void save_cfg_value(int value)
         showCobMessage("Error: unable to open file for writing", 1);
         return;
     }
-    fprintf(f, "%d\n", value);
+    fprintf(f, "%d\n", color);
+    fprintf(f, "%d\n", speed_delay);
     fclose(f);
-    snprintf(msg, 1024, "Color %d saved to: %s", value, path);
+    snprintf(msg, 1024, "Color: %d  Speed Delay: %d saved to: %s", color, speed_delay, path);
     showCobMessage(msg, 1);
 }
 
@@ -466,8 +467,11 @@ int load_cfg_value(void)
     #endif
     FILE *f = fopen(path, "r");
     if (!f) return -1;
-    int value = -1;
-    fscanf(f, "%d", &value);
+    int color = -1;
+    int speed_delay = -1;
+    fscanf(f, "%d", &color);
+    fscanf(f, "%d", &speed_delay);
     fclose(f);
-    return value;
+    if(speed_delay>=0) cob.auto_step_delay = speed_delay;
+    return color;
 }

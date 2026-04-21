@@ -347,7 +347,7 @@ char* getCurrentDirectory();
 int file_exists(const char *path);
 int save_breakpoints(struct st_bkpoint *head, char *filename);
 struct st_bkpoint *load_breakpoints(int (*sendCommandGdb)(char *), struct st_bkpoint *head, char *filename);
-void save_cfg_value(int value);
+void save_cfg_value(int color, int speed_delay);
 int load_cfg_value(void);
 //terminal.c
 int modifyBarColor(int a);

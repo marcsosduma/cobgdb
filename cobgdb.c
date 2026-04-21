@@ -27,7 +27,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.3.3"
+#define COBGDB_VERSION "2.3.4"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -955,6 +955,7 @@ int debug(int (*sendCommandGdb)(char *)){
             case '+':  
                 if(cob.auto_step){
                     cob.auto_step_delay=(cob.auto_step_delay==9)?cob.auto_step_delay:cob.auto_step_delay+1;
+                    sava_cfg=TRUE;
                 }else{
                     highlight_bar= modifyBarColor(1);
                     sava_cfg=TRUE;
@@ -964,7 +965,8 @@ int debug(int (*sendCommandGdb)(char *)){
             case '-':    
                 if(cob.auto_step){
                     if (cob.auto_step_delay > 0) {
-                       cob.auto_step_delay--;
+                        cob.auto_step_delay--;
+                        sava_cfg=TRUE;
                     }
                 }else{
                     highlight_bar= modifyBarColor(-1);
@@ -1009,7 +1011,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     bstop = 1;
                 }
                 if(sava_cfg){
-                    save_cfg_value(highlight_bar);
+                    save_cfg_value(highlight_bar, cob.auto_step_delay);
                 }
                 cob.showFile=TRUE; 
                 break;
