@@ -1079,7 +1079,9 @@ This routine was obtained from the following source:
 https://stackoverflow.com/questions/12975022/strtok-r-for-mingw
 */
 #pragma GCC diagnostic push
+#if defined(__GNUC__) && (__GNUC__ >= 10)
 #pragma GCC diagnostic ignored "-Wnonnull-compare"
+#endif
 char *strtok_r(char *str, const char *delim, char **save)
 {
     char *res, *last;

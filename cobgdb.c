@@ -27,7 +27,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.3.1"
+#define COBGDB_VERSION "2.3.2"
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -803,7 +803,6 @@ int debug(int (*sendCommandGdb)(char *)){
     while(cob.lines!=NULL && !bstop){       
         if(cob.showFile){
             line_debug=NULL;
-            disableEcho();
             int available_space = VIEW_LINES - 5;
             int scroll_range = cob.qtd_lines + available_space;
             if (scroll_range > 0) {
@@ -833,13 +832,11 @@ int debug(int (*sendCommandGdb)(char *)){
             fflush(stdout);
             cob.showFile=FALSE;
             show_info();
-            enableEcho();
             continue;
         }
         cob.input_character = -1;
         if(cob.isStepOver<0){
             if(!cob.waitAnswer){
-                disableEcho();
                 cob.input_character = key_press(MOUSE_EXT);
                 if (!cob.auto_step && cob.input_character <= 0) {
                     sleep_ms(1);
@@ -857,23 +854,20 @@ int debug(int (*sendCommandGdb)(char *)){
                         thread_create(&t1, td_check_screen_size, (void*)1);
                         last_check = now;
                     } 
-                    if(CHECKING_HOVER==FALSE && (now - last_check_high) > 0.5){
+                    if(CHECKING_HOVER==FALSE && (now - last_check_high) > 0.2){
                         CHECKING_HOVER=TRUE;
                         thread_create(&t2, td_check_hover_var, (void *) &hVar );
                         last_check_high = now;
                     }
                     check_start = getCurrentTime();
                 }
-                enableEcho();
             }else{
                 double elapsed_time = getCurrentTime() - check_start;
                 if (elapsed_time > 0.5) {
-                    disableEcho();
                     cob.input_character = key_press(MOUSE_EXT);
                     if(cob.auto_step && cob.input_character==27){
                         cob.auto_step = FALSE;
                     }
-                    enableEcho();
                 }
             }
         }
@@ -1030,12 +1024,10 @@ int debug(int (*sendCommandGdb)(char *)){
                         }
                     }
                     show_wait();
-                    disableEcho();
                     MI2start(sendCommandGdb);
                     WAIT_GDB=100;
                     lines = set_window_pos(&cob.line_pos);
                     cob.status_bar = 0;
-                    enableEcho();
                 }
                 break;
             case 's':
@@ -1073,9 +1065,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     int check=hasCobolLine(lb->file_line);
                     if(check>0){
                         show_wait();
-                        disableEcho();
                         MI2goToCursor(sendCommandGdb, cob.name_file, lb->file_line);
-                        enableEcho();
                         WAIT_GDB=100;
                         lines = set_window_pos(&cob.line_pos);
                         cob.status_bar = 0;
@@ -1155,7 +1145,6 @@ int debug(int (*sendCommandGdb)(char *)){
                 if(!cob.waitAnswer){
                     cob.input_character=' ';
                     gotoxy(1,VIEW_LINES);
-                    disableEcho();
                     printf("%s\r", "Connecting            ");
                     fflush(stdout);
                     MI2attach(sendCommandGdb);
@@ -1264,10 +1253,8 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 double current_time = getCurrentTime();
                 if (current_time - last_render_time > 0.016) { 
-                    disableEcho();
                     cob.line_pos = show_file(lines, cob.line_pos, &line_debug);
                     fflush(stdout); 
-                    enableEcho();
                     last_render_time = current_time;
                 }
                 CHECKING_HOVER = FALSE; 
@@ -1437,7 +1424,6 @@ int handle_exe_mode(char *exePath) {
     gotoxy(1,1);
     print_no_resetBK("",color_white, color_black);
     clearScreen();
-    disableEcho();
     printf("Name: %s\n",baseName);        
     draw_box_first(10,10,60,"Utilize the parameters below to compile your COBOL program:");
     draw_box_border(10,11);
@@ -1449,7 +1435,6 @@ int handle_exe_mode(char *exePath) {
     draw_box_last(10,12,60);
     gotoxy(10,15);
     printf("Press a key to continue...");
-    enableEcho();
     fflush(stdout);
     double check_start = getCurrentTime();
     while (key_press(MOUSE_OFF)<=0) {
@@ -1460,6 +1445,9 @@ int handle_exe_mode(char *exePath) {
         }
     }
 
+    #if defined(__linux__)
+    enableRawMode();
+    #endif
     init_cob_context(cwd, baseName);
     start_gdb(baseName, cob.cwd);
 
@@ -1533,6 +1521,9 @@ int handle_cob_files(int argc, char **argv, int arg_init) {
     highlightParse();
 
     strcat(cob.title, nameExecFile);
+    #if defined(__linux__)
+    enableRawMode();
+    #endif
     start_gdb(nameExecFile, cob.cwd);
     freeAll();
     gotoxy(1,(VIEW_LINES-1));
@@ -1543,10 +1534,9 @@ int main(int argc, char **argv) {
     int arg_init=1;
     setup_locale();
     init_terminal_colors();
-    #if defined(__win32__)
+    #if defined(_WIN32)
     timeBeginPeriod(1);
     #endif
-
     if(handle_connect_args(argc, argv)){
         arg_init=3;
     }
@@ -1561,6 +1551,7 @@ int main(int argc, char **argv) {
     print_color_reset();
     cursorON();
     #if defined(__linux__)
+    disableRawMode();
     printf("\033[?1002l");
     printf("\033[?1006l");
     #else

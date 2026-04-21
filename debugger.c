@@ -282,7 +282,11 @@ char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, uns
     if (strcmp(type, "numeric l double") == 0) {
         long double lval;
         memcpy(&lval, valueStr, sizeof(long double));
-        snprintf(wrk, sizeof(wrk), "\"%-.32Lf\"", lval);
+        #if defined(_WIN32)
+            snprintf(wrk, sizeof(wrk), "\"%-.32f\"", (double)lval);
+        #else
+            snprintf(wrk, sizeof(wrk), "\"%-.32Lf\"", lval);
+        #endif
         return strdup(wrk);
     } else if (strcmp(type, "numeric double") == 0) {
         double dval;

@@ -378,13 +378,14 @@ int draw_box_last(int posx, int posy, int width);
 int draw_box_border(int posx, int posy);
 void draw_utf8_text(const char* text);
 int showCobMessage(char * message, int type);
-void disableEcho();
-void enableEcho();
 void freeInputBuffer();
 void focusOnCobgdb();
 void focus_window_by_title(const char *window_title);
 #if defined(_WIN32)
 void DisableMaxWindow();
+#else
+void enableRawMode();
+void disableRawMode();
 #endif
 void init_terminal_colors();
 // parser.c

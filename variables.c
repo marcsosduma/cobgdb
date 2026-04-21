@@ -197,7 +197,6 @@ int show_variables(int (*sendCommandGdb)(char *)){
     char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
     if(functionName==NULL) return 0;
     while(input_character!='r'){
-        disableEcho();
         notShow=start_window_line;
         if(var!=NULL){
             gotoxy(1,1);
@@ -232,7 +231,6 @@ int show_variables(int (*sendCommandGdb)(char *)){
             fflush(stdout);
         }
         gotoxy(1,1);
-        enableEcho();
         expand = FALSE;
         var = NULL;
         input_character =  key_press(MOUSE_NORMAL);
@@ -432,10 +430,8 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     int qtd = 0;
     int st=0;
     int lin=line_start;
-    disableEcho();
     fflush(stdin);
     while(input_character!='R' && input_character!='r' ){
-        disableEcho();
         while(h!=NULL){
             show_help_var(TRUE);
             if(h->type==TP_ALPHA){
@@ -468,7 +464,6 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
             h=h->next;
         }
         fflush(stdout);
-        enableEcho();
         if(qtd==0) break;
         input_character =  key_press(MOUSE_NORMAL);
         if (cob.input_character <= 0) {
@@ -979,7 +974,6 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
         show_info();
     }
     while(input_character!=-100){
-        disableEcho();
         gotoxy(1,1);
         int lin = (VIEW_LINES-12)/2;
         int col = (VIEW_COLS-60)/2;
@@ -1024,7 +1018,6 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
         print_color_reset();
         fflush(stdout);
         gotoxy(1,1);
-        enableEcho();
         input_character =  key_press(MOUSE_NORMAL);
         if (cob.input_character <= 0) {
             #if defined(__linux__)
@@ -1149,7 +1142,6 @@ void load_file(){
         }
         show_info();
         while(input_character!=-100){
-            disableEcho();
             gotoxy(1,1);
             int lin = (VIEW_LINES-12)/2;
             int col = (VIEW_COLS-60)/2;
@@ -1201,7 +1193,6 @@ void load_file(){
             print_color_reset();
             fflush(stdout);
             gotoxy(1,1);
-            enableEcho();
             input_character =  key_press(MOUSE_NORMAL);
             if (cob.input_character <= 0) {
                 #if defined(__linux__)
@@ -1305,7 +1296,6 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
     boolean show = TRUE;
     void (*fprint_colorBK)(int, int) = print_colorBK;
 
-    disableEcho();
     while(input_character!=-100){
         gotoxy(1,1);
         int lin = 4;
@@ -1407,7 +1397,6 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
         }
         //gotoxy(1,23); if(input_character>0) printf("%d\n", input_character);
     }
-    enableEcho();
 }
 
 void show_help(int is_popup){

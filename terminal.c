@@ -196,28 +196,29 @@ int readKeyLinux(int type) {
             buf[nread] = '\0';
         }
         /* --------- MOUSE SGR --------- */
-        if (buf[1] == '[' && buf[2] == '<') {
+        if (nread >= 6 && buf[1] == '[' && buf[2] == '<') {
             int button, x, y;
-            char state;
-            if (sscanf((char*)buf, "\033[<%d;%d;%d%c", &button, &x, &y, &state) == 4) {
-                x--; y--;
-                cob.mouseX = x;
-                cob.mouseY = y;
-                mouseCobHover(x, y);
-                /* Scroll Wheel */
-                if (button == 64) return VKEY_UP;
-                if (button == 65) return VKEY_DOWN;
-                /* Left Button Logic */
-                if ((button & 3) == 0) {
-                    if (state == 'M') return mouseCobAction(x, y, type);
-                    if (state == 'm') { 
-                        cob.dragY = -1; 
-                        return 0; 
+            char state;            
+            // Find the end of the SGR sequence ('M' for press, 'm' for release)
+            char *endptr = strpbrk((char *)buf, "Mm");
+            if (endptr) {
+                state = *endptr;
+                if (sscanf((char*)(buf + 3), "%d;%d;%d", &button, &x, &y) == 3) {
+                    x--; y--; 
+                    cob.mouseX = x;
+                    cob.mouseY = y;
+                    mouseCobHover(x, y);
+                    if (state == 'm') {
+                        cob.dragY = -1;
+                        return 0;
                     }
-                }
-                /* Right Button Logic */
-                if ((button & 3) == 2 && state == 'M') {
-                    return mouseCobRigthAction(x, y);
+                    /* Scroll Wheel Support */
+                    if (button == 64) return VKEY_UP;
+                    if (button == 65) return VKEY_DOWN;
+                    /* Check button types (0: Left, 2: Right) */
+                    int btype = button & 3; 
+                    if (btype == 0) return mouseCobAction(x, y, type);
+                    if (btype == 2) return mouseCobRigthAction(x, y);
                 }
             }
             return 0;
@@ -441,10 +442,10 @@ int key_press(int type){
     }
     return 0;      
 #elif defined(__linux__)
-  enableRawMode();
+  //enableRawMode();
   cob.mouseButton=0;
   int ch_lin= readKeyLinux(type);
-  disableRawMode();
+  //disableRawMode();
   return ch_lin;
 #endif // Windows/Linux
 }

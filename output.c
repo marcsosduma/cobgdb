@@ -325,6 +325,5 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
         exit(1);
     }
     free(sleepVal);
-    //enableEcho();
 }
 #endif
