@@ -199,15 +199,10 @@ int sendCommandGdb(char * command)
    }
 
    strcpy(chBuf, "");
-   int cont1=0;
    for (;;) {
       DWORD dwAvailable = 0;
       if (!PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &dwAvailable, NULL)) 
          break;
-      if (dwAvailable == 0) {
-         Sleep(10);
-         if (++cont1 > 50) break;
-      }
       bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
       #ifdef DEBUG
       bSuccess = WriteFile(hParentStdOut, chBuf, dwRead, &dwWritten, NULL);
