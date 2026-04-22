@@ -252,11 +252,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
         var = NULL;
         input_character =  key_press(MOUSE_NORMAL);
         if (input_character <= 0) {
-            #if defined(__linux__)
-            usleep(1000);
-            #else
-            Sleep(5);
-            #endif
+            sleep_ms(1);
         }
         switch (input_character)
         {
@@ -1046,11 +1042,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
         gotoxy(1,1);
         input_character =  key_press(MOUSE_NORMAL);
         if (input_character <= 0) {
-            #if defined(__linux__)
-            usleep(1000);
-            #else
-            Sleep(5);
-            #endif
+            sleep_ms(1);
         }
         switch (input_character)
         {
@@ -1221,11 +1213,7 @@ void load_file(){
             gotoxy(1,1);
             input_character =  key_press(MOUSE_NORMAL);
             if (input_character <= 0) {
-                #if defined(__linux__)
-                usleep(1000);
-                #else
-                Sleep(5);
-                #endif
+                sleep_ms(1);
             }
             switch (input_character)
             {
@@ -1364,11 +1352,7 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
         gotoxy(1,1);
         input_character =  key_press(MOUSE_NORMAL);
         if (input_character <= 0) {
-            #if defined(__linux__)
-            usleep(1000);
-            #else
-            Sleep(5);
-            #endif
+            sleep_ms(1);
         }
         switch (input_character)
         {

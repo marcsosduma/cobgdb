@@ -328,6 +328,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.waitAnswer=FALSE;
                                         cob.running=FALSE;
                                         cob.isStepOver=-1;
+                                        cob.auto_step = FALSE;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }else if(strcmp(reason->value,"exited-normally")==0){
                                         *status = GDB_STEP_OUT_END;
@@ -336,6 +337,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.running=FALSE;
                                         cob.debug_line=-1;
                                         cob.isStepOver=-1;
+                                        cob.auto_step = FALSE;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }else if(strcmp(reason->value,"exited")==0){
                                         *status = GDB_STOPPED;
@@ -344,6 +346,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.running=FALSE;
                                         cob.debug_line=-1;
                                         cob.isStepOver=-1;
+                                        cob.auto_step = FALSE;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }
                             }else if(reason!=NULL && reason->key!=NULL && strcmp(reason->key,"frame")==0){
@@ -359,6 +362,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.waitAnswer=FALSE;
                                         cob.running=FALSE;
                                         cob.showFile=TRUE;
+                                        cob.auto_step = FALSE;
                                         cob.isStepOver=-1;
                                     }       
                             }else{
@@ -371,6 +375,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                 cob.changeLine = TRUE;
                                 cob.running=FALSE;
                                 cob.showFile=TRUE;
+                                cob.auto_step = FALSE;
                             }
                         }
                     }
@@ -1079,7 +1084,7 @@ This routine was obtained from the following source:
 https://stackoverflow.com/questions/12975022/strtok-r-for-mingw
 */
 #pragma GCC diagnostic push
-#if defined(__GNUC__) && (__GNUC__ >= 10)
+#if defined(__GNUC__) && (__GNUC__ >= 9)
 #pragma GCC diagnostic ignored "-Wnonnull-compare"
 #endif
 char *strtok_r(char *str, const char *delim, char **save)

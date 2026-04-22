@@ -757,7 +757,7 @@ void td_check_hover_var(void *arg) {
     mousex = cob.mouseX;
     mousey = cob.mouseY;
     double elapsed_time = getCurrentTime() - check_hover_start;
-    if (elapsed_time > 1 && cob.mouseY > 0 && cob.mouseY < VIEW_LINES - 2){
+    if (elapsed_time > 0.5 && cob.mouseY > 0 && cob.mouseY < VIEW_LINES - 2){
         if (check_hover(hVar, start_window_line, start_line_x,cob.mouseX, cob.mouseY)) {
             mousex = -9999;
             mousey = -9999;
@@ -847,14 +847,14 @@ int debug(int (*sendCommandGdb)(char *)){
                     cob.input_character = 's';
                     sleep_ms(step_speed[cob.auto_step_delay]);
                 }
-                if(cob.input_character==0 ){
+                if(cob.input_character<=0 ){
                     double now = getCurrentTime();
                     if(CHECKING_SCR_SIZE==FALSE && (now - last_check) > 0.5){
                         CHECKING_SCR_SIZE=TRUE;
                         thread_create(&t1, td_check_screen_size, (void*)1);
                         last_check = now;
                     } 
-                    if(CHECKING_HOVER==FALSE && (now - last_check_high) > 0.2){
+                    if(CHECKING_HOVER==FALSE && (now - last_check_high) > 0.5){
                         CHECKING_HOVER=TRUE;
                         thread_create(&t2, td_check_hover_var, (void *) &hVar );
                         last_check_high = now;

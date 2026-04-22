@@ -262,7 +262,7 @@ int sendCommandGdb(char * command)
          strcpy(chBuf,command);
          cob.waitAnswer = 1;
       }else{
-         _snprintf(chBuf, BUFSIZE, "%d-%s", token++, command);
+         snprintf(chBuf, BUFSIZE, "%d-%s", token++, command);
          chBuf[BUFSIZE - 1] = '\0';
       }
       #ifdef DEBUG
