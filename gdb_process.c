@@ -179,7 +179,8 @@ int sendCommandGdb(char * command)
          mustReturn = 0;
          cob.waitAnswer = 1;
       } else {
-         sprintf(chBuf, "%d-%s", token++, command);
+         _snprintf(chBuf, BUFSIZE, "%d-%s", token++, command);
+         chBuf[BUFSIZE - 1] = '\0';
       }
 
       bSuccess = WriteFile(g_hChildStd_IN_Wr, chBuf, strlen(chBuf), &dwWritten, NULL);
@@ -198,11 +199,15 @@ int sendCommandGdb(char * command)
    }
 
    strcpy(chBuf, "");
-   DWORD dwAvailable = 0;
+   int cont1=0;
    for (;;) {
-      if (!PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &dwAvailable, NULL)) break;
-      if (dwAvailable <=0)  
+      DWORD dwAvailable = 0;
+      if (!PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &dwAvailable, NULL)) 
          break;
+      if (dwAvailable == 0) {
+         Sleep(10);
+         if (++cont1 > 50) break;
+      }
       bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
       #ifdef DEBUG
       bSuccess = WriteFile(hParentStdOut, chBuf, dwRead, &dwWritten, NULL);
@@ -262,7 +267,8 @@ int sendCommandGdb(char * command)
          strcpy(chBuf,command);
          cob.waitAnswer = 1;
       }else{
-         sprintf(chBuf,"%d-%s", token++, command);
+         _snprintf(chBuf, BUFSIZE, "%d-%s", token++, command);
+         chBuf[BUFSIZE - 1] = '\0';
       }
       #ifdef DEBUG
       printf("%s",chBuf);
@@ -282,7 +288,7 @@ int sendCommandGdb(char * command)
    #ifdef DEBUG
    //clrscr();
    #endif
- for (;;)
+   for (;;)
    {
       FD_ZERO(&read_fds);
       FD_SET(stInPid, &read_fds);
