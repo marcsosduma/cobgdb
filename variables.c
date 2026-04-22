@@ -106,7 +106,15 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
         if(linW>0){
              printf("%*ls",linW,L" ");
         }
-        printBK(" ", color_white, color_frame);  
+        if(lin==0 ){
+            print_colorBK(color_light_gray, color_frame);
+            draw_utf8_text("\u25B2");
+        }else if(lin==(VIEW_LINES-4)){
+            print_colorBK(color_light_gray, color_frame);
+            draw_utf8_text("\u25BC");
+        }else{
+            printBK(" ", color_white, color_frame);  
+        }
         lin++;
     }
     if(strcmp(var->functionName,functionName)==0){
@@ -225,7 +233,16 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 }
                 fprint_colorBK(color_black, bkg);
                 printf("%*s",VIEW_COLS-2," ");
-                print_colorBK(color_black, color_frame); printf(" ");
+                //print_colorBK(color_black, color_frame); printf(" ");
+                if(lin==0 ){
+                    print_colorBK(color_light_gray, color_frame);
+                    draw_utf8_text("\u25B2");
+                }else if(lin==(VIEW_LINES-4)){
+                    print_colorBK(color_light_gray, color_frame);
+                    draw_utf8_text("\u25BC");
+                }else{
+                   printBK(" ", color_white, color_frame);  
+                }
                 lin++;
             }
             fflush(stdout);
@@ -234,7 +251,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
         expand = FALSE;
         var = NULL;
         input_character =  key_press(MOUSE_NORMAL);
-        if (cob.input_character <= 0) {
+        if (input_character <= 0) {
             #if defined(__linux__)
             usleep(1000);
             #else
@@ -292,10 +309,19 @@ int show_variables(int (*sendCommandGdb)(char *)){
                 var=firstVar(var);
                 lin=0;
                 break;
+            case 'B':
             case VKEY_ENTER:
-                expand=TRUE;
-                var=firstVar(var);
-                lin=0;
+                if(cob.mouseButton==1 && line_pos!=(cob.mouseY-1)){
+                    line_pos=cob.mouseY-1;
+                    var=firstVar(var);
+                    lin=0;
+                    cob.mouseButton=-1;
+                }else{
+                    expand=TRUE;
+                    var=firstVar(var);
+                    lin=0;
+                    cob.mouseButton=-1;
+                }
                 break;
             case 'e':
             case 'E':
@@ -466,7 +492,7 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
         fflush(stdout);
         if(qtd==0) break;
         input_character =  key_press(MOUSE_NORMAL);
-        if (cob.input_character <= 0) {
+        if (input_character <= 0) {
             #if defined(__linux__)
             usleep(1000);
             #else
@@ -1019,7 +1045,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
         fflush(stdout);
         gotoxy(1,1);
         input_character =  key_press(MOUSE_NORMAL);
-        if (cob.input_character <= 0) {
+        if (input_character <= 0) {
             #if defined(__linux__)
             usleep(1000);
             #else
@@ -1194,7 +1220,7 @@ void load_file(){
             fflush(stdout);
             gotoxy(1,1);
             input_character =  key_press(MOUSE_NORMAL);
-            if (cob.input_character <= 0) {
+            if (input_character <= 0) {
                 #if defined(__linux__)
                 usleep(1000);
                 #else
@@ -1337,7 +1363,7 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
         fflush(stdout);
         gotoxy(1,1);
         input_character =  key_press(MOUSE_NORMAL);
-        if (cob.input_character <= 0) {
+        if (input_character <= 0) {
             #if defined(__linux__)
             usleep(1000);
             #else
