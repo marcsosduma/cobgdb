@@ -254,6 +254,7 @@ int show_variables(int (*sendCommandGdb)(char *)){
         if (input_character <= 0) {
             sleep_ms(1);
         }
+        if(cob.mouseButton==2) input_character='e'; 
         switch (input_character)
         {
             case VKEY_UP:
@@ -997,7 +998,8 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     }
     while(input_character!=-100){
         gotoxy(1,1);
-        int lin = (VIEW_LINES-12)/2;
+        int initial_line = (VIEW_LINES-12)/2;
+        int lin = initial_line;
         int col = (VIEW_COLS-60)/2;
         int size = 60;
         if(show){
@@ -1085,20 +1087,27 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
                 show = TRUE;
                 break;
             case VKEY_ENTER:       
-                if(file_sel<0) break;
-                freeFile();
-                strcpy(cob.file_cobol, files[file_sel]);
-                strcpy(cob.first_file, cob.file_cobol);
-                if(!file_exists(cob.file_cobol)){
-                    clearScreen();
-                    showCobMessage("File COB not found.",2);
-                    fflush(stdout);
-                    printf("File COB not found.");
-                    return;
-                }            
-                loadfile(files[file_sel]);
-                highlightParse();
-                input_character=-100;
+                if(cob.mouseButton==1 && line_pos!=(cob.mouseY-initial_line) &&
+                            cob.mouseY>=initial_line && cob.mouseY<(initial_line+10)){
+                        line_pos=cob.mouseY-initial_line;
+                        lin=0;
+                        cob.mouseButton=-1;
+                }else{
+                    if(file_sel<0) break;
+                    freeFile();
+                    strcpy(cob.file_cobol, files[file_sel]);
+                    strcpy(cob.first_file, cob.file_cobol);
+                    if(!file_exists(cob.file_cobol)){
+                        clearScreen();
+                        showCobMessage("File COB not found.",2);
+                        fflush(stdout);
+                        printf("File COB not found.");
+                        return;
+                    }            
+                    loadfile(files[file_sel]);
+                    highlightParse();
+                    input_character=-100;
+                }
                 break;
             case VKEY_ESCAPE:
                 input_character=-100;
@@ -1161,7 +1170,8 @@ void load_file(){
         show_info();
         while(input_character!=-100){
             gotoxy(1,1);
-            int lin = (VIEW_LINES-12)/2;
+            int initial_line = (VIEW_LINES-12)/2;
+            int lin = initial_line;
             int col = (VIEW_COLS-60)/2;
             int size = 60;
             if(show){
@@ -1255,24 +1265,31 @@ void load_file(){
                     }
                     show = TRUE;
                     break;
-                case VKEY_ENTER:       
-                    if(file_sel<0) break;
-                    freeFile();
-                    strcpy(cob.file_cobol, files[file_sel]);
-                    fileNameWithoutExtension(files[file_sel], &baseName[0]);
-                    normalizePath(baseName);
-                    strcpy(baseName,getFileNameFromPath(baseName));
-                    // C File
-                    snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
-                    if(file_exists(nameCFile)){
-                        cob.status_bar = 1;
-                        parser(nameCFile, 0);
-                    }
-                    cob.status_bar = 0;         
-                    loadfile(files[file_sel]);
-                    highlightParse();
-                    input_character=-100;
-                    must_out = TRUE;
+                case VKEY_ENTER:  
+                    if(cob.mouseButton==1 && line_pos!=(cob.mouseY-initial_line) &&
+                            cob.mouseY>=initial_line && cob.mouseY<(initial_line+10)){
+                        line_pos=cob.mouseY-initial_line;
+                        lin=0;
+                        cob.mouseButton=-1;
+                    }else{
+                        if(file_sel<0) break;
+                        freeFile();
+                        strcpy(cob.file_cobol, files[file_sel]);
+                        fileNameWithoutExtension(files[file_sel], &baseName[0]);
+                        normalizePath(baseName);
+                        strcpy(baseName,getFileNameFromPath(baseName));
+                        // C File
+                        snprintf(nameCFile, sizeof(nameCFile), "%s/%s.c", cob.cwd, baseName);
+                        if(file_exists(nameCFile)){
+                            cob.status_bar = 1;
+                            parser(nameCFile, 0);
+                        }
+                        cob.status_bar = 0;         
+                        loadfile(files[file_sel]);
+                        highlightParse();
+                        input_character=-100;
+                        must_out = TRUE;
+                    }     
                     break;
                 case VKEY_ESCAPE:
                     must_out = TRUE;

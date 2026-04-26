@@ -27,7 +27,10 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.3.5"
+#define COBGDB_VERSION "2.3.6"
+
+#define STEP_DELAY_INITIAL_INDEX 6
+int step_delays[]={1700, 1500, 1300, 1100, 900, 700, 500, 300, 200, 1};
 
 struct st_cobgdb cob ={
     .debug_line = -1,
@@ -43,7 +46,7 @@ struct st_cobgdb cob ={
     .status_bar = 0,
     .dragY = -1,
     .auto_step = FALSE,
-    .auto_step_delay = 6
+    .auto_step_delay = STEP_DELAY_INITIAL_INDEX 
 };
 
 typedef struct {
@@ -82,7 +85,6 @@ ST_Watch * Watching=NULL;
 Lines * lines = NULL;
 struct st_cfiles * parsed_cfiles = NULL;
 int start_gdb(char * name, char * cwd);
-int step_speed[]={1600, 1500, 1300, 1100, 900, 700, 500, 300, 200, 1};
 
 void free_memory()
 {
@@ -688,8 +690,8 @@ int initTerminal(){
     sleep(1);
     #endif
     get_terminal_size(&width, &height);
-    printf("width= %d", width);
-    printf(", height= %d\n", height);
+    //printf("width= %d", width);
+    //printf(", height= %d\n", height);
     qtd_window_line = height-2;
     highlight_bar=load_cfg_value();
     if(highlight_bar>=0){
@@ -794,12 +796,19 @@ int debug(int (*sendCommandGdb)(char *)){
     Lines * line_debug=NULL;
     if(lines==NULL){
         show_sources(sendCommandGdb, TRUE);
+        if(cob.lines==NULL){
+            clearScreen();
+            printf("\n\nNo source file found.\nPlease check if the file was compiled with debug information.\n");
+            fflush(stdout);
+            return 1;
+        }
     }
     if(qtd_window_line>cob.qtd_lines) qtd_window_line=cob.qtd_lines;
     cob.line_pos=set_first_break(sendCommandGdb);
     lines = set_window_pos(&cob.line_pos);
     static double last_check = 0;
     static double last_check_high = 0;
+    int speed_array_size = sizeof(step_delays) / sizeof(step_delays[0]);
     while(cob.lines!=NULL && !bstop){       
         if(cob.showFile){
             line_debug=NULL;
@@ -845,7 +854,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 if(cob.input_character<=0 && cob.auto_step==TRUE){
                     cob.input_character = 's';
-                    sleep_ms(step_speed[cob.auto_step_delay]);
+                    sleep_ms(step_delays[cob.auto_step_delay]);
                 }
                 if(cob.input_character<=0 ){
                     double now = getCurrentTime();
@@ -954,7 +963,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 break;
             case '+':  
                 if(cob.auto_step){
-                    cob.auto_step_delay=(cob.auto_step_delay==9)?cob.auto_step_delay:cob.auto_step_delay+1;
+                    cob.auto_step_delay=(cob.auto_step_delay==(speed_array_size-1))?cob.auto_step_delay:cob.auto_step_delay+1;
                     sava_cfg=TRUE;
                 }else{
                     highlight_bar= modifyBarColor(1);
@@ -1438,6 +1447,11 @@ int handle_exe_mode(char *exePath) {
     gotoxy(10,15);
     printf("Press a key to continue...");
     fflush(stdout);
+
+    #if defined(__linux__)
+    enableRawMode();
+    #endif
+    
     double check_start = getCurrentTime();
     while (key_press(MOUSE_OFF)<=0) {
         double end_time = getCurrentTime();
@@ -1446,10 +1460,6 @@ int handle_exe_mode(char *exePath) {
             break;
         }
     }
-
-    #if defined(__linux__)
-    enableRawMode();
-    #endif
     init_cob_context(cwd, baseName);
     start_gdb(baseName, cob.cwd);
 

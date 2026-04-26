@@ -217,8 +217,9 @@ int readKeyLinux(int type) {
                     if (button == 65) return VKEY_DOWN;
                     /* Check button types (0: Left, 2: Right) */
                     int btype = button & 3; 
-                    if (btype == 0) return mouseCobAction(x, y, type);
-                    if (btype == 2) return mouseCobRigthAction(x, y);
+                    int drag = button & 32;
+                    if (btype== 0) return mouseCobAction(x, y, type);
+                    if (!drag && state=='M' && btype == 2) return mouseCobRigthAction(x, y);
                 }
             }
             return 0;
