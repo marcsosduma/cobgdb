@@ -124,7 +124,7 @@ In this example, p0.cob is the source code of the executable, and p1.cob is the 
 - `A` - Attach: attach to GDBSERVER or Application PID.
 - `W` - Window Size: switches between window sizes: 80x24 and 132x34.
 - `O` - Changes the focus to the window where the debugging code is being displayed (Windows or X11 only).
-- `Ctrl-A` - Autostep: automatically executes the “S” command until next breakpoint or press ESC. Use “+” to increase the delay or “-” to decrease it.
+- `Ctrl-A` - Autostep: automatically executes the “S” command until next breakpoint or press ESC. Use “+” or "-" to increase or decrease the Autostep speed (from 1 to 10).
 
 - `CTRL-F` - Find text: ask for some text and search in the source code.
 - `CTRL-G` - Go to line: ask for a line number and move the cursor in the source code.
