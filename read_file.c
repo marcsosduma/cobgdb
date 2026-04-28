@@ -444,7 +444,7 @@ void save_cfg_value(int color, int speed_delay)
     fprintf(f, "%d\n", color);
     fprintf(f, "%d\n", speed_delay);
     fclose(f);
-    snprintf(msg, 1024, "Color: %d  Speed Delay: %d saved to: %s", color, speed_delay+1, path);
+    snprintf(msg, 1024, "Color: %d  Autostep Speed: %d saved to: %s", color, speed_delay+1, path);
     showCobMessage(msg, 1);
 }
 

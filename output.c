@@ -195,6 +195,26 @@ void createGNOMETerminal(char *sleepVal, const char *target) {
     sleep(1);
 }
 
+// Open a PTYXIS terminal for debugging
+void createPTYXISTerminal(char *sleepVal, const char *target) {
+    setenv("GSK_RENDERER", "cairo", 1);
+    char param[512]; 
+    snprintf(param, sizeof(param), 
+             "echo -ne '\\033]0;GnuCOBOL Debug - %s\\007'; "
+             "echo 'GnuCOBOL DEBUG'; "
+             "sleep %s;", 
+             target, sleepVal);
+    char *ptyxis_args[] = {
+        "ptyxis",
+        "--",                
+        "bash", "-c", param,
+        NULL
+    };
+    createTerminalProcess(ptyxis_args);    
+    sleep(1);
+    unsetenv("GSK_RENDERER");
+}
+
 // Function to check the availability of a terminal
 int isTerminalInstalled(const char *terminalCommand) {
     char command[100];
@@ -299,7 +319,9 @@ void openOuput(int (*sendCommandGdb)(char *), char *target){
             createXFCETerminal(sleepVal, target);
         }else if (isTerminalInstalled("konsole")) {
             createKDETerminal(sleepVal, target);
-        } 
+        }else if (isTerminalInstalled("ptyxis")) {
+            createPTYXISTerminal(sleepVal, target);
+        }
         int try_find = 0;
         while (try_find < 4) {
             sleepMillis(500);

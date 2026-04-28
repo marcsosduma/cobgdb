@@ -465,3 +465,4 @@ void mutex_destroy(mutex_t *m);
 void mutex_lock(mutex_t *m);
 void mutex_unlock(mutex_t *m);
 void sleep_ms(unsigned int ms);
+void exit_with_message(const char *msg, int code);

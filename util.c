@@ -3,6 +3,17 @@
 #include "cobgdb.h"
 
 
+void exit_with_message(const char *msg, int code) {
+    #if defined(__linux__)
+    printf("\033[?1002l");
+    printf("\033[?1006l");
+    #endif
+    printf("%s\n", msg);
+    fflush(stdout);
+    exit(code);
+}
+
+
 void sleep_ms(unsigned int ms) {
 #ifdef _WIN32
     Sleep(ms);

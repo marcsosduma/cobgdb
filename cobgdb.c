@@ -27,7 +27,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.3.6"
+#define COBGDB_VERSION "2.3.7"
 
 #define STEP_DELAY_INITIAL_INDEX 6
 int step_delays[]={1700, 1500, 1300, 1100, 900, 700, 500, 300, 200, 1};
@@ -204,10 +204,7 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
 
     // Check if the cobc command is available
     if(!isCommandInstalled("cobc")){
-        printf("The GnuCOBOL cobc command is not available!\n");
-        fflush(stdout);
-        while(key_press(MOUSE_OFF)<=0);
-        return 0;
+        exit_with_message("The GnuCOBOL cobc command is not available!\n", 0);
     }
     // Initialize the first elements with the initial values.
     char *initial_params[] = {
@@ -443,7 +440,6 @@ int gotoLine(Lines **lines) {
     }
     return found;
 }
-
 
 int show_button() {
     static const char *symbols[] = {
@@ -1359,12 +1355,6 @@ void setup_locale(void) {
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
 #endif
-}
-
-void exit_with_message(const char *msg, int code) {
-    printf("%s\n", msg);
-    fflush(stdout);
-    exit(code);
 }
 
 int handle_connect_args(int argc, char **argv) {

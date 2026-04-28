@@ -53,15 +53,15 @@ endif
 
 # Commands for Windows and Linux
 ifeq ($(POSIX_UTILS),0)
-  # Windows tools (windows make with cmd as shell)
-  RM       = del
-  CP       = copy
-  COBGDB_VERSION := $(shell echo $(SRCDIR)/get_version.bat "$(SRCDIR)/cobgdb.c")
+  RM = del /F /Q
+  CP = copy /Y  
+  COBGDB_VERSION := $(shell for /f "tokens=3" %%a in ('findstr /C:"define COBGDB_VERSION" "$(subst /,\,$(SRCDIR)cobgdb.c")') do @echo %%~a)
+  COBGDB_VERSION := $(subst ",,$(COBGDB_VERSION))
 else
-  # Everything else - can also be MSYS in Windows
-  RM       = rm -f
-  CP       = cp
-  COBGDB_VERSION := $(shell awk '/define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c )
+  # --- VERSÃO PARA MSYS / LINUX ---
+  RM = rm -f
+  CP = cp
+  COBGDB_VERSION := $(shell awk '/define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)cobgdb.c )
 endif
 
 
