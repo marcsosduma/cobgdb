@@ -3,12 +3,19 @@
 
 ifeq ($(OS),Windows_NT)
     WINMODE = 1
+    ifeq ($(MSYSTEM),)
+        POSIX_UTILS = 0
+    else
+        POSIX_UTILS = 1
+    endif
 else
     # detect if running under unix by finding 'rm' in $PATH :
     ifeq ($(wildcard $(addsuffix /rm,$(subst :, ,$(PATH)))),)
         WINMODE = 1
+        POSIX_UTILS = 0
     else
         WINMODE = 0
+        POSIX_UTILS = 1
     endif
 endif
 
@@ -17,41 +24,46 @@ SRCDIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o variables.o debugger.o highlight.o string_parser.o util.o
 
 $(info SRCDIR = $(SRCDIR))
-#
-# Windows
-# objdump -x cobgdb.exe | findstr /R /C:"DLL"
-#
-ifeq ($(WINMODE),1)
-CC       = gcc.exe
-RES      = 
-BIN      = cobgdb.exe
-OBJ     += realpath.o
-RM       = del
-CP       = copy
-COMP     = comp.bat
-LIBS	 = -static -lwinmm
-COBGDB_VERSION := $(shell $(SRCDIR)/get_version.bat "$(SRCDIR)/cobgdb.c")
-else
-#
-# Linux
-#
-CC       = gcc
-RES      =
-OBJ     += output.o
-BIN      = cobgdb
-RM       = rm -f
-CP       = cp
-COMP     = comp.sh
-LIBS	 = -lpthread
-COBGDB_VERSION := $(shell awk '/define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c )
 
-# Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
-X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
-ifeq ($(X11_HEADER_EXISTS),yes)
+ifeq ($(WINMODE),1)
+  # Windows
+  # objdump -x cobgdb.exe | findstr /R /C:"DLL"
+  CC       = gcc.exe
+  RES      = 
+  BIN      = cobgdb.exe
+  OBJ     += realpath.o
+  LIBS	 = -static -lwinmm
+
+else
+
+  # Linux
+  CC       = gcc
+  RES      =
+  OBJ     += output.o
+  BIN      = cobgdb
+  LIBS	 = -lpthread
+
+  # Check whether the file Xlib.h exists in /usr/include/X11/Xlib.h (or in a similar include path, if different on your system).
+  X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
+  ifeq ($(X11_HEADER_EXISTS),yes)
     LIBS     += -lX11
     CPPFLAGS += -DHAVE_X11 -I/usr/include/X11
+  endif
 endif
+
+# Commands for Windows and Linux
+ifeq ($(POSIX_UTILS),0)
+  # Windows tools (windows make with cmd as shell)
+  RM       = del
+  CP       = copy
+  COBGDB_VERSION := $(shell echo $(SRCDIR)/get_version.bat "$(SRCDIR)/cobgdb.c")
+else
+  # Everything else - can also be MSYS in Windows
+  RM       = rm -f
+  CP       = cp
+  COBGDB_VERSION := $(shell awk '/define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)/cobgdb.c )
 endif
+
 
 CFLAGS   = $(CPPFLAGS) -fdiagnostics-color=always -g -Wall -Wextra
 
@@ -64,29 +76,27 @@ DIST_FILES = $(SRCDIR)README.md \
              $(wildcard $(SRCDIR)doc/*.pdf) \
              $(SRCDIR)LICENSE
 
-# Commands for Windows and Linux
-ifeq ($(WINMODE),1)
-	MKDIR = if not exist "$(DIST_DIR)" mkdir "$(DIST_DIR)"
-else
-	MKDIR = mkdir -p "$(DIST_DIR)"
-endif
-
 .PHONY: all all-before all-after clean clean-custom copy dist
 
 #=== Default target (executed when running just make) ===
 all: all-before $(BIN) all-after
 
 ifeq ($(WINMODE),1)
+dist: comp.bat
+
 copy:
 	$(CP) $(BIN) windows
-	$(CP) $(COMP) windows
+	$(CP) comp.bat windows
 	$(RM) $(BIN)
 endif
 
-dist: $(DIST_DIR) $(BIN) $(COMP) $(DIST_FILES)
+dist: $(DIST_DIR) $(BIN) comp.sh $(DIST_FILES)
 	$(CP) $(BIN) $(DIST_DIR)
-	$(CP) $(COMP) $(DIST_DIR)
+	$(CP) comp.sh $(DIST_DIR)
 ifeq ($(WINMODE),1)
+	$(CP) comp.bat $(DIST_DIR)
+endif
+ifeq ($(POSIX_UTILS),0)
 	@for %%f in ($(DIST_FILES)) do ( \
 		set "src=%%f" && \
 		setlocal enabledelayedexpansion && \
@@ -105,7 +115,7 @@ endif
 
 # Creation of the distribution directory
 $(DIST_DIR):
-	@$(MKDIR)
+	@mkdir "$(DIST_DIR)"
 	
 clean: clean-custom
 	${RM} $(OBJ)
