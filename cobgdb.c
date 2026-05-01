@@ -27,7 +27,7 @@
 #endif
 #include "cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.3.7"
+#define COBGDB_VERSION "2.3.8"
 
 #define STEP_DELAY_INITIAL_INDEX 6
 int step_delays[]={1700, 1500, 1300, 1100, 900, 700, 500, 300, 200, 1};

@@ -813,7 +813,7 @@ void focusOnCobgdb() {
     SetActiveWindow(hwndConsole);
     #else
     #ifdef HAVE_X11
-    focus_window_by_title_linux("CobGDB Debug");
+       focus_window_by_title_linux("CobGDB Debug");
     #endif
     #endif
 }
@@ -836,7 +836,14 @@ void focus_window_by_title(const char *window_title) {
     if (!is_x11_environment()) {
         showCobMessage("Works only in X11 environments",1);
     }else{
-        focus_window_by_title_linux(linux_title);
+        const char *session_type = getenv("XDG_SESSION_TYPE");
+        // Standard check for Wayland session
+        int is_wayland = (session_type && strcmp(session_type, "wayland") == 0);
+        if(!is_wayland){
+            focus_window_by_title_linux(linux_title);
+        }else{
+            showCobMessage("Not supported in Wayland",1);
+        }
     }
     #endif
     #endif
