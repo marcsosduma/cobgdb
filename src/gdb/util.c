@@ -1,7 +1,54 @@
+/*
+ * COBGDB GnuCOBOL Debugger:
+ * This code is based on the GnuCOBOL Debugger extension available at:
+ * https://github.com/OlegKunitsyn/gnucobol-debug
+ *
+ * License:
+ * This code is provided without any warranty, express or implied.
+ * You may modify and distribute it at your own risk.
+ * 
+ * Author: Marcos Martins Duma
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include "cobgdb.h"
 
+#if defined(__linux__)
+#if !defined(CLOCK_MONOTONIC)
+#define CLOCK_MONOTONIC		1
+#endif
+#endif
+
+
+/*
+ * COBGDB - Platform Abstraction Layer
+ *
+ * Provides cross-platform implementations for:
+ *   - High-resolution timing
+ *   - Sleep functions
+ *   - Process termination and cleanup
+ *   - Mutex synchronization
+ *   - Thread creation and management
+ *
+ * Supported platforms:
+ *   - Windows
+ *   - Linux / POSIX
+ *
+ * This module isolates operating system specific APIs from
+ * the rest of the debugger codebase.
+ */
+double getCurrentTime() {
+#ifdef _WIN32
+    LARGE_INTEGER frequency, start;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&start);
+    return (double)start.QuadPart / frequency.QuadPart;
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+#endif
+}
 
 void exit_with_message(const char *msg, int code) {
     #if defined(__linux__)

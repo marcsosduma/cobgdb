@@ -1,18 +1,29 @@
 /*
- * COBGDB GnuCOBOL Debugger:
+ * COBGDB - GnuCOBOL Debugger
+ *
+ * Linux terminal management and debugger I/O redirection.
+ *
  * License:
- * This code is provided without any warranty, express or implied.
- * You may modify and distribute it at your own risk.
- * 
- * Author: Marcos Martins Duma
+ * This software is provided "as is", without warranty of any kind,
+ * express or implied. Redistribution and modification are permitted.
+ *
+ * Author:
+ * Marcos Martins Duma
  */
 
- #if defined(__linux__)
+#if defined(__linux__)
+#include <dirent.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdint.h> 
+#include <limits.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
+#include <linux/limits.h>
 #include "cobgdb.h"
 
 #define BUFFER 512
@@ -20,7 +31,12 @@ extern char * gdbOutput;
 extern int VIEW_LINES;
 extern int VIEW_COLS;
 
-// run system command and read output
+// ==========================================================================================
+// Execute a system command and capture its standard output.
+//
+// The returned buffer is dynamically allocated and must be freed by
+// the caller.
+// ==========================================================================================
 char *execCommand(const char *cmd) {
     char initialColumns[100];
     char *result = malloc(BUFFER);
@@ -55,12 +71,21 @@ char *execCommand(const char *cmd) {
     return result;
 }
 
-// sleep
+// ==========================================================================================
+// Suspend execution for the specified number of milliseconds.
+// ==========================================================================================
 void sleepMillis(int milliseconds) {
     usleep(milliseconds * 1000);
 }
 
-
+// ==========================================================================================
+// Generate a deterministic numeric identifier from a string.
+//
+// The generated value is used as a unique token to identify debugger
+// terminal instances.
+//
+// The returned string must be freed by the caller.
+// ==========================================================================================
 char *hashCode(const char *target) {
     unsigned int code = 0;
     int i;
@@ -77,8 +102,17 @@ char *hashCode(const char *target) {
     return strdup(strCode);
 }
 
-// fint the tty for output
-char *findTtyName(const char *target) {
+
+// ==========================================================================================
+// Locate the terminal device associated with the debugger output process
+// using the "ps" command.
+//
+// Returns the full terminal device path (for example "/dev/pts/3")
+// or NULL if no matching terminal is found.
+//
+// The returned string must be freed by the caller.
+// ==========================================================================================
+char *findTtyNameByPS(const char *target) {
     char *xterm_device=NULL;
     char command[512];
     sprintf(command, "ps -u");
@@ -108,6 +142,85 @@ char *findTtyName(const char *target) {
     return xterm_device;
 }
 
+// ==========================================================================================
+// Check whether a string contains only numeric characters.
+// ==========================================================================================
+static int is_number_str(const char *s) {
+    for (; *s; s++) if (!isdigit((unsigned char)*s)) return 0;
+    return 1;
+}
+
+// ==========================================================================================
+// Locate the terminal device associated with the debugger output process.
+//
+// The function first searches the /proc filesystem for a process
+// matching the generated debugger token and retrieves its terminal.
+//
+// Returns the terminal device path or NULL if not found.
+//
+// The returned string must be freed by the caller.
+// ==========================================================================================
+char *findTtyName(const char *target) {
+    if (!target) return NULL;
+    uid_t myuid = getuid();
+    char *sleepVal = hashCode(target);
+    if (!sleepVal) return NULL;
+    char needle[128];
+    if (snprintf(needle, sizeof(needle), "sleep %s", sleepVal) >= (int)sizeof(needle)) {
+        free(sleepVal);
+        return findTtyNameByPS(target);
+    }
+    DIR *d = opendir("/proc");
+    if (!d) {
+        free(sleepVal);
+        return findTtyNameByPS(target);
+    }
+    struct dirent *de;
+    char *xterm_device = NULL;
+    while ((de = readdir(d)) != NULL) {
+        if (!is_number_str(de->d_name)) continue;
+        char procdir_path[PATH_MAX];
+        snprintf(procdir_path, sizeof(procdir_path), "/proc/%s", de->d_name);
+        struct stat st;
+        if (stat(procdir_path, &st) != 0) {
+            continue;
+        }
+        if (st.st_uid != myuid) {
+            continue;
+        }
+        char cmdline_path[PATH_MAX];
+        snprintf(cmdline_path, sizeof(cmdline_path), "/proc/%s/cmdline", de->d_name);
+        FILE *f = fopen(cmdline_path, "rb");
+        if (!f) continue;
+        char cmdline[4096];
+        size_t n = fread(cmdline, 1, sizeof(cmdline) - 1, f);
+        fclose(f);
+        if (n == 0) continue;
+        cmdline[n] = '\0';
+        for (size_t i = 0; i < n; i++) {
+            if (cmdline[i] == '\0') cmdline[i] = ' ';
+        }
+        if (!strstr(cmdline, needle)) continue;
+        char fd0_path[PATH_MAX];
+        snprintf(fd0_path, sizeof(fd0_path), "/proc/%s/fd/0", de->d_name);
+        char linkbuf[PATH_MAX];
+        ssize_t ln = readlink(fd0_path, linkbuf, sizeof(linkbuf) - 1);
+        if (ln <= 0) continue;
+        linkbuf[ln] = '\0';
+        if (strncmp(linkbuf, "/dev/", 5) == 0) {
+            free(xterm_device);
+            xterm_device = strdup(linkbuf);
+        }
+    }
+
+    closedir(d);
+    free(sleepVal);
+    return xterm_device;
+}
+
+// ==========================================================================================
+// Create a detached terminal process using fork() and execvp().
+// ==========================================================================================
 void createTerminalProcess(char *xterm_args[]) {
     int child_pid = fork();
     if (child_pid == -1) {
@@ -122,7 +235,9 @@ void createTerminalProcess(char *xterm_args[]) {
     }
 }
 
-// Open an XFCE terminal if necessary.
+// ==========================================================================================
+// Launch an XFCE Terminal instance configured for debugger output.
+// ==========================================================================================
 void createXFCETerminal(char *sleepVal, const char *target) {
     char title[100]; // Maximum title length.
     snprintf(title, sizeof(title) - 1, "GnuCOBOL Debug - %s", target);
@@ -140,7 +255,9 @@ void createXFCETerminal(char *sleepVal, const char *target) {
 }
 
 
-// Open an xterm terminal if necessary.
+// ==========================================================================================
+// Launch an xterm instance configured for debugger output.
+// ==========================================================================================
 void createTerminal(char * sleepVal, const char *target) {
     char title[100]; // Maximum Title Length.
     snprintf(title, sizeof(title)-1, "GnuCOBOL Debug - %s", target);
@@ -158,7 +275,9 @@ void createTerminal(char * sleepVal, const char *target) {
     sleep(1);
 }
 
-// Open a KDE terminal (Konsole) if necessary.
+// ==========================================================================================
+// Launch a Konsole terminal instance configured for debugger output.
+// ==========================================================================================
 void createKDETerminal(char *sleepVal, const char *target) {
     char title[100]; // Maximum title length.
     snprintf(title, sizeof(title) - 1, "GnuCOBOL Debug - %s", target);
@@ -178,7 +297,9 @@ void createKDETerminal(char *sleepVal, const char *target) {
     sleep(1);
 }
 
-// Open a GNOME terminal if necessary.
+// ==========================================================================================
+// Launch a GNOME Terminal instance configured for debugger output.
+// ==========================================================================================
 void createGNOMETerminal(char *sleepVal, const char *target) {
     char title[100];
     snprintf(title, sizeof(title) - 1, "GnuCOBOL Debug - %s", target);
@@ -195,7 +316,9 @@ void createGNOMETerminal(char *sleepVal, const char *target) {
     sleep(1);
 }
 
-// Open a PTYXIS terminal for debugging
+// ==========================================================================================
+// Launch a Ptyxis terminal instance configured for debugger output.
+// ==========================================================================================
 void createPTYXISTerminal(char *sleepVal, const char *target) {
     setenv("GSK_RENDERER", "cairo", 1);
     char param[512]; 
@@ -215,13 +338,20 @@ void createPTYXISTerminal(char *sleepVal, const char *target) {
     unsetenv("GSK_RENDERER");
 }
 
-// Function to check the availability of a terminal
+// ==========================================================================================
+// Check whether a terminal emulator is available in the current system.
+// ==========================================================================================
 int isTerminalInstalled(const char *terminalCommand) {
     char command[100];
     snprintf(command, sizeof(command) - 1, "which %s >/dev/null 2>/dev/null", terminalCommand);
     return system(command) == 0;
 }
 
+// ==========================================================================================
+// Copy text to the system clipboard using xclip.
+//
+// Returns 1 on success or 0 on failure.
+// ==========================================================================================
 int copyToClipboard(const char *text) {
     // Check if xclip is available
     if (system("which xclip > /dev/null 2> /dev/null") == 0) {
@@ -235,78 +365,23 @@ int copyToClipboard(const char *text) {
     return 0;
 }
 
-
-void message_output(char * sleepVal){
-    char alert1[80];
-    char aux[100];
-    int lin=(VIEW_LINES/2-6);
-    int col=(VIEW_COLS-60)/2;
-    int bkg= color_dark_red;
-    
-    print_colorBK(color_yellow, bkg);
-    draw_box_first(col,lin+2,59,"COBGDB OUTPUT");
-    draw_box_border(col,lin+3);
-    draw_box_border(col+60,lin+3);
-    gotoxy(col+1,lin+3);
-    printBK("COBGDB will open a terminal to  perform  the  application's\r",color_green, bkg);
-    print_colorBK(color_yellow, bkg);
-    draw_box_border(col,lin+4);
-    draw_box_border(col+60,lin+4);
-    gotoxy(col+1,lin+4);
-    printBK("output. If you want  to  use  another  terminal,  open  the\r",color_green, bkg);
-    print_colorBK(color_yellow, bkg);
-    draw_box_border(col,lin+5);
-    draw_box_border(col+60,lin+5);
-    gotoxy(col+1,lin+5);
-    printBK("terminal  and type the following command:                  \r",color_green, bkg);
-    sprintf(alert1,"sleep %s;", sleepVal);
-    sprintf(aux,"%-59s\r",alert1);
-    print_colorBK(color_yellow, bkg);
-    draw_box_border(col,lin+6);
-    draw_box_border(col+60,lin+6);
-    gotoxy(col+1,lin+6);
-    printBK(aux,color_white, bkg);
-    print_colorBK(color_yellow, bkg);
-    draw_box_border(col,lin+7);
-    draw_box_border(col+60,lin+7);
-    gotoxy(col+1,lin+7);
-    int vsum = 9;
-    if (getenv("DISPLAY") != NULL) {
-        if(copyToClipboard(alert1)){
-            printBK("(this value is in the clipboard)                           \r",color_green, bkg);
-            print_colorBK(color_yellow, bkg);
-            draw_box_border(col,lin+8);
-            draw_box_border(col+60, lin+8);
-            gotoxy(col+1,lin+8);
-        }else{
-            printBK("(install xclip to copy this information to the clipboard)  \r",color_green, bkg);
-            print_colorBK(color_yellow, bkg);
-            draw_box_border(col,lin+8);
-            draw_box_border(col+60,lin+8);
-            gotoxy(col+1,lin+8);
-        }
-    }else{
-        vsum=8;
-    }
-    printBK("After that, press a key in this window.                    \r",color_green, bkg);
-    print_colorBK(color_yellow, bkg);
-    draw_box_last(col,lin+vsum,59);
-    print_color_reset();
-    fflush(stdout);
-}
-
+// ==========================================================================================
+// Configure the GDB inferior terminal used for program input/output.
+//
+// The function attempts to locate an existing debugger terminal or
+// creates a new terminal emulator instance when necessary. Once the
+// terminal is available, its device path is assigned to GDB through
+// the "inferior-tty" setting.
+// ==========================================================================================
 void openOuput(int (*sendCommandGdb)(char *), char *target){
-    char aux[200];
+    char aux[512];
     int status, tk=0;
     char * sleepVal=hashCode(target);
     char *xterm_device = findTtyName(target);
 
     //disableEcho();
     if(xterm_device == NULL){
-        message_output(sleepVal);
-        gotoxy(12,15);
-        char key=-1;
-        while(key<20 && key!=VKEY_ENTER) key=key_press(MOUSE_EXT);
+        message_output_linux(sleepVal);
         xterm_device = findTtyName(target);
     }
     if (xterm_device == NULL) {

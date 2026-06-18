@@ -25,6 +25,18 @@ struct ST_TableValues * parseCommaValue(char * output);
 
 char * asyncRecordTypeOrg[] = { "*","+","="};
 char * asyncRecordTypeDest[]= { "exec","status","notify"};
+
+// ==========================================================================================
+// Convert a GDB asynchronous record symbol to its textual representation.
+//
+// Supported symbols:
+//   * -> exec
+//   + -> status
+//   = -> notify
+//
+// Returns a dynamically allocated string that must be freed by the caller.
+// Returns NULL if the symbol is not recognized.
+// ==========================================================================================
 char * asyncRecordType(char * type){
     for(int a=0;a<3;a++){
         if(strcmp(type, asyncRecordTypeOrg[a])==0) 
@@ -32,8 +44,20 @@ char * asyncRecordType(char * type){
     }
     return NULL;
 }
+
 char * streamRecordTypeOrg[] = { "~","@","&"};
 char * streamRecordTypeDest[]= { "console","target","log"};
+// ==========================================================================================
+// Convert a GDB stream record symbol to its textual representation.
+//
+// Supported symbols:
+//   ~ -> console
+//   @ -> target
+//   & -> log
+//
+// Returns a dynamically allocated string that must be freed by the caller.
+// Returns NULL if the symbol is not recognized.
+// ==========================================================================================
 char * streamRecordType(char * type){
     for(int a=0;a<3;a++){
         if(strcmp(type, streamRecordTypeOrg[a])==0) 
@@ -42,6 +66,13 @@ char * streamRecordType(char * type){
     return NULL;
 }
 
+// ==========================================================================================
+// Allocate and initialize a ST_TableValues structure.
+//
+// All fields are initialized to NULL.
+//
+// Returns a newly allocated structure.
+// ==========================================================================================
 ST_TableValues * newTableValues(){
     ST_TableValues * values = malloc(sizeof(ST_TableValues));
     values->next=NULL; values->array=NULL; values->next_array=NULL;
@@ -49,6 +80,16 @@ ST_TableValues * newTableValues(){
     return values;
 }
 
+// ==========================================================================================
+// Check whether the beginning of a string contains a valid 3-digit
+// octal escape sequence.
+//
+// Example:
+//   123
+//   377
+//
+// Returns 1 if a valid octal sequence is found, otherwise -1.
+// ==========================================================================================
 //char octalMatch[] = "^[0-7]{3}";
 int fOctalMatch(char * line, char mm[][MAX_MATCH_LENGTH]){
     if(strlen(line)<3) return -1;
@@ -63,12 +104,23 @@ int fOctalMatch(char * line, char mm[][MAX_MATCH_LENGTH]){
     return 1;
 }
 
+// ==========================================================================================
+// Decode a quoted C-style string.
+//
+// Supported escape sequences:
+//   \\  \"  \'  \n  \r  \t  \b  \f  \v
+// and octal escape sequences.
+//
+// Returns a newly allocated decoded string.
+// ==========================================================================================
 char * parseString(char * str){
     char chrUTF8[4];
-    char * ret = malloc(strlen(str)*4);
+    char * ret = malloc(strlen(str)*4+1);
     strcpy(ret,"");
-    if(str[0]!='"' || str[strlen(str)-1]!='"')
-        return "";
+    if(str[0]!='"' || str[strlen(str)-1]!='"'){
+        free(ret);
+        return strdup("");
+    }
     int tot=strlen(str)-2;
     subString(str,1, strlen(str)-2, str);
     str[tot]='\0';
@@ -96,8 +148,7 @@ char * parseString(char * str){
                 ret[x++] = '\v';}
             else if (str[i] == '0'){
                 ret[x++] = '\0';}
-            else{
-                
+            else{                
                 char match[10][512];
                 char * aux=malloc(strlen(str)+1);
                 subString(str,i, strlen(str)-i, aux);
@@ -129,7 +180,57 @@ char * parseString(char * str){
     return ret;
 }
 
-char * parseCString(char * output){
+// ==========================================================================================
+// Extract and decode a quoted string from the beginning of a buffer.
+//
+// The extracted portion is removed from the original buffer.
+//
+// Example:
+//   Input : "hello",next
+//   Output: hello
+//   Remaining buffer: ,next
+//
+// Returns a newly allocated decoded string.
+// ==========================================================================================
+char * parseCString(char * output) {
+    if (output[0] != '"') return NULL;
+
+    int stringEnd = 1;
+    int escaped = 0;
+    while (output[stringEnd] != '\0') {
+        if (escaped) {
+            escaped = 0;
+        } else if (output[stringEnd] == '\\') {
+            escaped = 1;
+        } else if (output[stringEnd] == '"') {
+            stringEnd++;
+            break;
+        }
+        stringEnd++;
+    }
+
+    char *str = malloc(stringEnd + 1);
+    memcpy(str, output, stringEnd);
+    str[stringEnd] = '\0';
+
+    size_t lenResto = strlen(output + stringEnd);
+    memmove(output, output + stringEnd, lenResto + 1);
+
+    char *aux = parseString(str); 
+    
+    free(str); 
+    return aux;
+}
+
+// ==========================================================================================
+// Legacy implementation of parseCString().
+//
+// Extracts a quoted string from the beginning of the buffer,
+// decodes escape sequences and removes the parsed text.
+//
+// Returns a newly allocated string.
+// ==========================================================================================
+char * parseCStringOld(char * output){
     //char remaining[8192];
     if(output[0]!='"')
         return NULL;
@@ -154,11 +255,25 @@ char * parseCString(char * output){
     int lenOut= strlen(output);
     subString(output,stringEnd, lenOut-stringEnd, output);
     char * aux = parseString(str);
-    strcpy(str, aux);
+    if(aux!=NULL){
+        strcpy(str, aux);
+        free(aux);
+    }
     return str;
 } 
 
- struct ST_TableValues * parseTupleOrList(char * output){
+// ==========================================================================================
+// Parse a GDB/MI tuple or list structure.
+//
+// Supported examples:
+//
+//   {name="value"}
+//   [1,2,3]
+//   [{...},{...}]
+//
+// Returns a tree of ST_TableValues structures.
+// ==========================================================================================
+struct ST_TableValues * parseTupleOrList(char * output){
     if(output[0] != '{' && output[0] != '[')
         return FALSE;
     boolean canBeValueList = (output[0]=='[');
@@ -176,26 +291,26 @@ char * parseCString(char * output){
         result->value=NULL;
         parseValue(output, result);
         if(result->array!=NULL || result->value!=NULL){
-            struct ST_TableValues * retornArray=NULL;
+            struct ST_TableValues * returnArray=NULL;
             if(result->value!=NULL){
-                retornArray=result;
+                returnArray=result;
             }else{
-                retornArray=result->array;        
+                returnArray=result->array;        
                 free(result);
             }
             while(TRUE){
                 struct ST_TableValues * portionValue = parseCommaValue(output);
                 if(portionValue!=NULL){
                     if(portionValue->value!=NULL){
-                        if(retornArray==NULL) {
-                            retornArray=portionValue;
+                        if(returnArray==NULL) {
+                            returnArray=portionValue;
                         }else{
-                            struct ST_TableValues * out=retornArray;
+                            struct ST_TableValues * out=returnArray;
                             while(out->next!=NULL) out=out->next;
                             out->next=portionValue;
                         }
                     }else{
-                        struct ST_TableValues * out=retornArray;
+                        struct ST_TableValues * out=returnArray;
                         while(out->next_array!=NULL) out=out->next_array;
                         out->next_array=portionValue;
                     }
@@ -204,7 +319,7 @@ char * parseCString(char * output){
                     break;
                 }
             }
-            return retornArray;
+            return returnArray;
         }
     }    
     struct ST_TableValues * result = parseResult( output);
@@ -222,14 +337,24 @@ char * parseCString(char * output){
         }
     }
     char canBeValueListChar = (canBeValueList)?'[':'{';
-    char * temp = malloc(strlen(output)+1);
+    char * temp = malloc(strlen(output)+2);
     sprintf(temp,"%c%s",canBeValueListChar, output);
     free(output);
     output=temp;
     return NULL;
 }
 
- void parseValue(char * output, struct ST_TableValues * values){
+// ==========================================================================================
+// Parse a single GDB/MI value.
+//
+// Supported value types:
+//   - string
+//   - tuple
+//   - list
+//
+// Parsed data is stored in the supplied structure.
+// ==========================================================================================
+void parseValue(char * output, struct ST_TableValues * values){
     if(output[0]=='\"'){
         values->value=parseCString(output);
     }else if (output[0] == '{' || output[0] == '['){
@@ -237,6 +362,15 @@ char * parseCString(char * output){
     }
 }
 
+// ==========================================================================================
+// Parse a comma-prefixed value.
+//
+// Example:
+//
+//   ,"value"
+//
+// Returns a parsed ST_TableValues structure or NULL.
+// ==========================================================================================
 ST_TableValues * parseCommaValue(char * output){
     if(output[0]!=',')
         return NULL;
@@ -246,7 +380,15 @@ ST_TableValues * parseCommaValue(char * output){
     return values;
 }
 
-
+// ==========================================================================================
+// Extract and validate a GDB/MI variable name.
+//
+// Supported characters:
+//   a-z A-Z 0-9 _ -
+//
+// Returns 1 when a valid identifier is found,
+// otherwise returns -1.
+// ==========================================================================================
 //char variableRegex[] = "^([a-zA-Z_\\-][a-zA-Z0-9_\\-]*)";
 int fVariableRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     if(line==NULL) return -1;
@@ -269,6 +411,16 @@ int fVariableRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     return ret;
 }
 
+// ==========================================================================================
+// Parse a GDB/MI result entry.
+//
+// Example:
+//
+//   frame={...}
+//   level="0"
+//
+// Returns a populated ST_TableValues structure.
+// ==========================================================================================
 ST_TableValues * parseResult(char * output){
     char match[10][512];
     struct ST_TableValues * values = NULL;
@@ -284,6 +436,15 @@ ST_TableValues * parseResult(char * output){
     return values;
 }
 
+// ==========================================================================================
+// Parse a comma-prefixed GDB/MI result entry.
+//
+// Example:
+//
+//   ,frame={...}
+//
+// Returns a populated ST_TableValues structure or NULL.
+// ==========================================================================================
 struct ST_TableValues * parseCommaResult(char * output){
     if(output[0]!=',')
         return NULL;
@@ -292,6 +453,18 @@ struct ST_TableValues * parseCommaResult(char * output){
     return values;
 }
 
+// ==========================================================================================
+// Parse a GDB/MI out-of-band record prefix.
+//
+// Supported record types:
+//
+//   *stopped
+//   +download
+//   =thread-created
+//   ~"console text"
+//
+// Returns the number of matched elements.
+// ==========================================================================================
 //char outOfBandRecordRegex[] = "^(([0-9]*|undefined)([\\*\\+\\=])|([\\~\\@\\&]))";
 int fOutOfBandRecordRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    if(line==NULL) return 0;
@@ -326,6 +499,17 @@ int fOutOfBandRecordRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    return ret;
 }
 
+// ==========================================================================================
+// Parse an asynchronous record class.
+//
+// Examples:
+//
+//   stopped,
+//   running,
+//   thread-created,
+//
+// Returns the number of matched elements.
+// ==========================================================================================
 //char asyncClassRegex[] = "^([a-zA-Z0-9_\\-]*),";
 int fAsyncClassRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    if(line==NULL) return -1;
@@ -354,6 +538,19 @@ int fAsyncClassRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     return ret;
 }
 
+// ==========================================================================================
+// Parse a GDB/MI result record.
+//
+// Supported records:
+//
+//   ^done
+//   ^running
+//   ^connected
+//   ^error
+//   ^exit
+//
+// Returns the number of matched elements.
+// ==========================================================================================
 //char resultRecordRegex[] = "^([0-9]*)\\^(done|running|connected|error|exit)";
 int fResultRecordRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    char * values[]={"done","running","connected","error","exit"};
@@ -384,6 +581,18 @@ int fResultRecordRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    return ret;
 }
 
+// ==========================================================================================
+// Parse a complete GDB/MI response.
+//
+// Supports:
+//   - result records
+//   - async records
+//   - stream records
+//
+// Builds a structured ST_MIInfo tree representing the response.
+//
+// Returns a newly allocated ST_MIInfo structure.
+// ==========================================================================================
 ST_MIInfo * parseMI(char * out){
     #ifdef DEBUG
     printf("%s\n", out);
@@ -482,7 +691,19 @@ ST_MIInfo * parseMI(char * out){
     return MIInfo;
 }
 
+// ==========================================================================================
+// Recursively free a ST_TableValues tree.
+//
+// Releases:
+//   - child arrays
+//   - sibling nodes
+//   - keys
+//   - values
+//
+// Does not free the root pointer itself.
+// ==========================================================================================
 void freeTableValues(ST_TableValues * start){
+        if(start == NULL) return;
         ST_TableValues * sch=start;
         if(sch->next_array!=NULL){
            freeTableValues(sch->next_array);
@@ -502,18 +723,34 @@ void freeTableValues(ST_TableValues * start){
         sch->value=NULL;
 }
 
+// ==========================================================================================
+// Release all memory allocated by parseMI().
+//
+// Frees:
+//   - out-of-band records
+//   - result records
+//   - table values
+//   - associated strings
+//
+// Safe to call with NULL.
+// ==========================================================================================
 void freeParsed(ST_MIInfo * parsed) {
     if(parsed==NULL)
         return;    
     if(parsed->outOfBandRecord!=NULL){
-        if(parsed->outOfBandRecord->asyncClass!=NULL) free(parsed->outOfBandRecord->asyncClass);
-        if(parsed->outOfBandRecord->content!=NULL) free(parsed->outOfBandRecord->content);
-        if(parsed->outOfBandRecord->type!=NULL) free(parsed->outOfBandRecord->type);
-        if(parsed->outOfBandRecord->output!=NULL){
-            freeTableValues(parsed->outOfBandRecord->output);
-            free(parsed->outOfBandRecord->output);
-        } 
-        free(parsed->outOfBandRecord);
+        ST_OutOfBandRecord * outOfBandRecord = parsed->outOfBandRecord;
+        while(outOfBandRecord!=NULL){
+            if(outOfBandRecord->asyncClass!=NULL) free(outOfBandRecord->asyncClass);
+            if(outOfBandRecord->content!=NULL) free(outOfBandRecord->content);
+            if(outOfBandRecord->type!=NULL) free(outOfBandRecord->type);
+            if(outOfBandRecord->output!=NULL){
+                freeTableValues(outOfBandRecord->output);
+                free(outOfBandRecord->output);
+            } 
+            ST_OutOfBandRecord * next = outOfBandRecord->next;
+            free(outOfBandRecord);
+            outOfBandRecord = next;
+        }
     }
     if(parsed->resultRecords!=NULL){
         if(parsed->resultRecords->results!=NULL){
@@ -526,6 +763,18 @@ void freeParsed(ST_MIInfo * parsed) {
     free(parsed);
 }
 
+// ==========================================================================================
+// Parse a path component used to navigate MI structures.
+//
+// Examples:
+//
+//   frame
+//   fullname
+//   args
+//   .local
+//
+// Returns the number of matched elements.
+// ==========================================================================================
 //char * pathRegex = "^\\.?([a-zA-Z_\\-][a-zA-Z0-9_\\-]*)";
 int fPathRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    if(line==NULL || line[0]=='\0') return -1;
@@ -559,6 +808,17 @@ int fPathRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     return ret;
 }
 
+// ==========================================================================================
+// Parse an array index expression.
+//
+// Examples:
+//
+//   [0]
+//   [5].
+//   [3]$
+//
+// Returns the number of matched elements.
+// ==========================================================================================
 //char * indexRegex = "^\\[([0-9]+)\\]($|\\.)";
 int fIndexRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    if(line==NULL) return 0;
@@ -592,6 +852,19 @@ int fIndexRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     return ret;
 }
 
+// ==========================================================================================
+// Search a parsed MI tree using a path expression.
+//
+// Examples:
+//
+//   frame.args[0].name
+//   stack[2].func
+//   bkpt.fullname
+//
+// Traverses nested structures and arrays recursively.
+//
+// Returns the matching node or an empty node if no match is found.
+// ==========================================================================================
 ST_TableValues * parseMIvalueOf(ST_TableValues * start, char * p, char * key, boolean * find) {
     if(start==NULL)
         return start;    

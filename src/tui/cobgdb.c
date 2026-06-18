@@ -25,13 +25,15 @@
 #define F_OK 0
 #include <mmsystem.h>
 #endif
-#include "cobgdb.h"
+#include "../gdb/cobgdb.h"
 #define __WITH_TESTS_
-#define COBGDB_VERSION "2.3.8"
+#define COBGDB_VERSION "2.3.9"
 
 #define STEP_DELAY_INITIAL_INDEX 6
-int step_delays[]={1700, 1500, 1300, 1100, 900, 700, 500, 300, 200, 1};
 
+// =====================================================
+// Cobol Debugger State
+// =====================================================
 struct st_cobgdb cob ={
     .debug_line = -1,
     .ctlVar = -1,
@@ -49,6 +51,9 @@ struct st_cobgdb cob ={
     .auto_step_delay = STEP_DELAY_INITIAL_INDEX 
 };
 
+// =====================================================
+// Variables
+// =====================================================
 typedef struct {
     int version_len;
     int title_len;
@@ -59,6 +64,8 @@ typedef struct {
 } ST_HeaderLayout;
 
 ST_HeaderLayout headerLayout;
+
+int step_delays[] = {2000,1750,1500,1250,1000,750,500,250,100,25};
 
 int VIEW_COLS=  80;
 int VIEW_LINES= 24;
@@ -76,7 +83,11 @@ char * gdbOutput = NULL;
 int color_frame=color_light_blue;
 int highlight_bar;
 int sava_cfg = FALSE;
+int DEBUG_GDB=0;
 
+// =====================================================
+// Global Data Structures
+// =====================================================
 ST_Line * LineDebug=NULL;
 ST_Attribute * Attributes=NULL;
 ST_DebuggerVariable * DebuggerVariable=NULL;
@@ -84,8 +95,16 @@ ST_bk * BPList=NULL;
 ST_Watch * Watching=NULL;
 Lines * lines = NULL;
 struct st_cfiles * parsed_cfiles = NULL;
+
+// =====================================================
+// Prototypes
+// =====================================================
 int start_gdb(char * name, char * cwd);
 
+// =====================================================
+// Free memory allocated for source lines and highlights, 
+// clearing the current state of the source view
+// =====================================================
 void free_memory()
 {
     Lines * lines = cob.lines;
@@ -107,9 +126,10 @@ void free_memory()
     cob.lines = NULL;
 }
 
-/**
- * Free c files parsed.
- */
+// =====================================================
+// Free c files parsed, clearing the list of source 
+// files that have been processed
+// =====================================================
 void free_cfiles(void) {
     struct st_cfiles * curr = parsed_cfiles;
     while (curr) {
@@ -121,7 +141,10 @@ void free_cfiles(void) {
     parsed_cfiles = NULL;
 }
 
-
+// =====================================================
+// Free watching list, clearing the list of variables 
+// that are being watched in the debugger
+// =====================================================
 void freeWatchingList()
 {
     ST_Watch * search = Watching;
@@ -135,6 +158,9 @@ void freeWatchingList()
     Watching = NULL;
 }
 
+// =====================================================
+// Free breakpoint list, clearing the list of breakpoints
+// =====================================================
 void freeBKList()
 {
     ST_bk * search = BPList;
@@ -149,42 +175,45 @@ void freeBKList()
     BPList = NULL;
 }
 
+
+#if defined(__clang__)
+    #define COMPILER_NAME "Clang " __clang_version__
+#elif defined(__MINGW64__)
+    #define COMPILER_NAME "MinGW-w64 GCC " __VERSION__
+#elif defined(__MINGW32__)
+    #define COMPILER_NAME "MinGW32 GCC " __VERSION__
+#elif defined(__GNUC__)
+    #define COMPILER_NAME "GCC " __VERSION__
+#elif defined(_MSC_VER)
+    #define COMPILER_NAME "Microsoft Visual C++"
+#else
+    #define COMPILER_NAME "Unknown Compiler"
+#endif
+// =====================================================
+// Show version information for the CobGDB debugger, 
+// including copyright and license details
+// =====================================================
 void show_version(){
     printf("CobGDB - GnuCOBOL Debugger - version %s\n", COBGDB_VERSION);
     printf("Copyright (C) 2025 Free Software Foundation, Inc.\n");
     printf("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n");
     printf("This is free software: you are free to change and redistribute it.\n");
-    #ifdef __MINGW32__
-    printf("This CobGDB was configured as \"MinGW32\".\n");
-    #elif defined(__GNUC__)
-    printf("This CobGDB was compiled with GCC.\n");
-    #else
-    printf("Compiler information not available.\n");
-    #endif
+    printf("This CobGDB was configured with \"%s\".\n", COMPILER_NAME);
     printf("For bug reporting instructions, please see:\n");
     printf("<https://github.com/marcsosduma/cobgdb>.\n");
 }
 
-#if defined(__linux__)
-#if !defined(CLOCK_MONOTONIC)
-#define CLOCK_MONOTONIC		1
-#endif
-#endif
-
-double getCurrentTime() {
-#ifdef _WIN32
-    LARGE_INTEGER frequency, start;
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&start);
-    return (double)start.QuadPart / frequency.QuadPart;
-#else
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
-#endif
+// =====================================================================
+// Log GDB output to the console, used for debugging and diagnostics
+// =====================================================================
+void log_gdb_output(const char *text){
+    printf("%s", text);
 }
 
-// Function to check the availability of a command
+// =====================================================================
+// Function to check the availability of a command in the system, 
+// used to verify that required tools like 'cobc' are installed
+// =====================================================================
 int isCommandInstalled(const char *command) {
 #ifdef _WIN32
     // Windows implementation
@@ -199,6 +228,10 @@ int isCommandInstalled(const char *command) {
 #endif
 }
 
+// ================================================================================
+// Start the GDB process with the specified executable name and working directory,
+// initializing the debugging session
+// ================================================================================
 int cobc_compile(char file[][512], char values[10][256], int arg_count){
     char *param[20]; 
 
@@ -259,6 +292,10 @@ int cobc_compile(char file[][512], char values[10][256], int arg_count){
     return ret;
 }
 
+// ============================================================
+// Set window position based on the current debug line,
+// adjusting the view to ensure that the debug line is visible
+// ============================================================
 Lines * set_window_pos(int * line_pos){
     if(cob.debug_line>=0){
         // exec_line before window
@@ -290,6 +327,10 @@ Lines * set_window_pos(int * line_pos){
     return line;
 }
 
+// ============================================================================
+// Show an exit message and wait for the user to press a key before exiting,
+// used when the user tries to exit the debugger
+// ============================================================================
 int show_esc_exit(){
     gotoxy(1,VIEW_LINES);
     print_colorBK(color_yellow, color_black);
@@ -298,6 +339,9 @@ int show_esc_exit(){
     return TRUE;
 }
 
+// =========================================================================
+// Search for a specific text in the source lines, allowing the user to find
+// =========================================================================
 int search_text(Lines ** lines) {
     Lines *line = cob.lines;
     wchar_t buffer[500];
@@ -345,7 +389,7 @@ int search_text(Lines ** lines) {
     buffer[499] = L'\0';
     wchar_t *wcharString = malloc(501 * sizeof(wchar_t));
     if (!wcharString) return -1;
-    int init_pos = start_window_line + cob.line_pos;
+    int init_pos = start_window_line + cob.line_pos + 1;
     int line_pos = 0;
     int loop = (cob.line_pos>0)?TRUE:FALSE;
     while (line != NULL) {
@@ -370,7 +414,7 @@ int search_text(Lines ** lines) {
         #endif
         const wchar_t *pos = wcsistr(wcharString, buffer);
         if (pos) {
-            start_window_line = line_pos;
+            start_window_line = line_pos - 1;
             cob.line_pos = 0;
             *lines=line;
             int qtt=3;
@@ -393,6 +437,9 @@ int search_text(Lines ** lines) {
     return found;
 }
 
+// ===============================================================================
+// Go to a specific line number in the source code, allowing the user to navigate
+// ===============================================================================
 int gotoLine(Lines **lines) {
     Lines *line = cob.lines;
     char buffer[500];
@@ -424,7 +471,7 @@ int gotoLine(Lines **lines) {
     }
     while (line != NULL) {
         if(new_line==line->file_line){
-            start_window_line = new_line;
+            start_window_line = new_line - 1;
             cob.line_pos = 0;
             *lines=line;
             int qtt=3;
@@ -441,6 +488,10 @@ int gotoLine(Lines **lines) {
     return found;
 }
 
+// ============================================================
+// Display the action buttons in the console window, allowing 
+// the user to interact with the debugger with mouse clicks
+// ============================================================
 int show_button() {
     static const char *symbols[] = {
         "\u2592 ", "\u25BA ", "\u2192 ", "\u2193 ",
@@ -463,6 +514,10 @@ int show_button() {
     return TRUE;
 }
 
+// =====================================================================
+// Set the title layout for the console window, calculating the padding
+// needed to center the title and version information
+// =====================================================================
 void set_title_layout() {
     int button_width=20;
     headerLayout.left_label_len = strlen("CobGDB");
@@ -482,6 +537,10 @@ void set_title_layout() {
     headerLayout.pad_right = free_space - headerLayout.pad_left;
 }
 
+// =====================================================================
+// Display the main options and status information in the console window,
+// including the title, version, and current state of the debugger
+// =====================================================================
 int show_opt() {
     char aux[512];
     const char *leftLabel = "CobGDB";
@@ -570,6 +629,8 @@ int show_info() {
             msg = cob.waitAnswer ? "Waiting" : "";
         }
     }
+    //gotoxy(1, 1);
+    //printf("MouseY=%d   start_window_line=%d  ",cob.mouseY, start_window_line);    
     gotoxy(1, VIEW_LINES);
     print_colorBK(fg, bg);
     char out[512];
@@ -588,6 +649,81 @@ int show_info() {
     return TRUE;
 }
 
+// ==========================================================================================
+// Print a highlighted line of code, iterating through the linked list of highlighted tokens and
+// printing each token with the appropriate color based on its type, ensuring that the output is
+// formatted correctly and that the colors are reset after printing
+// ==========================================================================================
+int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
+    struct st_highlt * h = hight;
+    wchar_t wcBuffer[512];    
+    int qtdMove=0;
+    int tot=total;
+    int fg=-1;
+    void (*fprint_colorBK)(int,int);
+    int st = start;
+    #if defined(_WIN32)
+    static HANDLE hConsole = NULL;
+    if (!hConsole)
+        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    #else
+    char    utf8buf[2048];
+    mbstate_t mbst = {0};
+    #endif
+
+    while (st > 0 && h != NULL) {
+        if (st < h->size) break;
+        st -= h->size;
+        h = h->next;
+    }
+    bkg = (bkg > 0) ? bkg : color_black;
+    fprint_colorBK = (bkg == color_dark_gray ? print_colorBK256c : print_colorBK);
+    fprint_colorBK(bkg, bkg);
+    fg = bkg;
+    while (h != NULL && tot > 0) {
+        qtdMove = (tot < h->size - st) ? tot : h->size - st;
+        if (qtdMove > 0) {
+            if (qtdMove > 512) qtdMove = 512;
+            if (h->color != fg) {
+                fprint_colorBK(h->color, bkg);
+                fg = h->color;
+            }
+            wmemcpy(wcBuffer, &h->token[st], qtdMove);
+            wcBuffer[qtdMove] = L'\0';
+            #if defined(_WIN32)
+            DWORD written;
+            WriteConsoleW(hConsole, wcBuffer, qtdMove, &written, NULL);
+            #else
+            const wchar_t *src = wcBuffer;
+            size_t out = wcsrtombs(utf8buf, &src, sizeof(utf8buf), &mbst);
+            if (out != (size_t)-1)
+                fwrite(utf8buf, 1, out, stdout);
+            //printf("%*ls", qtdMove, wcBuffer);
+            #endif
+        }
+        tot -= qtdMove;
+        h = h->next;
+        st = 0;
+    }
+    if (tot > 0) {
+        print_colorBK(color_black, bkg);
+        if (tot > 511) tot = 511;
+        wmemset(wcBuffer, L' ', tot);
+        #if defined(_WIN32)
+        DWORD written;
+        WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), wcBuffer, tot, &written, NULL);
+        #else
+        fwrite(wcBuffer, sizeof(wchar_t), tot, stdout);
+        #endif
+    }
+    print_color_reset();
+    return TRUE;
+}
+
+// ===============================================================================
+// Display the source code in the console window, allowing the user to navigate
+// through the lines and view the current debug line
+// ===============================================================================
 int show_file(Lines * lines_file, int line_pos, Lines ** line_debug){
     Lines * show_line=lines_file;
     int NUM_TXT=VIEW_COLS-4-cob.num_dig;    
@@ -675,6 +811,9 @@ int show_file(Lines * lines_file, int line_pos, Lines ** line_debug){
     return line_pos;
 }
 
+// ===============================================================================
+// Initialize the terminal window for the debugger
+// ===============================================================================
 int initTerminal(){
     int width=0, height=0;
 
@@ -697,6 +836,9 @@ int initTerminal(){
     return TRUE;
 }
 
+// ===============================================================================
+// Set the first breakpoint in the source code
+// ===============================================================================
 int set_first_break(int (*sendCommandGdb)(char *)){
     ST_Line * debug = LineDebug;
     int ret = 1;
@@ -724,6 +866,10 @@ int set_first_break(int (*sendCommandGdb)(char *)){
     return ret;
 }
 
+// ===============================================================================
+// Check the screen size and update the view if necessary, ensuring that the
+// debugger display is correctly sized for the terminal window
+// ===============================================================================
 void td_check_screen_size(void *arg){
     cob.showFile=win_size_verify(cob.showFile);
     if(!cob.showFile) sleep_ms(1000);
@@ -736,6 +882,10 @@ void td_check_screen_size(void *arg){
     CHECKING_SCR_SIZE=FALSE;
 }    
 
+// ===============================================================================
+// Check if the mouse is hovering over a variable in the source view, and update    
+// the hover state accordingly
+// ===============================================================================
 void td_check_hover_var(void *arg) {
     struct st_hoverer_var *hVar = arg;    
     if (hVar->isHoverVar && hVar->cobVar!=NULL) {
@@ -769,6 +919,10 @@ void td_check_hover_var(void *arg) {
     CHECKING_HOVER = FALSE;
 }
 
+// ===============================================================================
+// Main function to start the CobGDB debugger, initializing the terminal and entering   
+// the main debugging loop to handle user input and update the display
+// ===============================================================================
 int debug(int (*sendCommandGdb)(char *)){
     int qtd_page = 0;
     int tempValue = -1;
@@ -805,6 +959,9 @@ int debug(int (*sendCommandGdb)(char *)){
     static double last_check = 0;
     static double last_check_high = 0;
     int speed_array_size = sizeof(step_delays) / sizeof(step_delays[0]);
+    #if defined(__linux__)
+    enableRawMode();
+    #endif
     while(cob.lines!=NULL && !bstop){       
         if(cob.showFile){
             line_debug=NULL;
@@ -815,7 +972,7 @@ int debug(int (*sendCommandGdb)(char *)){
             } else {
                 cob.dragLine = 0;
             }
-            if (cob.dragLine == 0 && start_window_line>1) cob.dragLine++;                
+            if (cob.dragLine == 0 && start_window_line>0) cob.dragLine++;                
             int max_drag_pos = available_space - cob.dragSize;
             if (cob.dragLine < 0) cob.dragLine = 0;
             if (cob.dragLine > max_drag_pos) cob.dragLine = max_drag_pos;
@@ -882,7 +1039,7 @@ int debug(int (*sendCommandGdb)(char *)){
             case VKEY_UP:
                 if(cob.line_pos<0 && lines->file_line>0){
                     cob.line_pos = lines->file_line - lines->file_line;
-                    start_window_line = lines->file_line;
+                    start_window_line = lines->file_line - 1;
                 }else if(cob.line_pos==0 && start_window_line>0){
                     if(lines->line_before!= NULL){
                         start_window_line--;
@@ -892,13 +1049,13 @@ int debug(int (*sendCommandGdb)(char *)){
                     cob.line_pos--;
                 }
                 cob.showFile=TRUE;  
-                start_window_line = lines->file_line;      
+                start_window_line = lines->file_line - 1;      
                 CHECKING_HOVER = FALSE;
                 break;
             case VKEY_DOWN: 
                 if(cob.line_pos<0 && lines->line_after== NULL && lines->file_line>0){
                     cob.line_pos = lines->file_line - lines->file_line;
-                    start_window_line = lines->file_line;
+                    start_window_line = lines->file_line - 1;
                 }else if(lines->line_after!= NULL){
                     if(cob.line_pos>(VIEW_LINES-5)){
                         start_window_line++;                 
@@ -910,7 +1067,7 @@ int debug(int (*sendCommandGdb)(char *)){
                 }
                 CHECKING_HOVER = FALSE;
                 cob.showFile=TRUE;
-                start_window_line = lines->file_line;      
+                start_window_line = lines->file_line - 1;      
                 break;
             case VKEY_PGUP:
                 if(cob.line_pos>0){
@@ -924,7 +1081,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     }
                 }
                 cob.showFile=TRUE;
-                start_window_line = lines->file_line;      
+                start_window_line = lines->file_line - 1;      
                 CHECKING_HOVER = FALSE;
                 break;
             case VKEY_PGDOWN: 
@@ -941,7 +1098,7 @@ int debug(int (*sendCommandGdb)(char *)){
                     }
                 }
                 while((lines->file_line+cob.line_pos)>cob.qtd_lines) cob.line_pos--;
-                start_window_line = lines->file_line;      
+                start_window_line = lines->file_line - 1;      
                 cob.showFile=TRUE;
                 CHECKING_HOVER = FALSE;
                 break;
@@ -1287,6 +1444,11 @@ int debug(int (*sendCommandGdb)(char *)){
     return TRUE;
 }
 
+// ===============================================================================
+// Load the COBOL source file and prepare the data structures for debugging, 
+// including reading the source lines, setting breakpoints, and initializing the 
+// display parameters
+// ===============================================================================
 int loadfile(char * nameCobFile) {
     start_window_line = 0;
     start_line_x = 0;
@@ -1306,6 +1468,7 @@ int loadfile(char * nameCobFile) {
     strcpy(cob.cfile, temp_name);        
     readCodFile(&cob);
     freeWatchingList();
+    highlightParse();
     lines = cob.lines;
     char aux[10];
     sprintf(aux,"%d",cob.qtd_lines);
@@ -1336,11 +1499,19 @@ int loadfile(char * nameCobFile) {
     return TRUE;
 }
 
+// ===============================================================================
+// Free the memory allocated for the source file lines and related data structures,
+// ensuring that all resources are properly released when the debugger is closed
+// ===============================================================================
 int freeFile(){
     free_memory();
     return TRUE;
 }
 
+// ===============================================================================
+// Free all resources used by the debugger, including breakpoints, source file data,
+// and any other dynamically allocated memory
+// ===============================================================================
 int freeAll(){
     freeBKList();
     freeFile();
@@ -1349,6 +1520,10 @@ int freeAll(){
     return TRUE;
 }
 
+// ===============================================================================
+// Set up the locale settings for the debugger, ensuring that it can properly handle
+// international characters and display them correctly in the terminal
+// ===============================================================================
 void setup_locale(void) {
     setlocale(LC_ALL, "");
 #if defined(_WIN32)
@@ -1357,6 +1532,10 @@ void setup_locale(void) {
 #endif
 }
 
+// ===============================================================================
+// Handle command-line arguments for connecting to a running process, allowing the user
+// to specify connection parameters for attaching the debugger to an existing program
+// ===============================================================================
 int handle_connect_args(int argc, char **argv) {
     strcpy(cob.connect,"");
     if (argc < 3)
@@ -1373,6 +1552,9 @@ int handle_connect_args(int argc, char **argv) {
     return 0;
 }
 
+// ===============================================================================
+// Handle special command-line arguments, such as --test, --version, and --help
+// ===============================================================================
 int handle_special_args(int argc, char **argv, int arg_init) {
     if (argc < arg_init - 1 + 2)
         exit_with_message("Please provide the GnuCOBOL file.", 0);
@@ -1397,6 +1579,10 @@ int handle_special_args(int argc, char **argv, int arg_init) {
     return 0;
 }
 
+// ===============================================================================
+// Initialize the COBOL debugging context, setting up the working directory and 
+// executable file name
+// ===============================================================================
 void init_cob_context(const char *cwd, const char *nameExecFile) {
     strcpy(cob.cwd, cwd);
     normalizePath(cob.cwd);
@@ -1460,6 +1646,10 @@ int handle_exe_mode(char *exePath) {
     return 0;
 }
 
+// ===============================================================================
+// Handle the compilation of COBOL source files, preparing the necessary data structures
+// and starting the GDB debugger with the compiled executable
+// ===============================================================================
 int handle_cob_files(int argc, char **argv, int arg_init) {
     char *cwd = getCurrentDirectory();
     char nameExecFile[256], baseName[256];
@@ -1520,18 +1710,18 @@ int handle_cob_files(int argc, char **argv, int arg_init) {
     strcpy(cob.file_cobol, cob.name_file);
     strcpy(cob.first_file, cob.file_cobol);
     loadfile(cob.file_cobol);
-    highlightParse();
 
     strcat(cob.title, nameExecFile);
-    #if defined(__linux__)
-    enableRawMode();
-    #endif
     start_gdb(nameExecFile, cob.cwd);
     freeAll();
     gotoxy(1,(VIEW_LINES-1));
     return 0;
 }
 
+// ===============================================================================
+// Main function to start the CobGDB debugger, initializing the terminal and entering
+// the main debugging loop to handle user input and update the display
+// ===============================================================================
 int main(int argc, char **argv) {
     int arg_init=1;
     setup_locale();

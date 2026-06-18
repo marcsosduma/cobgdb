@@ -1,3 +1,4 @@
+#pragma once
 #if defined(_WIN32)
 #include <windows.h>
 #include <process.h>
@@ -272,6 +273,7 @@ enum types{
 struct st_cobgdb {
 	char name_file[256];
     char file_cobol[512];
+    char function[512];
     char title[512];
     char cfile[1048];
     char cwd[512];
@@ -381,6 +383,8 @@ int showCobMessage(char * message, int type);
 void freeInputBuffer();
 void focusOnCobgdb();
 void focus_window_by_title(const char *window_title);
+int dialogBox(char * title, char * msg, char * var, int size);
+int dialogBoxNum(char * title, char * msg, char * var, int size);
 #if defined(_WIN32)
 void DisableMaxWindow();
 #else
@@ -442,12 +446,14 @@ void show_help(int is_popup);
 void load_file();
 int check_hover(struct st_hoverer_var *hVar, int start_window_line, int start_line_x, int posx, int posy);
 int show_hover_var(int (*sendCommandGdb)(char *), struct st_hoverer_var *hVar);
+void message_output_linux(char * sleepVal);
 //debugger.c
 char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags, int digits);
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags);
 char* parseUsage(char* valueStr);
 // output.c
 void openOuput(int (*sendCommandGdb)(char *), char *target);
+int copyToClipboard(const char *text);
 //highlight.c
 int highlightParse();
 void freeHighlight(struct st_highlt * hight);
@@ -466,3 +472,7 @@ void mutex_lock(mutex_t *m);
 void mutex_unlock(mutex_t *m);
 void sleep_ms(unsigned int ms);
 void exit_with_message(const char *msg, int code);
+
+// util ou windows.c
+void show_log(const char *fmt, ...);
+void log_gdb_output(const char *text);

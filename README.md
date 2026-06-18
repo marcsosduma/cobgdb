@@ -40,12 +40,12 @@ In the ```doc``` directory of the project, there is a document available that sh
 
 COBGDB running:
 
-![Screenshot](cobgdb_run.png)
+![Screenshot](images/cobgdb_run.png)
 
 
 Debugging application output:
 
-![Screenshot](customer_run.png)
+![Screenshot](images/customer_run.png)
 
 
 To debug multiple programs, use COBGDB with the following syntax:
@@ -104,9 +104,9 @@ comp.sh -m p1.cob
 
 In this example, p0.cob is the source code of the executable, and p1.cob is the source code of the module (.dll on Windows or .so on Linux).
 
-![Screenshot](cobgdb_library1.png)
+![Screenshot](images/cobgdb_library1.png)
 
-![Screenshot](cobgdb_library2.png)
+![Screenshot](images/cobgdb_library2.png)
 
 ## ❓ Main Commands
 
@@ -151,7 +151,7 @@ To switch to Windows Console Host, follow these steps:
 
 Debugging application on Linux:
 
-![Screenshot](cobgdb_linux.png)
+![Screenshot](images/cobgdb_linux.png)
 
 ## 📝 Extra Information
 
@@ -170,3 +170,5 @@ Linux Ubuntu:
 
 sudo apt install libx11-dev
 ```
+
+

@@ -17,7 +17,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <dirent.h> 
-#include "cobgdb.h"
+#include "../gdb/cobgdb.h"
 
 #ifndef VKEY_BACKSPACE
 #define VKEY_BACKSPACE 8
@@ -35,6 +35,20 @@ int expand = FALSE;
 wchar_t wcBuffer[512];
 ST_DebuggerVariable * currentVar;
 
+// ==========================================================================================
+// Displays the variable window command bar.
+//
+// Shows the available keyboard shortcuts used in the variable viewer and
+// clears the footer area.
+//
+// Commands:
+//   R      - Return to previous screen
+//   ENTER  - Expand/Collapse variable
+//   E      - Edit variable value
+//
+// Returns:
+//   TRUE.
+// ==========================================================================================
 int show_opt_var(){
     char * opt = " CobGDB - (R)return (ENTER)expand/contract (E)edit var";
     char aux[150];
@@ -47,6 +61,19 @@ int show_opt_var(){
     return TRUE;
 }
 
+// ==========================================================================================
+// Prints a variable and its children in the variable tree.
+//
+// Responsible for rendering the variable hierarchy, updating values when
+// necessary, handling expand/collapse operations and highlighting the
+// currently selected item.
+//
+// The function recursively traverses child and sibling nodes to build the
+// complete variable tree displayed on screen.
+//
+// Returns:
+//   The next available screen line.
+// ==========================================================================================
 int print_variable(int level, int * notShow, int line_pos, int start_lin, 
                    int end_lin, int lin, int start_linex_x,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *),
@@ -132,9 +159,18 @@ int print_variable(int level, int * notShow, int line_pos, int start_lin,
     return lin;
 }
 
+// ==========================================================================================
+// Returns the first root COBOL variable.
+//
+// Searches the global debugger variable list and returns the first variable
+// associated with a COBOL structure that does not have a parent node.
+//
+// Returns:
+//   Pointer to the first root variable.
+// ==========================================================================================
 ST_DebuggerVariable * firstVar(ST_DebuggerVariable * var){
     var = DebuggerVariable;
-    while(TRUE){
+    while(var!=NULL){
         if(var->variablesByCobol!=NULL && var->parent==NULL){
             break;
         }
@@ -143,6 +179,17 @@ ST_DebuggerVariable * firstVar(ST_DebuggerVariable * var){
     return var;
 }
 
+// ==========================================================================================
+// Edits the currently selected variable.
+//
+// Opens an edit dialog, allows the user to change the variable value and
+// sends the modification request to GDB.
+//
+// After a successful update, the variable list is refreshed.
+//
+// Returns:
+//   TRUE.
+// ==========================================================================================
 int edit_variable(int (*sendCommandGdb)(char *),int lin){
     char aux[500];
     int bkg= color_dark_red;
@@ -187,6 +234,22 @@ int edit_variable(int (*sendCommandGdb)(char *),int lin){
     return TRUE;
 }
 
+// ==========================================================================================
+// Displays the Variables window.
+//
+// Provides interactive navigation through the debugger variables including:
+//
+//   - Vertical scrolling
+//   - Horizontal scrolling
+//   - Variable expansion/collapse
+//   - Runtime variable editing
+//
+// The display is limited to variables belonging to the currently active
+// COBOL function.
+//
+// Returns:
+//   TRUE.
+// ==========================================================================================
 int show_variables(int (*sendCommandGdb)(char *)){
     gotoxy(1,1);
     int lin=0;    
@@ -345,6 +408,16 @@ int show_variables(int (*sendCommandGdb)(char *)){
     return TRUE;
 }
 
+// ==========================================================================================
+// Displays a variable hierarchy inside the hover window.
+//
+// Recursively renders the selected variable and all of its descendants.
+//
+// Used by the "Show Line Variables" feature.
+//
+// Returns:
+//   The next available screen line.
+// ==========================================================================================
 int hover_variable(int level, int * notShow, int line_pos, int start_lin, 
                    int end_lin, int lin, int start_linex_x,
                    ST_DebuggerVariable * var,int (*sendCommandGdb)(char *), int bkg){
@@ -421,6 +494,15 @@ int hover_variable(int level, int * notShow, int line_pos, int start_lin,
     return lin;
 }
 
+// ==========================================================================================
+// Displays or clears the variable editing help message.
+//
+// When enabled, a short help message is shown in the status area informing
+// the user that the selected variable can be edited.
+//
+// Returns:
+//   TRUE.
+// ==========================================================================================
 int show_help_var(int show){
     #if defined(_WIN32)
     int len = VIEW_COLS-1;
@@ -438,6 +520,18 @@ int show_help_var(int show){
     return TRUE;
 }
 
+// ==========================================================================================
+// Displays all variables referenced by the selected source line.
+//
+// Parses the highlighted tokens from the current COBOL source line,
+// identifies matching debugger variables and presents their values in
+// a popup window.
+//
+// Allows navigation and direct editing of displayed variables.
+//
+// Returns:
+//   TRUE.
+// ==========================================================================================
 int show_line_var(struct st_highlt * high, char * functionName, int (*sendCommandGdb)(char *)){
     int line_pos=0;
     int start_window_line = 0;
@@ -577,6 +671,20 @@ int show_line_var(struct st_highlt * high, char * functionName, int (*sendComman
     return TRUE;
 }
 
+// ==========================================================================================
+// Removes trailing spaces while preserving surrounding quotes.
+//
+// This function is primarily used to normalize COBOL variable values
+// returned by GDB before displaying them to the user.
+//
+// Examples:
+//
+//   "ABC     " -> "ABC"
+//   '123   '   -> '123'
+//
+// Returns:
+//   Pointer to the original modified string.
+// ==========================================================================================
 char * EspecialTrim(char *s) {
     int end, len;
     char *buf;
@@ -600,6 +708,17 @@ char * EspecialTrim(char *s) {
     return s;
 }
 
+// ==========================================================================================
+// Checks whether a watch window collides with another screen element.
+//
+// Collision detection is performed against:
+//
+//   - Existing watch windows
+//   - The current execution line
+//
+// Returns:
+//   TRUE if a collision is detected.
+// ==========================================================================================
 boolean isCollide(ST_Watch * wnew, int debug_line, int * size){
     boolean result=FALSE;
     ST_Watch * wt = Watching;
@@ -623,6 +742,18 @@ boolean isCollide(ST_Watch * wnew, int debug_line, int * size){
     return result;
 }
 
+// ==========================================================================================
+// Finds a free screen position for a watch window.
+//
+// Attempts to position the watch window in a location that does not overlap
+// existing watches or the current execution line.
+//
+// The search is performed vertically and horizontally until a valid
+// position is found.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void findNewVarPos(ST_Watch * wnew, int debug_line){
     int phase=0;
     if(wnew->posy<0){
@@ -675,6 +806,15 @@ void findNewVarPos(ST_Watch * wnew, int debug_line){
     }
 }
 
+// ==========================================================================================
+// Creates and initializes a new watch structure.
+//
+// Allocates memory and initializes all fields required to track and display
+// a watched variable during debugging.
+//
+// Returns:
+//   Pointer to the newly created watch structure.
+// ==========================================================================================
 ST_Watch * new_watching(ST_Line * debug, ST_DebuggerVariable * var){
     ST_Watch * wnew=malloc(sizeof(ST_Watch));
     wnew->var= var;
@@ -689,6 +829,23 @@ ST_Watch * new_watching(ST_Line * debug, ST_DebuggerVariable * var){
     return wnew;
 }
 
+// ==========================================================================================
+// Updates and displays active watch variables.
+//
+// Responsible for:
+//
+//   - Creating automatic watches
+//   - Refreshing variable values
+//   - Removing expired watches
+//   - Calculating window positions
+//   - Rendering watch boxes
+//
+// This function is continuously called while program execution advances
+// through the source code.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 #define MAX_WCHAR_BUFFER 1024
 void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser , int debug_line){
     if (!exe_line || cob.file_cobol[0] == '\0') return;
@@ -827,6 +984,18 @@ void var_watching(Lines * exe_line, int (*sendCommandGdb)(char *), int waitAnser
     }
 }
 
+// ==========================================================================================
+// Detects whether the mouse cursor is positioned over a COBOL variable.
+//
+// Converts screen coordinates into source code coordinates and identifies
+// the corresponding token under the cursor.
+//
+// When a valid COBOL variable is found, hover information is prepared
+// for display.
+//
+// Returns:
+//   TRUE if a variable was found.
+// ==========================================================================================
 int check_hover(struct st_hoverer_var *hVar, int start_window_line, int start_line_x, int posx, int posy){
     int ret = FALSE;
     Lines * line = cob.lines;
@@ -864,7 +1033,17 @@ int check_hover(struct st_hoverer_var *hVar, int start_window_line, int start_li
     return ret;
 }
 
-
+// ==========================================================================================
+// Displays a popup window containing the current value of a variable.
+//
+// The variable is resolved using the hover information and its current
+// value is requested from GDB before being displayed.
+//
+// Supports COBOL nested fields and Unicode values.
+//
+// Returns:
+//   TRUE on success.
+// ==========================================================================================
 int show_hover_var(int (*sendCommandGdb)(char *), struct st_hoverer_var *hVar)
 {
     int fcollor = color_blue;
@@ -954,6 +1133,17 @@ end:
     return TRUE;
 }
 
+// ==========================================================================================
+// Displays the list of source files known by GDB.
+//
+// Allows the user to browse and select a COBOL source file for navigation.
+//
+// Optionally rebuilds the source map information by parsing the generated
+// C source files associated with the COBOL modules.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 #define MAX_FILES 100
 void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     char input_character=-1;
@@ -973,7 +1163,7 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     if(mustParse){
         char baseName[256];
         char nameCFile[1024];
-        char fileCGroup[10][512];
+        char fileCGroup[100][512];
         int nfile=0;
         for(int a=0;a<qtd_files;a++){
             fileNameWithoutExtension(files[a], &baseName[0]);
@@ -1119,6 +1309,17 @@ void show_sources(int (*sendCommandGdb)(char *), int mustParse){
     }
 }
 
+// ==========================================================================================
+// Displays a file selection dialog.
+//
+// Scans the current project directory for COBOL source files and allows
+// interactive filtering and selection.
+//
+// Only files that have an associated generated C source file are listed.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void load_file(){
     char input_character=-1;
     int bkgr = color_dark_red;
@@ -1314,6 +1515,15 @@ void load_file(){
     }
 }
 
+// ==========================================================================================
+// Displays a scrollable help popup window.
+//
+// Presents formatted help text using color attributes and supports
+// keyboard navigation through large help documents.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void show_help_popup(char *text[], int ctext[], int qtt_lines){
     char input_character=-1;
     int bkgr = color_dark_red;
@@ -1426,6 +1636,15 @@ void show_help_popup(char *text[], int ctext[], int qtt_lines){
     }
 }
 
+// ==========================================================================================
+// Displays the CobGDB help documentation.
+//
+// Can either print the help text directly to the terminal or show it
+// inside a popup window depending on the selected mode.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void show_help(int is_popup){
     char *text[] = {
         "                     CobGDB - Commands",
@@ -1520,3 +1739,80 @@ void show_help(int is_popup){
         //print_color_reset();
     }
 }
+
+#if defined(__linux__)
+// ==========================================================================================
+// Displays Linux-specific output terminal instructions.
+//
+// Informs the user how to attach an external terminal to the program
+// output window and optionally copies the required command to the
+// clipboard.
+//
+// Used before launching the debugged application.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
+void message_output_linux(char * sleepVal){
+    char alert1[80];
+    char aux[100];
+    int lin=(VIEW_LINES/2-6);
+    int col=(VIEW_COLS-60)/2;
+    int bkg= color_dark_red;
+    
+    print_colorBK(color_yellow, bkg);
+    draw_box_first(col,lin+2,59,"COBGDB OUTPUT");
+    draw_box_border(col,lin+3);
+    draw_box_border(col+60,lin+3);
+    gotoxy(col+1,lin+3);
+    printBK("COBGDB will open a terminal to  perform  the  application's\r",color_green, bkg);
+    print_colorBK(color_yellow, bkg);
+    draw_box_border(col,lin+4);
+    draw_box_border(col+60,lin+4);
+    gotoxy(col+1,lin+4);
+    printBK("output. If you want  to  use  another  terminal,  open  the\r",color_green, bkg);
+    print_colorBK(color_yellow, bkg);
+    draw_box_border(col,lin+5);
+    draw_box_border(col+60,lin+5);
+    gotoxy(col+1,lin+5);
+    printBK("terminal  and type the following command:                  \r",color_green, bkg);
+    sprintf(alert1,"sleep %s;", sleepVal);
+    sprintf(aux,"%-59s\r",alert1);
+    print_colorBK(color_yellow, bkg);
+    draw_box_border(col,lin+6);
+    draw_box_border(col+60,lin+6);
+    gotoxy(col+1,lin+6);
+    printBK(aux,color_white, bkg);
+    print_colorBK(color_yellow, bkg);
+    draw_box_border(col,lin+7);
+    draw_box_border(col+60,lin+7);
+    gotoxy(col+1,lin+7);
+    int vsum = 9;
+    if (getenv("DISPLAY") != NULL) {
+        if(copyToClipboard(alert1)){
+            printBK("(this value is in the clipboard)                           \r",color_green, bkg);
+            print_colorBK(color_yellow, bkg);
+            draw_box_border(col,lin+8);
+            draw_box_border(col+60, lin+8);
+            gotoxy(col+1,lin+8);
+        }else{
+            printBK("(install xclip to copy this information to the clipboard)  \r",color_green, bkg);
+            print_colorBK(color_yellow, bkg);
+            draw_box_border(col,lin+8);
+            draw_box_border(col+60,lin+8);
+            gotoxy(col+1,lin+8);
+        }
+    }else{
+        vsum=8;
+    }
+    printBK("After that, press a key in this window.                    \r",color_green, bkg);
+    print_colorBK(color_yellow, bkg);
+    draw_box_last(col,lin+vsum,59);
+    print_color_reset();
+    fflush(stdout);
+    gotoxy(12,15);
+    char key=-1;
+    while(key<20 && key!=VKEY_ENTER) key=key_press(MOUSE_EXT);
+
+}
+#endif

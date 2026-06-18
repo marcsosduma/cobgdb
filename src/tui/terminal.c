@@ -60,7 +60,7 @@ void SetConsoleSize(HANDLE hStdout, int cols, int rows );
 #endif
 #endif // Windows/Linux
 #include <time.h>
-#include "cobgdb.h"
+#include "../gdb/cobgdb.h"
 
 #define STRCURSOR_OFF  "\e[?25l"
 #define STRCURSOR_ON   "\e[?25h"
@@ -141,13 +141,22 @@ void die(const char *s) {
 	exit(1);
 }
 
+static int raw_mode_enabled = 0;
+
 void disableRawMode() {
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
-        die("tcsetattr");
-    //tcflush(STDIN_FILENO, TCIFLUSH);
-    /* disable mouse tracking */
-    const char *mouse_off = "\033[?1003l\033[?1006l";
-    write(STDOUT_FILENO, mouse_off, 16);
+    if (!raw_mode_enabled) return;
+    /*  
+    *  Restore terminal state by:
+     * - Disabling mouse tracking (1003, 1002, 1000) and SGR mode (1006), 
+     * - Ensuring the cursor is visible again (?25h). Resetting text attributes/colors (0m)
+     */
+    const char *reset_seq = "\033[?1003l\033[?1002l\033[?1000l\033[?1006l\033[?25h\033[0m";
+    write(STDOUT_FILENO, reset_seq, strlen(reset_seq));
+    tcflush(STDIN_FILENO, TCIFLUSH);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1) {
+        perror("tcsetattr failed on exit"); 
+    }
+    raw_mode_enabled = 0;
 }
 
 void handle_signal(int sig) {
@@ -155,11 +164,32 @@ void handle_signal(int sig) {
     exit(1);
 }
 
+// ==========================================================================================
+// Enable terminal raw mode (Linux only).
+//
+// Configures the terminal to operate in raw mode, disabling canonical
+// input processing, echo, signal generation, and line buffering.
+//
+// This mode allows CobGDB to receive keyboard and mouse events
+// immediately without waiting for ENTER.
+//
+// Also enables SGR mouse tracking for:
+//   - Clicks
+//   - Drag operations
+//   - Mouse wheel events
+//
+// The previous terminal configuration is automatically restored by
+// disableRawMode() when the application exits.
+//
+// Linux only.
+// ==========================================================================================
 void enableRawMode() {
+    if (raw_mode_enabled) return;
     if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
     atexit(disableRawMode);
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
+    raw_mode_enabled = 1;
     struct termios raw = E.orig_termios;
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     raw.c_oflag &= ~(OPOST);
@@ -173,6 +203,30 @@ void enableRawMode() {
     write(STDOUT_FILENO, mouse_on, 16);
 }
 
+// ==========================================================================================
+// Read a keyboard or mouse event from the Linux terminal.
+//
+// Interprets:
+//
+//   - Standard keyboard input
+//   - UTF-8 characters
+//   - Arrow keys
+//   - Page Up / Page Down
+//   - Delete
+//   - CTRL shortcuts
+//   - Mouse clicks
+//   - Mouse wheel events
+//   - Mouse drag events
+//
+// Returns:
+//
+//   ASCII/Unicode character code
+//   Virtual key constant (VKEY_*)
+//   Mouse action code
+//   0 if no input is available
+//
+// Linux only.
+// ==========================================================================================
 int readKeyLinux(int type) {
     unsigned char buf[64];
     ssize_t nread = read(STDIN_FILENO, buf, sizeof(buf) - 1);
@@ -269,6 +323,22 @@ void setBarColor(int color){
     ansi256_bg_map[16]=color;
 }
 
+// ==========================================================================================
+// Update the current mouse hover region.
+//
+// Determines which UI element is currently under the mouse cursor and
+// updates cob.mouse accordingly.
+//
+// Regions include:
+//
+//   Scrollbar controls
+//   Scrollbar drag area
+//   Source-code gutter
+//   Toolbar buttons
+//
+// This function does not execute actions; it only identifies the
+// active UI region.
+// ==========================================================================================
 void mouseCobHover(int col, int line) {
     cob.mouse = 0; // Default
     if (col == VIEW_COLS - 1) {
@@ -289,6 +359,20 @@ void mouseCobHover(int col, int line) {
     }
 }
 
+// ==========================================================================================
+// Process a left mouse click.
+//
+// Converts mouse coordinates into debugger actions such as:
+//
+//   - Scroll Up / Down
+//   - Page Up / Page Down
+//   - Toolbar commands
+//   - Breakpoint toggling
+//   - Source line selection
+//   - Scrollbar dragging
+//
+// Returns the corresponding virtual key code or debugger action.
+// ==========================================================================================
 int mouseCobAction(int col, int line, int type) {
     cob.mouseButton = 1;
     int action = -1;
@@ -336,6 +420,14 @@ int mouseCobAction(int col, int line, int type) {
     return action;
 }
 
+// ==========================================================================================
+// Process a right mouse click.
+//
+// Selects the source line under the cursor and triggers the context
+// menu action used by the debugger.
+//
+// Returns the corresponding action code.
+// ==========================================================================================
 int mouseCobRigthAction(int col, int line){
     int action= 'H';
     cob.mouseButton=2;
@@ -373,6 +465,30 @@ void freeInputBuffer(){
 #endif
 }
 
+// ==========================================================================================
+// Read a keyboard or mouse event.
+//
+// Platform-independent wrapper that dispatches input handling to the
+// appropriate implementation:
+//
+//   Windows -> Console API
+//   Linux   -> Raw terminal mode
+//
+// Supports:
+//
+//   Keyboard input
+//   UTF-8 characters
+//   Mouse clicks
+//   Mouse wheel
+//   Drag operations
+//   CTRL shortcuts
+//
+// Returns:
+//
+//   Character code
+//   Virtual key constant (VKEY_*)
+//   Mouse action code
+// ==========================================================================================
 int key_press(int type){
 #if defined(_WIN32)
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -500,6 +616,32 @@ int readnum(char * str, int size) {
     return readalpha(str, size, TRUE);
 }
 
+// ==========================================================================================
+// Interactive string editor.
+//
+// Displays a UTF-8 string inside a fixed-width editable field and allows
+// the user to modify its content using keyboard navigation.
+//
+// Features:
+//
+//   Left/Right navigation
+//   Insert and overwrite editing
+//   Horizontal scrolling
+//   UTF-8 support
+//   ESC to cancel
+//   ENTER to confirm
+//
+// Parameters:
+//
+//   value  -> String to edit
+//   size   -> Visible field size
+//   x,y    -> Screen coordinates
+//
+// Returns:
+//
+//   TRUE  -> Value accepted
+//   FALSE -> User cancelled
+// ==========================================================================================
 int updateStr(char *value, int size, int x, int y) {
     int len = strlen(value)+1;
     int len_char = len;
@@ -791,6 +933,19 @@ void focus_window_by_title_linux(const char *title_to_find) {
 #endif
 #endif  
 
+// ==========================================================================================
+// Bring the CobGDB window to the foreground.
+//
+// Attempts to activate and focus the debugger window.
+//
+// Windows:
+//   Uses Console API functions.
+//
+// Linux:
+//   Uses X11 window management functions when available.
+//
+// No action is performed in unsupported environments.
+// ==========================================================================================
 void focusOnCobgdb() {
     #if defined(_WIN32)
     HWND hwndConsole = GetConsoleWindow();
@@ -1065,7 +1220,22 @@ const char *ansi256_bg(int c)
     return escbuf;
 }
 
-// Detect 256-color support
+// ==========================================================================================
+// Detect terminal 256-color support.
+//
+// Checks whether the current terminal supports ANSI 256-color sequences.
+//
+// Windows:
+//   Verifies ENABLE_VIRTUAL_TERMINAL_PROCESSING.
+//
+// Linux:
+//   Examines TERM and COLORTERM environment variables.
+//
+// Returns:
+//
+//   1 -> 256-color support available
+//   0 -> Limited ANSI color support
+// ==========================================================================================
 int detect_256_colors()
 {
 #if defined(_WIN32)
@@ -1252,6 +1422,20 @@ void draw_utf8_text(const char* text) {
     #endif
 }
 
+// ==========================================================================================
+// Draw the top border of a UTF-8 box.
+//
+// Creates the title line of a dialog box using Unicode box-drawing
+// characters.
+//
+// Parameters:
+//
+//   posx,posy -> Screen position
+//   width     -> Internal box width
+//   text      -> Box title
+//
+// Returns TRUE.
+// ==========================================================================================
 int draw_box_first(int posx, int posy, int width, char *text) {
     char horizontal[] = "\u2500";   // UTF-8 character for horizontal line
     // Define the corners of the box using wide characters
@@ -1277,6 +1461,14 @@ int draw_box_first(int posx, int posy, int width, char *text) {
     return TRUE;
 }
 
+// ==========================================================================================
+// Draw the bottom border of a UTF-8 box.
+//
+// Completes a box created by draw_box_first() using Unicode box-drawing
+// characters.
+//
+// Returns TRUE.
+// ==========================================================================================
 int draw_box_last(int posx, int posy, int width) {
     char horizontal[] = "\u2500";         // UTF-8 character for horizontal line
     // Define the corners of the box using wide characters
@@ -1302,9 +1494,25 @@ int draw_box_border(int posx, int posy) {
     return TRUE;
 }
 
-/////////////////////////////////////////////////
-// Message Display Function
-/////////////////////////////////////////////////
+// ==========================================================================================
+// Display a message dialog.
+//
+// Creates a modal dialog box centered on the debugger screen.
+//
+// Message types:
+//
+//   1 -> Informational message
+//   2 -> Alert message
+//   3 -> Confirmation dialog (Yes/No)
+//
+// For confirmation dialogs, the function waits until the user selects
+// an option using the keyboard or mouse.
+//
+// Returns:
+//
+//   'Y' / 'N' for confirmation dialogs
+//   -1 for informational messages
+// ==========================================================================================
 int showCobMessage(char * message, int type){
     char aux[500];
     int bkg= color_dark_red;
@@ -1385,4 +1593,61 @@ int showCobMessage(char * message, int type){
         }
     }
     return key;
+}
+
+void show_log(const char *fmt, ...){
+        printf("%s\n", fmt);
+        fflush(stdout);
+}
+
+int dialogBox(char * title, char * msg, char * var, int size){
+    int bkg= color_dark_red;
+    int lin=10;
+    gotoxy(10,lin+2);
+    print_colorBK(color_white, bkg);
+    draw_box_first(10,lin+2,61,title);
+    draw_box_border(10,lin+3);
+    draw_box_border(72,lin+3);
+    print_colorBK(color_yellow, bkg);
+    gotoxy(11,lin+3);
+    int size_aux = size + strlen(msg)+1;
+    sprintf(var,"%s:", msg);
+    printf("%-*s", size_aux,var);
+    lin++;
+    print_colorBK(color_white, bkg);
+    draw_box_last(10,lin+3,size_aux);
+    print_colorBK(color_green, bkg);
+    fflush(stdout);
+    gotoxy(12+strlen(var),lin+2);
+    if(readchar(var,size)==FALSE) return 0;
+    return TRUE; 
+}
+
+int dialogBoxNum(char * title, char * msg, char * var, int size){
+    int bkg= color_dark_red;
+    int lin=VIEW_LINES/2-2;
+    int col=VIEW_COLS/2 - (size/2);
+    int size_aux = size + strlen(msg)+1;
+    if (strlen(title) > (size_t)(size_aux + 4)) {
+        size_aux = (int)strlen(title) + 4;
+    }
+    gotoxy(col,lin);
+    print_colorBK(color_white, bkg);
+    draw_box_first(col,lin,size_aux, title);
+    draw_box_border(col,lin+1);
+    draw_box_border(col+size_aux+1,lin+1);
+    print_colorBK(color_yellow, bkg);
+    gotoxy(col+1,lin+1);
+    int readLine = lin+1;
+    strcpy(var,msg);
+    printf("%-*s",size_aux, var);
+    //printf("%-*s",size_aux-strlen(msg)-1, " ");
+    lin++;
+    print_colorBK(color_white, bkg);
+    draw_box_last(col,lin+1,size_aux);
+    print_colorBK(color_green, bkg);
+    fflush(stdout);
+    gotoxy(col+1+strlen(var),readLine);
+    if(readnum(var,size) == FALSE) return FALSE;
+    return TRUE;
 }

@@ -20,8 +20,11 @@ else
 endif
 
 # path where the source resides - same as current Makefile's directory
-SRCDIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+MAINDIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o variables.o debugger.o highlight.o string_parser.o util.o
+
+TUIDIR := $(MAINDIR)src/tui/
+SRCDIR := $(MAINDIR)src/gdb/
 
 $(info SRCDIR = $(SRCDIR))
 
@@ -55,13 +58,13 @@ endif
 ifeq ($(POSIX_UTILS),0)
   RM = del /F /Q
   CP = copy /Y  
-  COBGDB_VERSION := $(shell for /f "tokens=3" %%a in ('findstr /C:"define COBGDB_VERSION" "$(subst /,\,$(SRCDIR)cobgdb.c")') do @echo %%~a)
+  COBGDB_VERSION := $(shell for /f "tokens=3" %%a in ('findstr /C:"define COBGDB_VERSION" "$(subst /,\,$(TUIDIR)cobgdb.c")') do @echo %%~a)
   COBGDB_VERSION := $(subst ",,$(COBGDB_VERSION))
 else
   # --- VERSÃO PARA MSYS / LINUX ---
   RM = rm -f
   CP = cp
-  COBGDB_VERSION := $(shell awk '/define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(SRCDIR)cobgdb.c )
+  COBGDB_VERSION := $(shell awk '/define COBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(TUIDIR)cobgdb.c )
 endif
 
 
@@ -71,10 +74,10 @@ $(info COBGDB_VERSION = $(COBGDB_VERSION))
 
 # Directory and files for distribution
 DIST_DIR ?= cobgdb-$(COBGDB_VERSION)
-DIST_FILES = $(SRCDIR)README.md \
-             $(wildcard $(SRCDIR)*.png) \
-             $(wildcard $(SRCDIR)doc/*.pdf) \
-             $(SRCDIR)LICENSE
+DIST_FILES = $(MAINDIR)README.md \
+             $(wildcard $(MAINDIR)/images/*.png) \
+             $(wildcard $(MAINDIR)doc/*.pdf) \
+             $(MAINDIR)LICENSE
 
 .PHONY: all all-before all-after clean clean-custom copy dist
 
@@ -123,11 +126,11 @@ clean: clean-custom
 $(BIN): $(OBJ)
 	$(CC) $(OBJ) -o $(BIN) $(LIBS)
 
-cobgdb.o: $(SRCDIR)/cobgdb.c $(SRCDIR)/cobgdb.h
-	$(CC) -c $(SRCDIR)/cobgdb.c -o cobgdb.o $(CFLAGS)
+cobgdb.o: $(TUIDIR)/cobgdb.c $(SRCDIR)/cobgdb.h
+	$(CC) -c $(TUIDIR)/cobgdb.c -o cobgdb.o $(CFLAGS)
 
-terminal.o: $(SRCDIR)/terminal.c $(SRCDIR)/cobgdb.h
-	$(CC) -c $(SRCDIR)/terminal.c -o terminal.o $(CFLAGS)
+terminal.o: $(TUIDIR)/terminal.c $(SRCDIR)/cobgdb.h
+	$(CC) -c $(TUIDIR)/terminal.c -o terminal.o $(CFLAGS)
 
 read_file.o: $(SRCDIR)/read_file.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/read_file.c -o read_file.o $(CFLAGS)
@@ -153,8 +156,8 @@ testParser.o: $(SRCDIR)/testParser.c $(SRCDIR)/cobgdb.h
 realpath.o: $(SRCDIR)/realpath.c
 	$(CC) -c $(SRCDIR)/realpath.c -o realpath.o $(CFLAGS)
 
-variables.o: $(SRCDIR)/variables.c $(SRCDIR)/cobgdb.h
-	$(CC) -c $(SRCDIR)/variables.c -o variables.o $(CFLAGS)
+variables.o: $(TUIDIR)/variables.c $(SRCDIR)/cobgdb.h
+	$(CC) -c $(TUIDIR)/variables.c -o variables.o $(CFLAGS)
 
 debugger.o: $(SRCDIR)/debugger.c $(SRCDIR)/cobgdb.h
 	$(CC) -c $(SRCDIR)/debugger.c -o debugger.o $(CFLAGS)

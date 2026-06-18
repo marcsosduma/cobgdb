@@ -20,18 +20,27 @@
 #ifndef EOVERFLOW
 #define EOVERFLOW 132
 #endif
-
 //#define debug 0
 
+// ==========================================================================================
+// Prototypes
+// ==========================================================================================
+int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp);
 char* toUpper(char* str);
 int fileNameCompare(char * fileOne, char * fileTwo);
-// external variables
+
+// =====================================================
+// Global Variables
+// =====================================================
 extern ST_Line * LineDebug;
 extern ST_Attribute * Attributes;
 extern ST_DebuggerVariable * DebuggerVariable;
 extern struct st_cobgdb cob;
 extern struct st_cfiles * parsed_cfiles;
-//
+
+// =====================================================
+// Local Variables
+// =====================================================
 ST_Line * LineAtu=NULL;
 ST_Attribute * AtualAttrib;
 ST_DebuggerVariable * AtuDebuggerVariable;
@@ -58,9 +67,15 @@ struct ST_CFILE {
 	Clines * clines;
 	int qtd_clines;	
 };
-// FILE C
 
-// LINES TO DEBUG
+
+// ==========================================================================================
+// Search for an attribute definition by its internal key.
+//
+// Performs a linear search through the global Attributes list.
+//
+// Returns a pointer to the matching attribute or NULL if not found.
+// ==========================================================================================
 ST_Attribute * GetAttributes(char * key){
     ST_Attribute * searchAttribute = Attributes;
     while(searchAttribute!=NULL){
@@ -70,8 +85,14 @@ ST_Attribute * GetAttributes(char * key){
     return searchAttribute;
 }
 
-int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp);
-
+// ==========================================================================================
+// Locate the first occurrence of a substring inside another string.
+//
+// Similar to strstr(), but returns the zero-based position of the
+// first match instead of a pointer.
+//
+// Returns the position of the match or -1 if not found.
+// ==========================================================================================
 int strpos(char *str1, char *str2)
 {
     int b=strlen(str2);
@@ -83,6 +104,15 @@ int strpos(char *str1, char *str2)
     return -1;
 }
 
+// ==========================================================================================
+// Convert a hexadecimal COBOL attribute flag string into a numeric mask.
+//
+// Example:
+//
+//   "0x0010" -> 0x0010
+//
+// If the input is invalid or missing, the flag mask is cleared.
+// ==========================================================================================
 void buildFlags(ST_Attribute * attribute, char * flagStr){  
 
         // 0xNNN1 0xNNN2 0xNNN4 0xNNN8 0xNN1N 0xNN2N 0xNN4N 0xNN8N 0xN1NN 0xN2NN 0xN4NN 0xN8NN 0x1NNN   
@@ -93,6 +123,15 @@ void buildFlags(ST_Attribute * attribute, char * flagStr){
         }
 }
 
+// ==========================================================================================
+// Create and register a new COBOL field attribute.
+//
+// Allocates a new ST_Attribute structure, fills all metadata fields,
+// converts the flag string to a numeric mask and appends the object
+// to the global attribute list.
+//
+// Returns TRUE on success.
+// ==========================================================================================
 int PushAttribute(char * key, char * cName, char * type, int digits, int scale, char * flagStr){
     ST_Attribute* new_attrib = (ST_Attribute*) malloc(sizeof(ST_Attribute));
     new_attrib->next=NULL;
@@ -126,6 +165,13 @@ int PushAttribute(char * key, char * cName, char * type, int digits, int scale, 
     return TRUE;
 }
 
+// ==========================================================================================
+// Remove the last attribute from the global attribute list.
+//
+// Frees all dynamically allocated strings associated with the attribute.
+//
+// Returns TRUE.
+// ==========================================================================================
 int PopAttribute(){
     if(Attributes!=NULL){
         ST_Attribute * toRemove = Attributes->last;
@@ -144,6 +190,16 @@ int PopAttribute(){
     return TRUE;
 }
 
+// ==========================================================================================
+// Convert a GnuCOBOL internal type code into a human-readable name.
+//
+// Example:
+//
+//   0x10 -> Numeric Display
+//
+// Returns a pointer to a static string.
+// Do not free the returned value.
+// ==========================================================================================
 char * VariableType(char * type_org){
     char *org[]={"0x00","0x01","0x02","0x10","0x11","0x12","0x13","0x14","0x15","0x16","0x17",
                 "0x18","0x19","0x1A","0x1B","0x24","0x20","0x21","0x22","0x23","0x40","0x41",
@@ -162,6 +218,23 @@ char * VariableType(char * type_org){
     return "";
 }
 
+// ==========================================================================================
+// Add a debugger variable to the internal variable registry.
+//
+// Stores all metadata required by the debugger, including:
+//
+//   - COBOL variable name
+//   - generated C variable name
+//   - storage identifier
+//   - variable type
+//   - size information
+//   - parent/child relationships
+//
+// The variable is appended to the internal linked list and becomes
+// available for debugger lookups and watch operations.
+//
+// Returns a pointer to the newly created ST_DebuggerVariable structure.
+// ==========================================================================================
 int PushDebuggerVariable(char * cobolName, char * cName, char * functionName, ST_Attribute * attribute , int size){
     ST_DebuggerVariable * debVar = (ST_DebuggerVariable*) malloc(sizeof(ST_DebuggerVariable));
     debVar->cobolName = (char *) malloc(strlen(cobolName)+1);
@@ -200,6 +273,23 @@ int PushDebuggerVariable(char * cobolName, char * cName, char * functionName, ST
     return TRUE;
 }
 
+// ==========================================================================================
+// Attach a child debugger variable to a parent node.
+//
+// If the parent has no children, the specified variable becomes the
+// first child. Otherwise, it is appended to the end of the sibling
+// list.
+//
+// Updates parent-child relationships and marks the parent as
+// expandable when its first child is added.
+//
+// Parameters:
+//   father - Parent variable.
+//   child  - Child variable to attach.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void AddChildDebuggerVariable(ST_DebuggerVariable * father, ST_DebuggerVariable * child){
     if(father->first_children==NULL){
         father->first_children=child;
@@ -215,6 +305,19 @@ void AddChildDebuggerVariable(ST_DebuggerVariable * father, ST_DebuggerVariable 
     }
 }
 
+// ==========================================================================================
+// Create a fully-qualified debugger variable identifier.
+//
+// Format:
+//
+//   <class>.<value>
+//
+// Example:
+//
+//   MAIN.CUSTOMER-NAME
+//
+// Returns a newly allocated string that must be freed by the caller.
+// ==========================================================================================
 char *  DebuggerVariable_Set(char * classe, char * value ){
     char tmp1[256];
     sprintf(tmp1,"%s.%s", classe, value );
@@ -224,6 +327,21 @@ char *  DebuggerVariable_Set(char * classe, char * value ){
     return toSet;
 }
 
+// ==========================================================================================
+// Create a fully-qualified child variable identifier.
+//
+// Format:
+//
+//   <class>.<parent>.<child>
+//
+// Example:
+//
+//   MAIN.CUSTOMER.NAME
+//
+// Parent and child names are converted to uppercase.
+//
+// Returns a newly allocated string that must be freed by the caller.
+// ==========================================================================================
 char *  DebuggerVariable_ChildSet(char * classe, char * father, char * child ){
     char tmp1[256];
     char tmp2[256];
@@ -237,7 +355,11 @@ char *  DebuggerVariable_ChildSet(char * classe, char * father, char * child ){
     return toSet;
 }
 
-
+// ==========================================================================================
+// Search for a data storage variable using its internal identifier.
+//
+// Returns the matching debugger variable or NULL if not found.
+// ==========================================================================================
 ST_DebuggerVariable * GetDataSotorage(char * key){
     ST_DebuggerVariable * search = DebuggerVariable;
     while(search!=NULL){
@@ -247,6 +369,11 @@ ST_DebuggerVariable * GetDataSotorage(char * key){
     return search;
 }
 
+// ==========================================================================================
+// Search for a debugger variable using its fully-qualified COBOL name.
+//
+// Returns the matching variable or NULL if not found.
+// ==========================================================================================
 ST_DebuggerVariable * GetVariableByCobol(char * key){
     ST_DebuggerVariable * search = DebuggerVariable;
     while(search!=NULL){
@@ -256,6 +383,11 @@ ST_DebuggerVariable * GetVariableByCobol(char * key){
     return search;
 }
 
+// ==========================================================================================
+// Search for a debugger variable using its generated C variable name.
+//
+// Returns the matching variable or NULL if not found.
+// ==========================================================================================
 ST_DebuggerVariable * GetVariableByC(char * key){
     ST_DebuggerVariable * search = DebuggerVariable;
     while(search!=NULL){
@@ -266,6 +398,14 @@ ST_DebuggerVariable * GetVariableByC(char * key){
 }
 // DebuggerVariable - END
 
+// ==========================================================================================
+// Add a COBOL-to-C source mapping entry.
+//
+// Stores the relationship between a COBOL source line and the
+// corresponding generated C source line.
+//
+// Returns TRUE.
+// ==========================================================================================
 int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, int lineProgramExit, int isCall, int * varEntry){
     ST_Line* new_line = (ST_Line*) malloc(sizeof(ST_Line));
     new_line->next=NULL;
@@ -303,6 +443,13 @@ int PushLine(char * filePathCobol, int lineCobol, char * filePathC, int lineC, i
     return TRUE;
 }
 
+// ==========================================================================================
+// Remove the most recently added source mapping entry.
+//
+// Releases all resources associated with the mapping.
+//
+// Returns TRUE.
+// ==========================================================================================
 int PopLine(){
     if(LineAtu!=NULL){
         ST_Line * toRemove = LineAtu;
@@ -320,6 +467,14 @@ int PopLine(){
     return TRUE;
 }
 
+// ==========================================================================================
+// Associate debugger-visible variables with the current source line.
+//
+// The supplied variable names are resolved against the global debugger
+// variable list and attached to the current line entry.
+//
+// Returns TRUE.
+// ==========================================================================================
 int PushVarLine(char * function, char var[][MAX_MATCH_LENGTH]){
     if(LineAtu!=NULL){
         int idx=0;
@@ -358,6 +513,13 @@ int PushVarLine(char * function, char var[][MAX_MATCH_LENGTH]){
     return TRUE;
 }
 
+// ==========================================================================================
+// Load a generated C source file into memory.
+//
+// Reads every line and stores the content in a doubly linked list.
+//
+// Returns TRUE on success.
+// ==========================================================================================
 int readCFile(struct ST_CFILE * program) {
     FILE *fp = fopen(program->name_cfile, "r");
     if(fp == NULL) {
@@ -394,6 +556,11 @@ int readCFile(struct ST_CFILE * program) {
     return TRUE;
 }
 
+// ==========================================================================================
+// Release all memory associated with a loaded C source file.
+//
+// Frees every stored source line and resets the file structure.
+// ==========================================================================================
 void freeST_CFILE(struct ST_CFILE * program_cfile){
     Clines * lines = program_cfile->clines;
     for(int idx=0;idx<program_cfile->qtd_clines;idx++){
@@ -405,13 +572,25 @@ void freeST_CFILE(struct ST_CFILE * program_cfile){
     program_cfile->qtd_clines=0;
 }
 
-
+// ==========================================================================================
+// Remove the ".c" extension from a generated C file name.
+//
+// Example:
+//
+//   sample.c -> sample
+// ==========================================================================================
 void cleanedCFileName(char *dst, char *filename) {
     int len = strlen(filename);
     memcpy(dst, filename, len-2);
     dst[len - 2] = 0;
 }
 
+// ==========================================================================================
+// Detect and extract the original COBOL source file name from a
+// generated C source line.
+//
+// Returns TRUE if a COBOL file reference is found.
+// ==========================================================================================
 boolean fileCobolRegex(struct st_parse * line_parsed, int qtt_tk, char * fileName){
     int pos=0;
     boolean ret = FALSE;
@@ -780,6 +959,16 @@ boolean fileIncludeRegex(struct st_parse *line_parsed, int qtt_tk, char mm[][MAX
     return ret;
 }
 
+// ==========================================================================================
+// Extract debugger-visible variable references from a parsed C line.
+//
+// Recognizes generated variable names such as:
+//
+//   b_xxxx
+//   f_xxxx
+//
+// Returns TRUE if at least one variable is found.
+// ==========================================================================================
 // variables -> b_xxxx or f_xxxx
 boolean showVarRegex(struct st_parse *line_parsed, int qtt_tk, char mm[][MAX_MATCH_LENGTH]){
     int idx=0;
@@ -799,10 +988,16 @@ boolean showVarRegex(struct st_parse *line_parsed, int qtt_tk, char mm[][MAX_MAT
     return ret;
 }
 
-/**
- * Adds a new file to the global list if it does not already exist.
- *
- */
+// ==========================================================================================
+// Add a source file to the internal parsed-file registry.
+//
+// Prevents the same generated C source from being parsed multiple times.
+//
+// Returns:
+//   1  - file added
+//   0  - file already exists
+//  -1  - error
+// ==========================================================================================
 int add_cfile(const char *file_name) {
     if (file_name == NULL || *file_name == '\0')
         return -1;
@@ -831,6 +1026,21 @@ int add_cfile(const char *file_name) {
     return 1;
 }
 
+// ==========================================================================================
+// Parse a generated GnuCOBOL C source file.
+//
+// Extracts:
+//
+//   - source line mappings
+//   - COBOL file references
+//   - debugger variables
+//   - attributes
+//   - function information
+//
+// Builds the complete internal debugger metadata structure.
+//
+// Returns TRUE on success.
+// ==========================================================================================
 int parser(char * file_name, int fileN){
     char m[10][512];
     char fileCobol[1024];
@@ -1046,6 +1256,12 @@ int parser(char * file_name, int fileN){
     return TRUE;
 }
 
+// ==========================================================================================
+// Check whether a COBOL source line exists in the mapping table.
+//
+// Returns the corresponding generated C line number,
+// or -1 if the line is not mapped.
+// ==========================================================================================
 int hasCobolLine(int lineCobol){
     ST_Line * search = LineDebug;
     int line=-1;
@@ -1059,6 +1275,11 @@ int hasCobolLine(int lineCobol){
     return line;
 }
 
+// ==========================================================================================
+// Locate a source mapping entry using a COBOL file name and line number.
+//
+// Returns the matching mapping entry or NULL if not found.
+// ==========================================================================================
 ST_Line * getLineC(char * fileCobol, int lineCobol){
     ST_Line * search = LineDebug;
     while(search!=NULL){
@@ -1068,6 +1289,11 @@ ST_Line * getLineC(char * fileCobol, int lineCobol){
     return search;
 }
 
+// ==========================================================================================
+// Locate the COBOL source line associated with a generated C line.
+//
+// Returns the matching source mapping entry or NULL if not found.
+// ==========================================================================================
 ST_Line * getLineCobol(char * fileC, int lineC){
     ST_Line * search = LineDebug;
     if(fileC==NULL) return NULL;
@@ -1079,10 +1305,20 @@ ST_Line * getLineCobol(char * fileC, int lineC){
     return search;
 }
 
+// ==========================================================================================
+// Retrieve the detected GnuCOBOL version string.
+//
+// The version is copied into the supplied buffer.
+// ==========================================================================================
 void getVersion(char vrs[]){
     strcpy(vrs, version);
 }
 
+// ==========================================================================================
+// Count all registered source mapping entries.
+//
+// Returns the total number of mapped source lines.
+// ==========================================================================================
 int getLinesCount(){
     int tot = 0;
     ST_Line * search = LineDebug;
@@ -1093,6 +1329,11 @@ int getLinesCount(){
     return tot;
 }
 
+// ==========================================================================================
+// Count all registered debugger variables.
+//
+// Returns the total number of mapped variables.
+// ==========================================================================================
 int getVariablesCount(){
         int tot = 0;
     ST_DebuggerVariable * search = DebuggerVariable;
@@ -1104,6 +1345,11 @@ int getVariablesCount(){
     return tot;
 }
 
+// ==========================================================================================
+// Search for a debugger variable using its COBOL identifier.
+//
+// Returns the matching variable or NULL if not found.
+// ==========================================================================================
 ST_DebuggerVariable * getVariableByCobol(char * cobVar){
     ST_DebuggerVariable * search = DebuggerVariable;
     while(search!=NULL){        
@@ -1114,12 +1360,21 @@ ST_DebuggerVariable * getVariableByCobol(char * cobVar){
     return search;
 }
 
+// ==========================================================================================
+// Return the head of the debugger variable list.
+//
+// Useful for iterating through all registered variables.
+// ==========================================================================================
 ST_DebuggerVariable * getVariablesByCobol(){
     ST_DebuggerVariable * search = DebuggerVariable;
     return search;
 }
 
-
+// ==========================================================================================
+// Search for a debugger variable using its generated C name.
+//
+// Returns the matching variable or NULL if not found.
+// ==========================================================================================
 ST_DebuggerVariable * getVariableByC(char * cVar){
     ST_DebuggerVariable * search = DebuggerVariable;
     while(search!=NULL){        
@@ -1130,6 +1385,14 @@ ST_DebuggerVariable * getVariableByC(char * cVar){
     return search;
 }
 
+// ==========================================================================================
+// Search for a COBOL variable inside a specific program or function.
+//
+// Performs a case-insensitive lookup using the fully-qualified COBOL
+// variable path.
+//
+// Returns the matching variable or NULL.
+// ==========================================================================================
 ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar){
     ST_DebuggerVariable * search = DebuggerVariable;
     char tmp1[256];
@@ -1148,6 +1411,11 @@ ST_DebuggerVariable * findVariableByCobol(char * functionName, char * cobVar){
     return search;
 }
 
+// ==========================================================================================
+// Check whether a COBOL variable exists in the debugger metadata.
+//
+// Returns TRUE if found, otherwise FALSE.
+// ==========================================================================================
 int isVariableByCobol(char * cobVar){
     ST_DebuggerVariable * search = DebuggerVariable;
     int ret=FALSE;
@@ -1165,7 +1433,13 @@ int isVariableByCobol(char * cobVar){
     return ret;
 }
 
-
+// ==========================================================================================
+// Search for a field within a COBOL group variable.
+//
+// The search starts at the supplied variable node and continues forward.
+//
+// Returns the matching field or NULL if not found.
+// ==========================================================================================
 ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVar, ST_DebuggerVariable * start){
     ST_DebuggerVariable * search = start;
     char tmp1[256];
@@ -1187,6 +1461,23 @@ ST_DebuggerVariable * findFieldVariableByCobol(char * functionName, char * cobVa
     return search;
 }
 
+// ==========================================================================================
+// Find a debugger variable by its generated C variable name.
+// Searches the global debugger variable list and returns the first
+// variable whose C identifier matches the specified name.
+// This function is typically used when mapping a generated C variable
+// back to its corresponding COBOL debugger variable.
+// Example:
+//   COBOL variable : CUSTOMER-NAME
+//   C variable     : f_123_customer_name
+// ST_DebuggerVariable *var =
+//       getShowVariableByC("f_123_customer_name");
+// Parameters:
+//   cVar - Generated C variable name to search for.
+// Returns:
+//   Pointer to the matching debugger variable.
+//   NULL if no matching variable is found.
+// ==========================================================================================
 ST_DebuggerVariable * getShowVariableByC(char * cVar){
     ST_DebuggerVariable * search = DebuggerVariable;
     while(search!=NULL){        
@@ -1197,8 +1488,20 @@ ST_DebuggerVariable * getShowVariableByC(char * cVar){
     return search;
 }
 
-
-
+// ==========================================================================================
+// Compare two file names using the platform-specific rules.
+//
+// Windows:
+//   Case-insensitive comparison.
+//
+// Linux:
+//   Case-sensitive comparison.
+//
+// Returns:
+//   0 if equal
+//   <0 if fileOne < fileTwo
+//   >0 if fileOne > fileTwo
+// ==========================================================================================
 int fileNameCompare(char * fileOne, char * fileTwo){
 #if defined(_WIN32)
     int result=0;
@@ -1209,6 +1512,18 @@ int fileNameCompare(char * fileOne, char * fileTwo){
 #endif // Windows/Linux 
 }
 
+// ==========================================================================================
+// Build the COBOL-to-C source mapping database.
+//
+// Parses generated C files and extracts:
+//
+//   - source line mappings
+//   - variable definitions
+//   - attributes
+//   - procedure information
+//
+// Returns TRUE on success.
+// ==========================================================================================
 void SourceMap(char fileGroup[][512]){
     int q = 0;
     LineDebug = NULL;

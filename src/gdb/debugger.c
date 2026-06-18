@@ -25,10 +25,27 @@
 #include "cobgdb.h"
 #define ZERO_SIGN_CHAR_CODE 112
 
+// =====================================================
+// Global Variables
+// =====================================================
 extern char m[10][512];
 
+// ==========================================================================================
+// Format a COBOL numeric field value into a human-readable string, handling scaling and sign
+// safely without dynamic allocation (no malloc/free memory leaks).
+// ==========================================================================================
 void formatNumberParser(char *valueStr, int fieldSize, int sc) {
-    char *originalLocale = setlocale(LC_NUMERIC, NULL);
+    if (valueStr == NULL) return;
+    char originalLocale[128];
+
+    snprintf(
+        originalLocale,
+        sizeof(originalLocale),
+        "%s",
+        setlocale(LC_NUMERIC, NULL)
+    );
+
+    setlocale(LC_NUMERIC, "C");
 
     int scale = abs(sc);    
     char *value = malloc(fieldSize+scale+3);
@@ -97,6 +114,10 @@ void formatNumberParser(char *valueStr, int fieldSize, int sc) {
     setlocale(LC_NUMERIC, originalLocale);
 }
 
+// ==========================================================================================
+// Role of this function is to parse a COBOL field value, handling special cases such as repeated
+// values and formatting the output accordingly
+// ==========================================================================================
 //char repeatTimeRegex[] = "(\"\\,\\s|^)\\'(\\s|0)\\'\\s\\<repeats\\s(\\[0-9]+)\\stimes\\>";
 int fRepeatTimeRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     if(line==NULL) return 0;
@@ -136,6 +157,10 @@ int fRepeatTimeRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
     return 2;
 }
 
+// ==========================================================================================
+// Parse a COBOL field value, handling special cases such as repeated values and formatting 
+// the output accordingly
+// ==========================================================================================
 char *CobolFieldDataParser(char *valueStr) {
     char *value = strdup(valueStr);
     char *toFree=value;
@@ -168,6 +193,10 @@ char *CobolFieldDataParser(char *valueStr) {
     return value;
 }
 
+// ==========================================================================================
+// Format a COBOL alphanumeric field value, ensuring that it is properly padded or truncated
+// to fit the specified field size
+// ==========================================================================================
 char* formatAlpha(const char* valueStr, int fieldSize) {
     const char* value = valueStr;
     if (value[0] == '"') {
@@ -197,6 +226,10 @@ char* formatAlpha(const char* valueStr, int fieldSize) {
     }
 }
 
+// ==========================================================================================
+// Pow function implementation to calculate the power of a base raised to an exponent, 
+// handling both positive and negative exponents
+// ==========================================================================================
 double my_pow(double base, int exponent) {
     if (exponent == 0) return 1;
     double result = 1.0;
@@ -221,7 +254,10 @@ double my_pow(double base, int exponent) {
 #define	cob_u64_t		unsigned long long
 #endif
 
-// Function to reverse the byte order of a 64-bit number
+// ==========================================================================================
+// Function to reverse the byte order of a 64-bit integer, used for handling endianness 
+// in binary data
+// ==========================================================================================
 uint64_t COB_BSWAP_64(uint64_t x) {
     return (((x) << 56) |                         \
             (((x) << 40) & 0xff000000000000ULL) | \
@@ -233,6 +269,10 @@ uint64_t COB_BSWAP_64(uint64_t x) {
             ((x)  >> 56));
 }
 
+
+// ==========================================================================================
+// Convert a binary string to a signed 64-bit integer, handling endianness and sign extension
+// ==========================================================================================
 cob_s64_t cob_binary_get_sint64(const char* data, size_t size, unsigned int flags) {
     cob_s64_t n = 0;
     const size_t fsiz = 8U - size;
@@ -250,6 +290,9 @@ cob_s64_t cob_binary_get_sint64(const char* data, size_t size, unsigned int flag
     return n;
 }
 
+// ==========================================================================================
+// Convert a binary string to an unsigned 64-bit integer, handling endianness
+// ==========================================================================================
 cob_u64_t cob_binary_get_uint64(const char* data, size_t size, unsigned int flags) {
     cob_u64_t n = 0;
     const size_t fsiz = 8U - size;
@@ -267,6 +310,10 @@ cob_u64_t cob_binary_get_uint64(const char* data, size_t size, unsigned int flag
     return n;
 }
 
+// ==========================================================================================
+// Parse a binary string representing a COBOL numeric field, converting it to a human-readable
+// string based on the field size, scale, and type
+// ==========================================================================================
 char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags, int digits) {
     char wrk[50];
 
@@ -425,13 +472,125 @@ char* debugParseBuilIn(char* valueStr, int fieldSize, int scale, char* type, uns
     return strdup(wrk);
 }
 
-/*
- * Unescapes a C-style string:
- * - Converts \" -> "
- * - Converts \\ -> \
- * - Removes outer quotes if present
- * - Converts the final string to lowercase
- */
+char* debugParseBuilIn2(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags, int digits) {
+    char wrk[128];
+
+    if (fieldSize == 0) return NULL;
+    if (type == NULL) return strdup("");
+
+    // 1. Handle string-like types
+    if (strcmp(type, "alphanumeric") == 0 || strcmp(type, "numeric edited") == 0 || 
+        strcmp(type, "group") == 0 || strcmp(type, "boolean") == 0 || strstr(type, "national") != NULL) {
+        
+        if (valueStr[0] == '\"') return strdup(valueStr);
+        
+        char *new_value = malloc(strlen(valueStr) + 3);
+        if (!new_value) return NULL;
+        sprintf(new_value, "\"%s\"", valueStr);
+        return new_value;
+    }
+
+    // 2. Handle Numeric types
+    if (strcmp(type, "numeric l double") == 0) {
+        long double lval;
+        memcpy(&lval, valueStr, sizeof(long double));
+#if defined(_WIN32)
+        snprintf(wrk, sizeof(wrk), "\"%-.32f\"", (double)lval);
+#else
+        snprintf(wrk, sizeof(wrk), "\"%-.32Lf\"", lval);
+#endif
+        return strdup(wrk);
+    } 
+    else if (strcmp(type, "numeric double") == 0) {
+        double dval;
+        memcpy(&dval, valueStr, sizeof(double));
+        snprintf(wrk, sizeof(wrk), "\"%-.16G\"", dval);
+        return strdup(wrk);
+    } 
+    else if (strcmp(type, "numeric float") == 0) {
+        float fval;
+        memcpy(&fval, valueStr, sizeof(float));
+        snprintf(wrk, sizeof(wrk), "\"%-.8G\"", (double)fval);
+        return strdup(wrk);
+    } 
+    else if (strcmp(type, "numeric packed") == 0) {
+        int is_negative = 0;
+        double comp_value = 0.0;
+        int is_comp3 = FALSE;
+        
+        unsigned char last_byte = valueStr[fieldSize - 1];
+        unsigned char last_nibble = last_byte & 0x0F;
+        if (last_nibble == 0xC || last_nibble == 0xD || last_nibble == 0xF) is_comp3 = TRUE;
+
+        if (is_comp3) {
+            int len = (fieldSize * 2) - 1;
+            char* buf = malloc(len + 2);
+            if (buf) {
+                int j = 0;
+                for (int i = 0; i < fieldSize - 1; i++) {
+                    buf[j++] = ((valueStr[i] & 0xF0) >> 4) + '0';
+                    buf[j++] = (valueStr[i] & 0x0F) + '0';
+                }
+                buf[j++] = ((valueStr[fieldSize - 1] & 0xF0) >> 4) + '0';
+                char sign = valueStr[fieldSize - 1] & 0x0F;
+                if (sign == 0x0D || sign == 0x0B) is_negative = 1;
+                buf[j] = '\0';
+                comp_value = atof(buf) / my_pow(10, scale);
+                if (is_negative) comp_value = -comp_value;
+                free(buf);
+            }
+        } else {
+            int64_t val = 0;
+            for (int i = 0; i < fieldSize; i++) {
+                val = (val * 100) + (((valueStr[i] >> 4) & 0x0F) * 10) + (valueStr[i] & 0x0F);
+            }
+            comp_value = (double)val / my_pow(10, scale);
+            is_negative = (val < 0);
+        }
+
+        if(flags & (1U << 3))
+            snprintf(wrk, sizeof(wrk), "%.*f", scale, comp_value);
+        else
+            snprintf(wrk, sizeof(wrk), "%0*.*f", fieldSize + scale + is_negative, scale, comp_value);
+        
+        return strdup(wrk);
+    } 
+
+    // 3. Handle Binary/COMP types
+    if (strstr(type, "numeric") != NULL) {
+        if (strcmp(type, "numeric binary") == 0 || strcmp(type, "numeric COMP5") == 0) {
+            double converted_value;
+            if(flags & 0x1) {
+                cob_s64_t val = cob_binary_get_sint64((const char*)valueStr, fieldSize, flags);
+                converted_value = (double)val / my_pow(10, scale);
+            } else {
+                const cob_u64_t uval = cob_binary_get_uint64((const char*)valueStr, fieldSize, flags);
+                converted_value = (double)uval / my_pow(10, scale);
+            }
+            
+            if(flags & (1U << 0))
+                snprintf(wrk, sizeof(wrk), "%+0*.*f", digits - scale + 1, scale, converted_value);
+            else
+                snprintf(wrk, sizeof(wrk), "%0*.*f", digits - scale, scale, converted_value);
+            
+            return strdup(wrk);
+        } else {
+            formatNumberParser(valueStr, fieldSize, scale);
+            snprintf(wrk, sizeof(wrk), "\"%s\"", valueStr);
+            return strdup(wrk);
+        }
+    }
+
+    return strdup("");
+}
+
+// ==========================================================================================
+// Unescapes a C-style string:
+// - Converts \" -> "   
+/* - Converts \\ -> \ */
+// - Removes outer quotes if present
+// Converts the final string to lowercase
+// ==========================================================================================
 char *unescape(const char *src) {
     if (!src) return NULL;
 
@@ -470,6 +629,10 @@ char *unescape(const char *src) {
     return out;
 }
 
+// ==========================================================================================
+// Parse a COBOL field value, handling special cases such as repeated values and formatting
+// the output accordingly
+// ==========================================================================================
 char* parseUsage(char* valueStr) {
     if (!valueStr || strlen(valueStr) == 0) {
         return NULL;
@@ -483,6 +646,10 @@ char* parseUsage(char* valueStr) {
     return  unescape(valueStr);
 }
 
+// ==========================================================================================
+// Convert a COBOL numeric field value from a string representation to a formatted string suitable
+// for display, handling scaling, sign, and special cases such as repeated values
+// ==========================================================================================
 char *convertStrToCobField(const char *value){
     unsigned char *final_buff;
     unsigned char *p, *p_end;
@@ -613,7 +780,10 @@ game_over:
     return formattedValue;
 }
 
-// Helper function to remove the comma and point
+// ==========================================================================================
+// Convert a string representation of a number into an integer, handling special characters 
+// such as commas and decimal points, which are common in COBOL numeric fields
+// ==========================================================================================
 int64_t stringToInteger(const char *str) {
     char temp[50];
     strncpy(temp, str, sizeof(temp));
@@ -631,7 +801,10 @@ int64_t stringToInteger(const char *str) {
     return atoll(temp);
 }
 
-// Function to convert a string into binary bytes
+// ==========================================================================================
+// Convert a string representation of a COBOL numeric field into a binary format suitable for
+// storage or transmission, handling different numeric types and endianness based on flags
+// ==========================================================================================
 char *stringToCobNumber(const char *valueStr, size_t fieldSize, const char *type, int flags) {
     size_t dataSize = fieldSize; 
     char *binary_data = (char *)malloc(dataSize);
@@ -666,7 +839,11 @@ char *stringToCobNumber(const char *valueStr, size_t fieldSize, const char *type
     return binary_data;
 }
 
-// Function to convert a string to COMP-3 binary bytes
+// ==========================================================================================
+// Convert a string representation of a COBOL numeric field into a packed binary format 
+// (COMP-3 or COMP-6), handling scaling, sign, and digit extraction based on the specified 
+// field size and type
+// ==========================================================================================
 char *stringToPacked(char *valueStr, size_t fieldSize, int scale, const char *type) {
     size_t packedSize = fieldSize; 
     unsigned char *packed_data = (unsigned char *)malloc(packedSize+1);
@@ -724,6 +901,11 @@ char *stringToPacked(char *valueStr, size_t fieldSize, int scale, const char *ty
     return (char *) packed_data;
 }
 
+// ==========================================================================================
+// Convert a string representation of a COBOL numeric double field into a binary format 
+// suitable for storage or transmission, handling scaling, sign, and special characters such 
+// as commas and decimal points
+// ==========================================================================================
 char* convertDoubleValueToBytes(char* ptr){
         char * bytes = malloc(50);
         for(size_t i=0;i<strlen(ptr);i++){
@@ -735,6 +917,11 @@ char* convertDoubleValueToBytes(char* ptr){
         return bytes;
 }
 
+// ==========================================================================================
+// Format a COBOL field value based on its type, handling different numeric formats, alphanumeric
+// fields, and special cases such as repeated values, ensuring that the output is suitable for 
+// display in the debugger 
+// ==========================================================================================
 char* formatValueVar(char* valueStr, int fieldSize, int scale, char* type, unsigned int flags) {
     if (!valueStr) return NULL;
     if (strcmp(type, "numeric") == 0) {

@@ -14,11 +14,36 @@
 #include <assert.h>
 #include "cobgdb.h"
 
+/*
+ * GDB/MI Parser Tests:
+ *
+ * couldBeOutput()
+ *   Checks whether a line received from GDB represents
+ *   regular program output or an MI (Machine Interface) record.
+ *
+ * parseMI()
+ *   Converts an MI line into internal structures
+ *   (ST_MIInfo, ST_TableValues, etc.).
+ *
+ * parseMIvalueOf()
+ *   Allows access to values using a notation similar
+ *   to hierarchical paths:
+ *      asm_insns.src_and_asm_line.line_asm_insn[1].address
+ *
+ * The tests cover:
+ *   - asynchronous records
+ *   - result records
+ *   - nested arrays and objects
+ *   - escaped UTF-8 strings
+ *   - empty arrays
+ *   - empty strings
+ *   - navigation through complex structures
+ */
 int testMI2()
 {
     {
         printf("------------------------------------------------\n");
-        printf("Testing-> couldBeOutput\n");
+        printf("Testing -> couldBeOutput\n");
         printf("------------------------------------------------\n");
         printf("Test: ''\n");
         int x = couldBeOutput("");
@@ -126,14 +151,14 @@ int testMI2()
         assert(parsed->token == 1);
         assert(parsed->outOfBandRecord==NULL);
         assert(parsed->resultRecords!=NULL);
-        printf("Testando: %s\n", parsed->resultRecords->resultClass);
+        printf("Testing: %s\n", parsed->resultRecords->resultClass);
         assert(strcmp(parsed->resultRecords->resultClass, "running")==0);
         assert(parsed->resultRecords->results==NULL);
         freeParsed(parsed);
     }
     {
         printf("------------------------------------------------\n");
-        printf("Testing-> Values\n");
+        printf("Testing -> Values\n");
         printf("------------------------------------------------\n");
         printf("Test-> *stopped,reason=\"breakpoint-hit\",disp=\"keep\",bkptno=\"1\",frame={addr=\"0x00000000004e807f\",func=\"D main\",args=[{name=\"args\",value=\"...\"}],file=\"source/app.d\",fullname=\"/path/to/source/app.d\",line=\"157\"},thread-id=\"1\",stopped-threads=\"all\",core=\"0\"\n");
         ST_MIInfo * parsed;
@@ -429,6 +454,6 @@ int testMI2()
         assert(strcmp(search->value,"unsigned char [3]")==0);
         freeParsed(parsed);
     }
-    printf("Test - MI2 - Fim\n");
+    printf("Test - MI2 - End\n");
     return 0;
 }

@@ -16,6 +16,12 @@
 #include <wctype.h>
 #include "cobgdb.h"
 
+// ==========================================================================================
+// Default empty token.
+//
+// Used as a safe fallback when a requested token position does not
+// exist in a parsed token array.
+// ==========================================================================================
 struct st_parse parse_blank = {
     .token = "" ,       // Initialize the char * token pointer as NULL
     .size = 0,          // Initialize the int size as 0
@@ -24,6 +30,13 @@ struct st_parse parse_blank = {
 
 };
 
+// ==========================================================================================
+// Convert all alphabetic characters in a string to uppercase.
+//
+// The conversion is performed in-place, modifying the original buffer.
+//
+// Returns a pointer to the modified string.
+// ==========================================================================================
 char * toStUpper(char* str) {
   int j = 0;
  
@@ -34,6 +47,14 @@ char * toStUpper(char* str) {
   return str;
 }
 
+// ==========================================================================================
+// Count leading whitespace characters.
+//
+// Counts consecutive spaces and tab characters starting from the
+// beginning of the supplied string.
+//
+// Returns the number of whitespace characters found.
+// ==========================================================================================
 int psSpaces(char * ch){
     int count=0;
     while(*ch==' ' || *ch=='\t'){
@@ -43,6 +64,14 @@ int psSpaces(char * ch){
     return count;
 }
 
+// ==========================================================================================
+// Determine the length of a quoted string literal.
+//
+// Supports both single-quoted and double-quoted strings and includes
+// the opening and closing quote characters in the count.
+//
+// Returns the total length of the string token.
+// ==========================================================================================
 int psString(char * ch){
     int count=0;
     if(*ch=='\''){
@@ -71,7 +100,14 @@ int psString(char * ch){
     return count;
 }
 
-
+// ==========================================================================================
+// Determine the length of a generic symbol sequence.
+//
+// A symbol sequence consists of consecutive non-whitespace characters
+// that are not recognized as delimiters or grouping symbols.
+//
+// Returns the number of characters in the symbol token.
+// ==========================================================================================
 int psSymbols(char * ch){
     int count=0;
     while(*ch!=' ' && *ch!='\t' && *ch!='\n' && *ch!='\0' &&
@@ -83,6 +119,15 @@ int psSymbols(char * ch){
     return count;
 }
 
+// ==========================================================================================
+// Determine the length of an alphanumeric identifier.
+//
+// Valid characters include:
+//
+//   a-z A-Z 0-9 . _ -
+//
+// Returns the number of characters in the identifier.
+// ==========================================================================================
 int psAlpha(char * ch){
     int count=0;
     while(isalpha(*ch) || *ch=='.' || *ch=='-' || *ch=='_' || isdigit(*ch)){
@@ -92,6 +137,17 @@ int psAlpha(char * ch){
     return count;
 }
 
+// ==========================================================================================
+// Determine the length of a numeric token.
+//
+// Supports:
+//
+//   Decimal numbers
+//   Floating-point numbers
+//   Hexadecimal-style values containing 'x' and a-f digits
+//
+// Returns the number of characters in the numeric token.
+// ==========================================================================================
 int psNumber(char * ch){
     int count=0;
     int hex = 0;
@@ -104,6 +160,14 @@ int psNumber(char * ch){
     return count;
 }
 
+// ==========================================================================================
+// Safely retrieve a token from a parsed token array.
+//
+// If the requested position is outside the valid range, a predefined
+// empty token structure is returned instead.
+//
+// Returns a pointer to the requested token.
+// ==========================================================================================
 struct st_parse * tk_val(struct st_parse * line_parsed, int qtt_tk, int pos){
     struct st_parse * tk = NULL;
     if(pos>=0 && pos<qtt_tk){
@@ -113,7 +177,14 @@ struct st_parse * tk_val(struct st_parse * line_parsed, int qtt_tk, int pos){
     return tk;
 }
 
-// Returns a pointer to the first occurrence of the specified text (case-insensitive)
+// ==========================================================================================
+// Perform a case-insensitive search in a wide-character string.
+//
+// Similar to wcsstr(), but comparisons are performed without regard
+// to character case.
+//
+// Returns a pointer to the first matching occurrence or NULL if not found.
+// ==========================================================================================
 const wchar_t *wcsistr(const wchar_t *haystack, const wchar_t *needle) {
     if (!*needle) return haystack;
     for (; *haystack; haystack++) {
@@ -129,6 +200,25 @@ const wchar_t *wcsistr(const wchar_t *haystack, const wchar_t *needle) {
     return NULL;
 }
 
+// ==========================================================================================
+// Tokenize a source line into parser tokens.
+//
+// The function scans the input line and classifies tokens into
+// categories such as:
+//
+//   - identifiers
+//   - numbers
+//   - strings
+//   - symbols
+//
+// The token array is automatically expanded when necessary.
+//
+// Parameters:
+//   line_to_parse - source text to tokenize
+//   h             - token array
+//   qtt           - receives token count
+//   cap           - current token array capacity
+// ==========================================================================================
 void lineParse(char * line_to_parse, struct st_parse **h, int *qtt, int *cap ){
     char * ch = line_to_parse;
     *qtt=0;
@@ -186,6 +276,17 @@ void lineParse(char * line_to_parse, struct st_parse **h, int *qtt, int *cap ){
         }
 }
 
+// ==========================================================================================
+// Convert a UTF-8 string to a wide-character string.
+//
+// On Windows, MultiByteToWideChar() is used.
+// On POSIX systems, mbstowcs() is used.
+//
+// The returned buffer is dynamically allocated and must be freed by
+// the caller.
+//
+// Returns NULL on conversion failure.
+// ==========================================================================================
 wchar_t *to_wide(const char *src) {
     if (!src) return NULL;
 #if defined(_WIN32)
@@ -205,6 +306,16 @@ wchar_t *to_wide(const char *src) {
 #endif
 }
 
+// ==========================================================================================
+// Perform a case-insensitive substring search.
+//
+// Similar to strcasestr(), but returns the starting position of the
+// first match instead of a pointer.
+//
+// Returns:
+//   >= 0 : position of the match
+//   -1   : substring not found
+// ==========================================================================================
 int my_strcasestr(const char *haystack, const char *needle) {
     if (!haystack || !needle) return -1;
 

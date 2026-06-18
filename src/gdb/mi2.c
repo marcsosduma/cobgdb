@@ -20,6 +20,9 @@
 #include "cobgdb.h"
 //#define DEBUG 0
 
+// ==========================================================================================
+// Global Variables
+// ==========================================================================================
 extern int VIEW_LINES;
 extern int VIEW_COLS;
 extern struct st_cobgdb cob;
@@ -27,6 +30,10 @@ extern ST_Line * LineDebug;
 extern char * gdbOutput;
 extern char m[10][512];
 extern ST_bk * BPList;
+
+// ==========================================================================================
+// Local Variables
+// ==========================================================================================
 char lastComand[200];
 int subroutine=-1;
 int isCall = FALSE;
@@ -48,13 +55,25 @@ enum GDB_STATUS {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-void MI2log(char * log){
+
+// ==========================================================================================
+// Log a message for debugging purposes, printing the message to the console if debugging is 
+// enabled and ensuring that the message is not null before attempting to print it
+// ==========================================================================================
+void MI2log(char *log) {
     #ifdef DEBUG
-    printf("%s\n", log);
+    if (!log) return;
+        show_log(log);
+    }
     #endif
 }
 #pragma GCC diagnostic pop
 
+// ==========================================================================================
+// Parse non output from GDB, checking if the line matches a specific pattern that indicates 
+// non-output and extracting the relevant information from the line if it matches, ensuring 
+// that the line is
+// ==========================================================================================
 //char nonOutput[] = "(([0-9]*|undefined)[\\*\\+\\-\\=\\~\\@\\&\\^])([^\\*\\+\\-\\=\\~\\@\\&\\^]{1,})";
 int fNonOutput(char * line, char mm[][MAX_MATCH_LENGTH]){
     int len = 0;
@@ -113,6 +132,11 @@ int fNonOutput(char * line, char mm[][MAX_MATCH_LENGTH]){
     return ret;
 }
 
+// ==========================================================================================
+// Verify if a line from GDB output could be considered as non-output, checking if the line
+// matches the expected pattern for non-output and returning a boolean value indicating whether
+// the line is non-output or not, ensuring that the line is properly analyzed and classified    
+// ==========================================================================================
 int couldBeOutput(char * line) {
     int qtd = fNonOutput(line, m);
     if(qtd==0) 
@@ -120,6 +144,11 @@ int couldBeOutput(char * line) {
     return 0;
 }
 
+// ==========================================================================================
+// Load a library file, constructing the path to the corresponding C file based on the provided
+// library file name and checking if the C file exists before attempting to load it, ensuring that
+// the library is properly loaded and that any errors are handled gracefully    
+// ==========================================================================================
 void loadLibrary(char * file){
     char temp[256];
     char nameCFile[1024];
@@ -135,6 +164,11 @@ void loadLibrary(char * file){
     }
 }
 
+// ==========================================================================================
+// Load a COBOL source file, checking if the new file is different from the currently loaded file
+// and if the new file exists before attempting to load it, ensuring that the source file is 
+// properly loaded and that any errors are handled gracefully    
+// ==========================================================================================
 int loadCobSourceFile(char * atualFile, char * newFile){
     if(strcasecmp(atualFile, newFile)!=0){
         if(!file_exists(newFile)){
@@ -145,13 +179,18 @@ int loadCobSourceFile(char * atualFile, char * newFile){
         freeFile();
         strcpy(cob.file_cobol, newFile);
         loadfile(cob.file_cobol);
-        highlightParse();
         cob.status_bar = 0;
         return TRUE;
     }
     return TRUE;
 }
 
+// ==========================================================================================
+// Check if there is a COBOL line corresponding to the current GDB output, parsing the output
+// and extracting the relevant information to determine if there is a corresponding COBOL line,
+// ensuring that the COBOL line is properly identified and that any necessary source files are
+// loaded as needed    
+// ==========================================================================================
 ST_Line * hasLineCobol(ST_MIInfo * parsed){
     boolean find=FALSE;
     ST_Line * hasLine = NULL;
@@ -175,6 +214,12 @@ ST_Line * hasLineCobol(ST_MIInfo * parsed){
     return hasLine;
 }
 
+// ==========================================================================================
+// Parse the output from GDB, analyzing the output line by line and extracting the relevant
+// information to determine the status of the GDB session and any necessary actions to take based
+// on the output, ensuring that the output is properly parsed and that the appropriate status is
+// returned based on the content of the output
+// ==========================================================================================
 //char gdbRegex[]  = "([0-9]*|undefined)\\(gdb\\)";
 int fGdbRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    if(line==NULL) return 0;
@@ -206,6 +251,12 @@ int fGdbRegex(char * line, char mm[][MAX_MATCH_LENGTH]){
    return 0;
 }
 
+// ==========================================================================================
+// Parse the output from GDB, analyzing the output line by line and extracting the relevant
+// information to determine the status of the GDB session and any necessary actions to take based
+// on the output, ensuring that the output is properly parsed and that the appropriate status is
+// returned based on the content of the output  
+// ==========================================================================================
 ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
    *status=GDB_RUNNING;
    if(gdbOutput==NULL) return NULL;
@@ -337,6 +388,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.running=FALSE;
                                         cob.debug_line=-1;
                                         cob.isStepOver=-1;
+                                        cob.changeLine=TRUE;
                                         cob.auto_step = FALSE;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }else if(strcmp(reason->value,"exited")==0){
@@ -346,6 +398,7 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
                                         cob.running=FALSE;
                                         cob.debug_line=-1;
                                         cob.isStepOver=-1;
+                                        cob.changeLine=TRUE;
                                         cob.auto_step = FALSE;
                                         loadCobSourceFile(cob.file_cobol, cob.first_file);
                                 }
@@ -394,6 +447,10 @@ ST_MIInfo * MI2onOuput(int (*sendCommandGdb)(char *), int tk, int * status){
    return parsedRet;
 }
 
+// ==========================================================================================
+// Read and process pending debugger output generated by GDB.
+// On Linux this updates the debugger state using the output pipe.
+// ==========================================================================================
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void verify_output(int (*sendCommandGdb)(char *)){
@@ -403,6 +460,11 @@ void verify_output(int (*sendCommandGdb)(char *)){
 }
 #pragma GCC diagnostic pop
 
+// ==========================================================================================
+// Wait for a response from GDB, continuously sending an empty command until a response is 
+// received from GDB, ensuring that the function does not return until a response is received 
+// and that any necessary processing is done based on the response received from GDB
+// ==========================================================================================
 void wait_gdb_answer(int (*sendCommandGdb)(char *)){
     if(gdbOutput!=NULL) strcpy(gdbOutput,"");
     do{
@@ -410,6 +472,10 @@ void wait_gdb_answer(int (*sendCommandGdb)(char *)){
     }while(strlen(gdbOutput)==0 && strcmp(gdbOutput,"\n")!=0);
 }
 
+// ==========================================================================================
+// Get the current stack frames from GDB, sending the appropriate command to GDB and parsing the    
+// response to extract the relevant information about the stack frames
+// ==========================================================================================
 int MI2getStack(int (*sendCommandGdb)(char *), int thread){
     int status, tk;
     char command[200];
@@ -447,6 +513,10 @@ int MI2getStack(int (*sendCommandGdb)(char *), int thread){
     return 0;
 }
 
+// ==========================================================================================
+// Step over the current line in GDB, sending the appropriate command to GDB and waiting for the
+// response to determine when the step over action has completed
+// ==========================================================================================
 int MI2stepOver(int (*sendCommandGdb)(char *)){
     int status;
 
@@ -471,6 +541,11 @@ int MI2stepOver(int (*sendCommandGdb)(char *)){
     return TRUE;
 }
 
+// ==========================================================================================
+// Step into the current line in GDB, sending the appropriate command to GDB and waiting for the
+// response to determine when the step into action has completed, handling any necessary actions    
+// based on the response received from GDB
+// ==========================================================================================
 int MI2stepInto(int (*sendCommandGdb)(char *)){
     int status;
     char command[200];
@@ -498,6 +573,11 @@ int MI2stepInto(int (*sendCommandGdb)(char *)){
     return 0;
 }
 
+// ==========================================================================================
+// Step out of the current function in GDB, sending the appropriate command to GDB and
+// waiting for the response to determine when the step out action has completed, handling any
+// necessary actions based on the response received from GDB    
+// ==========================================================================================
 int MI2stepOut(int (*sendCommandGdb)(char *)){
     strcpy(lastComand,"exec-next\n"); 
     char command[200];
@@ -509,6 +589,11 @@ int MI2stepOut(int (*sendCommandGdb)(char *)){
     return 0;
 }
 
+// ==========================================================================================
+// Start the GDB session, sending the appropriate command to GDB to start the session and
+// waiting for the response to determine when the session has started, handling any necessary
+// actions based on the response received from GDB
+// ==========================================================================================
 int MI2start(int (*sendCommandGdb)(char *)){
     hasCobGetFieldStringFunction=TRUE;
     verify_output(sendCommandGdb); 
@@ -528,6 +613,11 @@ int MI2start(int (*sendCommandGdb)(char *)){
     return 0;
 }
 
+// ==========================================================================================
+// Verify the connection to GDB, sending an empty command to GDB and waiting for the response to
+// determine if the connection is valid, handling any necessary actions based on the response
+// received from GDB
+// ==========================================================================================
 int MI2verifyGdb(int (*sendCommandGdb)(char *)){
     int status;
     sendCommandGdb("");
@@ -535,6 +625,10 @@ int MI2verifyGdb(int (*sendCommandGdb)(char *)){
     return 0;
 }
 
+// ==========================================================================================
+// Add a breakpoint in GDB, sending the appropriate command to GDB to add the breakpoint and
+// waiting for the response to determine when the breakpoint has been added
+// ==========================================================================================
 int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
     char command[256];
     int status=0;
@@ -570,6 +664,10 @@ int MI2addBreakPoint(int (*sendCommandGdb)(char *), char * fileCobol, int lineNu
     return TRUE;
 }
 
+// ==========================================================================================
+// Remove a breakpoint in GDB, sending the appropriate command to GDB to remove the breakpoint
+// and waiting for the response to determine when the breakpoint has been removed
+// ==========================================================================================
 void MI2removeAllBreakPoint(int (*sendCommandGdb)(char *) ){
     int status=0;
     char command[256];
@@ -581,6 +679,10 @@ void MI2removeAllBreakPoint(int (*sendCommandGdb)(char *) ){
     }while(status==GDB_RUNNING);
 }
 
+// ==========================================================================================
+// Remove a specific breakpoint in GDB, sending the appropriate command to GDB to remove the
+// breakpoint and waiting for the response to determine when the breakpoint has been removed
+// ==========================================================================================
 int MI2removeBreakPoint (int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
     ST_Line * line = getLineC(fileCobol, lineNumber);
     if(line!=NULL){
@@ -612,6 +714,11 @@ int MI2removeBreakPoint (int (*sendCommandGdb)(char *), char * fileCobol, int li
     return 0;
 }
 
+// ==========================================================================================
+// Go to a specific line in GDB, sending the appropriate command to GDB to set a temporary 
+// breakpoint at the specified line and waiting for the response to determine when the 
+// breakpoint has been hit
+// ==========================================================================================
 int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumber ){
     char command[256];
     int status=0;
@@ -649,6 +756,10 @@ int MI2goToCursor(int (*sendCommandGdb)(char *), char * fileCobol, int lineNumbe
     return TRUE;
 }
 
+// ==========================================================================================
+// Get the name of the current function from GDB, sending the appropriate command to GDB and
+// parsing the response to extract the name of the current function
+// ==========================================================================================
 char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *)){
     char * ret = NULL;
     ST_MIInfo * parsed= NULL;
@@ -668,21 +779,69 @@ char * MI2getCurrentFunctionName(int (*sendCommandGdb)(char *)){
     return ret;
 }
 
+// ==========================================================================================
+// Convert the value from GDB output to a format suitable for display in the debugger, 
+// extracting the value and formatting it appropriately for display
+// ==========================================================================================
+char *convert_gdb_value(const char *gdb_output, ST_DebuggerVariable *var){
+    char *p_size;
+    char *p_quote;
+    int size;
+    char *temp;
+    char * ret;
+    // size =
+    p_size = strstr(gdb_output,"size = ");
+    if(p_size == NULL)
+        return NULL;
+    p_size += strlen("size = ");
+    size = atoi(p_size);
+    // FIND \"
+    p_quote = strstr(gdb_output,"\"");
+    if(p_quote == NULL)
+        return NULL;
+    p_quote += 1;
+    // BUFFER
+    temp = (char *)malloc(2048+size + 1);
+    if(temp == NULL)
+        return NULL;
+    if(p_quote[0]=='"'){
+        free(temp);
+        return strdup("");
+    }else{
+    // Move Size BYTES
+        memcpy(temp, p_quote, size);
+        temp[size] = '\0';
+        if((p_quote = strstr(temp,"\""))!=NULL){
+             p_quote[0]='\0';
+        }
+    }
+    // PARSER
+    ret = debugParseBuilIn(temp,
+        var->size,
+        var->attribute ? var->attribute->scale : 0,
+        var->attribute ? var->attribute->type : NULL,
+        var->attribute ? var->attribute->flags : 0,
+        var->attribute ? var->attribute->digits : 0
+    );
+    if(temp!=NULL) free(temp);
+    return ret;
+}
+
+// ==========================================================================================
+// Recursively traverse the table of variable values from GDB output, extracting the relevant
+// information about each variable and updating the corresponding variables in the debugger
+// ==========================================================================================
 void tableVariableElements(ST_TableValues * start, char * functionName){
+        if (start == NULL) return;
         ST_TableValues * sch=start;
-        if(sch->next_array!=NULL){
-           tableVariableElements(sch->next_array, functionName);
-        }
-        if(sch->array!=NULL){
-           tableVariableElements(sch->array, functionName);
-        }
-        if(sch->next!=NULL){
-           tableVariableElements(sch->next, functionName);
-        }
-        if(sch->key!=NULL && strcmp(sch->key,"name")==0){
+        if(sch->next_array!=NULL) tableVariableElements(sch->next_array, functionName);
+        if(sch->array!=NULL) tableVariableElements(sch->array, functionName);
+        if(sch->next!=NULL) tableVariableElements(sch->next, functionName);
+
+        if(sch->key!=NULL && strcmp(sch->key,"name")==0 && sch->value != NULL){
             if(strncmp(sch->value,"b_",2)==0){
-                char varNameC[256];
-                sprintf(varNameC,"%s%c%s",functionName,'.',sch->value);
+                char varNameC[512];
+                snprintf(varNameC, sizeof(varNameC),"%s%c%s",functionName,'.',sch->value);
                 ST_DebuggerVariable * cobolVariable =  getVariableByC(varNameC);
                 if(cobolVariable!=NULL && sch->next!=NULL){
                     ST_TableValues * value = sch->next;
@@ -691,16 +850,41 @@ void tableVariableElements(ST_TableValues * start, char * functionName){
                         cobolVariable->value=strdup(value->value);
                     }
                 }
+            }else if(strncmp(sch->value,"f_",2)==0){
+                char varNameC[512];
+                snprintf(varNameC, sizeof(varNameC),"%s%c%s",functionName,'.',sch->value);
+                ST_DebuggerVariable * cobolVariable =  getVariableByC(varNameC);
+                if(cobolVariable!=NULL && sch->next!=NULL){
+                    const char *tab = "group boolean numeric numeric edited alphanumeric alphanumeric edited national national edited";
+                    //printf("Variable %s\n", cobolVariable->cobolName);
+                    if(cobolVariable->attribute != NULL && cobolVariable->attribute->type != NULL){
+                        if(strstr(tab,cobolVariable->attribute->type)){
+                            ST_TableValues * array = sch->next;
+                            //printf("Array = %s\n", array->value);
+                            if(cobolVariable->value!=NULL) free(cobolVariable->value);
+                            cobolVariable->value = NULL;
+                            cobolVariable->value =convert_gdb_value(array->value,cobolVariable);
+                            //printf("Variable %s = %s\n", cobolVariable->cobolName, cobolVariable->value);
+                        }else{
+                            cobolVariable->value = NULL;
+                        }
+                    }
+                }
             }
         }
 }
 
+// ==========================================================================================
+// Retrieve all visible variables from the specified thread and stack frame.
+// The variable values are parsed and synchronized with the COBOL debugger.
+// ==========================================================================================
 void MI2getStackVariables(int (*sendCommandGdb)(char *), int thread,int  frame){
         int status;
         char command[256];
         
         ST_MIInfo * parsed=NULL;
         char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
+        strcpy(cob.function, (functionName!=NULL)?functionName:"");
         sprintf(command,"stack-list-variables --thread %d --frame %d --all-values\n", thread, frame);
         int tk=sendCommandGdb(command);
         do{
@@ -718,11 +902,17 @@ void MI2getStackVariables(int (*sendCommandGdb)(char *), int thread,int  frame){
         if(functionName!=NULL) free(functionName);
 }
 
+// ==========================================================================================
+// Request the variables of the current execution context.
+// ==========================================================================================
 int MI2variablesRequest(int (*sendCommandGdb)(char *)){
     MI2getStackVariables(sendCommandGdb,1,0);
     return 0;
 }
 
+// ==========================================================================================
+// Display variable information for the symbol located under the cursor.
+// ==========================================================================================
 int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * line ){
     char * functionName = MI2getCurrentFunctionName(sendCommandGdb);
     show_line_var(line->high, functionName, sendCommandGdb);
@@ -730,6 +920,10 @@ int MI2hoverVariable(int (*sendCommandGdb)(char *), Lines * line ){
     return TRUE;
 }
 
+// ==========================================================================================
+// Remove surrounding quotes from a GDB string value.
+// The returned string must be freed by the caller.
+// ==========================================================================================
 char* cleanRawValue(const char* rawValue) {
     if (!rawValue) return NULL;
 
@@ -762,6 +956,11 @@ char* cleanRawValue(const char* rawValue) {
     return out;
 }
 
+// ==========================================================================================
+// Remove surrounding quotes from a GDB string value and escape embedded double quotes
+// so the resulting string can be safely used inside GDB MI commands.
+// The returned string must be freed by the caller.
+// ==========================================================================================
 char* cleanRawValueWithEscape(const char* rawValue) {
     if (!rawValue) return NULL;
 
@@ -808,6 +1007,16 @@ char* cleanRawValueWithEscape(const char* rawValue) {
     return out;
 }
 
+// ==========================================================================================
+// Evaluate a debugger variable using GDB MI.
+//
+// Depending on the variable type, the function retrieves its value using
+// either COBOL helper functions or direct memory access. The retrieved value
+// is converted to a debugger-friendly representation and stored in
+// var->value.
+//
+// Returns TRUE on success or FALSE on failure.
+// ==========================================================================================
 int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable *var, int thread, int frame){
     if (var == NULL) return FALSE;
     int status = 0;
@@ -967,6 +1176,12 @@ int MI2evalVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable *var, int
     return FALSE;
 }
 
+// ==========================================================================================
+// Convert a binary buffer into its hexadecimal string representation.
+//
+// The destination buffer must be large enough to hold
+// (dataSize * 2) + 1 characters.
+// ==========================================================================================
 void binaryDataToHexString(const unsigned char *binary_data, size_t dataSize, char *hexString, size_t hexStringSize) {
     size_t offset = 0;
     for (size_t i = 0; i < dataSize; ++i) {
@@ -974,6 +1189,14 @@ void binaryDataToHexString(const unsigned char *binary_data, size_t dataSize, ch
     }
 }
 
+// ==========================================================================================
+// Modify the value of a debugger variable through GDB MI.
+//
+// Depending on the variable type, the function uses direct assignment,
+// COBOL runtime helper functions, or raw memory writes.
+//
+// Returns TRUE on success or FALSE on failure.
+// ==========================================================================================
 int MI2editVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable *var, char *rawValue)
 {
     if (var == NULL || rawValue == NULL || sendCommandGdb == NULL)
@@ -1079,10 +1302,14 @@ int MI2editVariable(int (*sendCommandGdb)(char *), ST_DebuggerVariable *var, cha
 
 #define MAX_FILES 100
 #ifndef strtok_r
-/*
-This routine was obtained from the following source:
-https://stackoverflow.com/questions/12975022/strtok-r-for-mingw
-*/
+// ==========================================================================================
+// Thread-safe strtok implementation for platforms that do not provide strtok_r().
+//
+// This implementation is used primarily on Windows/MinGW environments.
+// ==========================================================================================
+// This routine was obtained from the following source:
+// https://stackoverflow.com/questions/12975022/strtok-r-for-mingw
+// ==========================================================================================
 #pragma GCC diagnostic push
 #if defined(__GNUC__) && (__GNUC__ >= 9)
 #pragma GCC diagnostic ignored "-Wnonnull-compare"
@@ -1109,6 +1336,15 @@ char *strtok_r(char *str, const char *delim, char **save)
 #pragma GCC diagnostic pop
 #endif
 
+// ==========================================================================================
+// Retrieve the list of source files known by the current GDB session.
+//
+// The function executes the GDB command "info sources", extracts COBOL
+// source files (.cob and .cbl), normalizes their paths, removes duplicates,
+// and stores them in the provided array.
+//
+// Returns the number of files found.
+// ==========================================================================================
 int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
     char* token;
     int fileCount = 0;
@@ -1168,29 +1404,24 @@ int MI2sourceFiles(int (*sendCommandGdb)(char *), char files[][512]){
     return fileCount;
 }
 
-
+// ==========================================================================================
+// Attach the debugger to a running process or remote GDB server.
+//
+// The connection target may be specified as a PID or in the form
+// "host:port". After a successful attach, the current execution location
+// is synchronized with the COBOL source view.
+// ==========================================================================================
 int MI2attach(int (*sendCommandGdb)(char *)){
     int status, tk=0;
-    int lin=10;
     char aux[256];
+    aux[0]='\0';
     if(strlen(cob.connect)==0){
-        int bkg= color_dark_red;
-        gotoxy(10,lin+2);
-        print_colorBK(color_white, bkg);
-        draw_box_first(10,lin+2,61,"Attach - server:port or pid");
-        draw_box_border(10,lin+3);
-        draw_box_border(72,lin+3);
-        print_colorBK(color_yellow, bkg);
-        gotoxy(11,lin+3);
-        sprintf(aux,"%s:","Enter");
-        printf("%-61s",aux);
-        lin++;
-        print_colorBK(color_white, bkg);
-        draw_box_last(10,lin+3,61);
-        print_colorBK(color_green, bkg);
-        fflush(stdout);
-        gotoxy(12+strlen(aux),lin+2);
-        if(readchar(aux,55)==FALSE) return 0;  
+        if(!dialogBox(
+                "Attach - server:port or pid", 
+                "Enter", 
+                aux, 
+                55)
+        ) return FALSE;
     }else{
         strcpy(aux,cob.connect);
     }
@@ -1288,30 +1519,25 @@ int MI2attach(int (*sendCommandGdb)(char *)){
     return 0;
 }
 
-
+// ==========================================================================================
+// Display a dialog that allows the user to jump execution to a specific
+// COBOL source line.
+//
+// If the line exists in the loaded source, a temporary breakpoint is
+// created and execution continues until the selected location is reached.
+//
+// Return values:
+//   0 - invalid line
+//   1 - operation cancelled
+//   2 - success
+// ==========================================================================================
 int MI2lineToJump(int (*sendCommandGdb)(char *)){
     char aux[500];
-    int bkg= color_dark_red;
     int ret=2;    
-
-    int lin=VIEW_LINES/2-2;
-    gotoxy(10,lin);
-    print_colorBK(color_white, bkg);
-    draw_box_first(10,lin,61,"Jump to Line");
-    draw_box_border(10,lin+1);
-    draw_box_border(72,lin+1);
-    print_colorBK(color_yellow, bkg);
-    gotoxy(11,lin+1);
-    int readLine = lin+1;
-    strcpy(aux,"Line: ");
-    printf("%-61s",aux);
-    lin++;
-    print_colorBK(color_white, bkg);
-    draw_box_last(10,lin+1,61);
-    print_colorBK(color_green, bkg);
-    fflush(stdout);
-    gotoxy(11+strlen(aux),readLine);
-    if(readnum(aux,50) == FALSE) return 1;
+    aux[0]='\0';
+    
+    if(!dialogBoxNum("Jump to Line", "Line: ", aux, 10))
+        return 1;
     int line = atoi(aux);
     int check=hasCobolLine(line);
     if(check>0){

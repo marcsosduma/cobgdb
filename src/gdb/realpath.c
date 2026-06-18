@@ -17,7 +17,31 @@
 #define PATH_MAX 4096
 #endif
 
-// Function to emulate the basic functionality of realpath on Linux in a Windows environment
+// ==========================================================================================
+// Resolve a file path to its absolute canonical form on Windows.
+//
+// This function provides a Windows implementation compatible with
+// the POSIX realpath() API, allowing source code portability across
+// platforms.
+//
+// Internally, the Windows API GetFullPathNameA() is used to obtain
+// the absolute path.
+//
+// Parameters:
+//   name     - Input path to resolve.
+//   resolved - Destination buffer. If NULL, a buffer is allocated
+//              automatically.
+//
+// Returns:
+//   Pointer to the resolved absolute path.
+//   NULL if the path cannot be resolved or memory allocation fails.
+//
+// Notes:
+//   - When 'resolved' is NULL, the returned buffer is dynamically
+//     allocated and must be freed by the caller.
+//   - The returned path may contain symbolic path components already
+//     resolved by the operating system.
+// ==========================================================================================
 char* realpath(const char* name, char* resolved) {
     char* fullPath = NULL;
 

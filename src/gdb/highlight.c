@@ -18,6 +18,15 @@
 #include <locale.h>
 #include "cobgdb.h"
 
+// ==========================================================================================
+// Global Variables
+// ==========================================================================================
+extern struct st_cobgdb cob;
+extern int color_frame;
+
+// ==========================================================================================
+// Variables
+// ==========================================================================================
 const wchar_t COBOL_RESERVED_WORDS[] = L" ABSENT ACCEPT ACCESS ACTION ACTIVATING ACTIVE-CLASS ACTIVE-X ACTUAL ADD ADDRESS ADJUSTABLE-COLUMNS ADVANCING AFTER ALIGNED ALIGNMENT ALL ALLOCATE ALLOWING ALPHABET ALPHABETIC ALPHABETIC-LOWER ALPHABETIC-UPPER ALPHANUMERIC ALPHANUMERIC-EDITED ALSO ALTER ALTERNATE AND ANUM ANY ANYCASE APPLY ARE AREA AREAS ARGUMENT-NUMBER ARGUMENT-VALUE ARITHMETIC AS ASCENDING ASCII ASSIGN AT ATTRIBUTE ATTRIBUTES  AUTO AUTO-DECIMAL AUTO-SKIP AUTO-SPIN AUTOMATIC AUTOTERMINATE AWAY-FROM-ZERO B-AND B-NOT B-OR B-SHIFT-L B-SHIFT-LC B-SHIFT-R B-SHIFT-RC B-XOR BACKGROUND-COLOR BACKGROUND-COLOUR BACKGROUND-HIGH BACKGROUND-LOW BACKGROUND-STANDARD BACKWARD BAR BASED BEEP BEFORE BELL BINARY BINARY-C-LONG BINARY-CHAR BINARY-DOUBLE BINARY-INT BINARY-LONG BINARY-LONG-LONG BINARY-SEQUENTIAL BINARY-SHORT BIT BITMAP BITMAP-END BITMAP-HANDLE BITMAP-NUMBER BITMAP-START BITMAP-TIMER BITMAP-TRAILING BITMAP-TRANSPARENT-COLOR BITMAP-WIDTH BLANK BLINK BLOCK BOOLEAN BOTTOM BOX BOXED BULK-ADDITION BUSY BUTTONS BY BYTE BYTE-LENGTH BYTES C CALENDAR-FONT CANCEL CANCEL-BUTTON CAPACITY CARD-PUNCH CARD-READER CASSETTE CCOL CD CELL CELL-COLOR CELL-DATA CELL-FONT CELL-PROTECTION CELLS CENTER CENTERED CENTERED-HEADINGS CENTURY-DATE CF CH CHAIN CHAINING CHANGED CHARACTER CHARACTERS CHECK-BOX CLASS CLASS-ID CLASSIFICATION CLEAR-SELECTION CLINE CLINES CLOSE COBOL CODE CODE-SET COL COLLATING COLOR COLORS COLOURS COLS COLUMN COLUMN-COLOR COLUMN-DIVIDERS COLUMN-FONT COLUMN-HEADINGS COLUMN-PROTECTION COLUMNS COMBO-BOX COMMA COMMAND-LINE COMMIT COMMON "
                                         " COMMUNICATION COMP COMP-0 COMP-1 COMP-10 COMP-15 COMP-2 COMP-3 COMP-4 COMP-5 COMP-6 COMP-9 COMP-N COMP-X COMPUTATIONAL COMPUTATIONAL-0 COMPUTATIONAL-1 COMPUTATIONAL-2 COMPUTATIONAL-3 COMPUTATIONAL-4 COMPUTATIONAL-5 COMPUTATIONAL-6 COMPUTATIONAL-N COMPUTATIONAL-X COMPUTE CONDITION CONFIGURATION CONSTANT CONTAINS CONTENT CONTROL CONTROLS CONVERSION CONVERTING COPY COPY-SELECTION CORE-INDEX CORR CORRESPONDING COUNT CRT CRT-UNDER CSIZE CURRENCY CURRENT CURSOR CURSOR-COL CURSOR-COLOR CURSOR-FRAME-WIDTH CURSOR-ROW CURSOR-X CURSOR-Y CUSTOM-PRINT-TEMPLATE CYCLE CYL-INDEX CYL-OVERFLOW DASHED DATA DATA-COLUMNS DATA-POINTER DATA-TYPES DATE DATE-COMPILED DATE-ENTRY DATE-MODIFIED DATE-WRITTEN DAY DAY-OF-WEEK DE DEBUGGING DECIMAL-POINT DECLARATIVES DEFAULT DEFAULT-BUTTON DEFAULT-FONT DELETE DELIMITED DELIMITER DEPENDING DESCENDING DESTINATION DESTROY DETAIL DISABLE DISC DISK DISP DISPLAY DISPLAY-1 DISPLAY-COLUMNS DISPLAY-FORMAT DIVIDE DIVIDER-COLOR DIVIDERS DIVISION DOTDASH DOTTED DOUBLE DOWN DRAG-COLOR DROP-DOWN DROP-LIST DUPLICATES DYNAMIC EBCDIC EC ECHO EDITING EGI ELEMENT  EMI EMPTY-CHECK ENABLE ENCODING ENCRYPTION END END-ACCEPT END-ADD END-CHAIN END-COLOR END-COMPUTE END-DELETE END-DISPLAY END-DIVIDE END-JSON END-MODIFY END-MULTIPLY END-OF-PAGE END-READ END-RECEIVE END-RETURN END-REWRITE END-SEARCH END-SEND END-START END-STRING END-SUBTRACT END-UNSTRING END-WRITE END-XML ENGRAVED ENSURE-VISIBLE ENTRY ENTRY-CONVENTION ENTRY-FIELD ENTRY-REASON ENVIRONMENT ENVIRONMENT-NAME "
                                         " ENVIRONMENT-VALUE EO EOL EOP EOS EQUAL EQUALS ERASE ERROR ESCAPE ESCAPE-BUTTON ESI EVENT EVENT-LIST EVERY EXCEPTION EXCEPTION-OBJECT EXCEPTION-VALUE EXCLUSIVE EXCLUSIVE-OR EXHIBIT EXIT EXPAND EXPANDS EXTEND EXTENDED-SEARCH EXTERN EXTERNAL EXTERNAL-FORM FACTORY FALSE FD FH--FCD FH--KEYDEF FILE FILE-CONTROL FILE-ID FILE-LIMIT FILE-LIMITS FILE-NAME FILE-POS FILL-COLOR FILL-COLOR2 FILL-PERCENT FILLER FINAL FINALLY FINISH-REASON FIRST FIXED FIXED-FONT FIXED-WIDTH FLAT FLAT-BUTTONS FLOAT FLOAT-BINARY-128 FLOAT-BINARY-32 FLOAT-BINARY-64 FLOAT-DECIMAL-16 FLOAT-DECIMAL-34 FLOAT-EXTENDED FLOAT-INFINITY FLOAT-LONG FLOAT-NOT-A-NUMBER FLOAT-SHORT FLOATING FONT FOOTING FOR FOREGROUND-COLOR FOREGROUND-COLOUR FOREVER FORMAT FRAME FRAMED FREE FROM FULL FULL-HEIGHT FUNCTION FUNCTION-ID FUNCTION-POINTER GENERATE GET GIVING GLOBAL GO-BACK GO-FORWARD GO-HOME GO-SEARCH GOBACK GRAPHICAL GREATER GRID GROUP GROUP-USAGE GROUP-VALUE HANDLE HAS-CHILDREN HEADING HEADING-COLOR HEADING-DIVIDER-COLOR HEADING-FONT HEAVY HEIGHT-IN-CELLS HEX HIDDEN-DATA HIGH-COLOR HIGH-VALUE HIGH-VALUES HIGHLIGHT HOT-TRACK HSCROLL HSCROLL-POS I-O I-O-CONTROL ICON ID IDENTIFICATION IDENTIFIED IF IGNORE IGNORING IMPLEMENTS IN INDEPENDENT INDEX INDEXED INDICATE INHERITS INITIAL INITIALISE INITIALISED INITIALIZE INITIALIZED INITIATE INPUT INPUT-OUTPUT INQUIRE INSERT-ROWS INSERTION-INDEX INSPECT INSTALLATION INTERFACE INTERFACE-ID INTERMEDIATE INTO INTRINSIC INVALID INVOKE IS ITEM ITEM-TEXT ITEM-TO-ADD ITEM-TO-DELETE ITEM-TO-EMPTY ITEM-VALUE JSON JUST JUSTIFIED "
@@ -27,15 +36,16 @@ const wchar_t COBOL_RESERVED_WORDS[] = L" ABSENT ACCEPT ACCESS ACTION ACTIVATING
                                         " 'LENGTH OF' NUMBER-OF-CALL-PARAMETERS RETURN-CODE SORT-RETURN TALLY WHEN-COMPILED XML-CODE XML-EVENT XML-INFORMATION XML-NAMESPACE XML-NAMESPACE-PREFIX XML-NNAMESPACE XML-NNAMESPACE-PREFIX XML-NTEXT XML-TEXT JSON-CODE ";
 
 const wchar_t COBOL_SPECIAL_WORDS[] =  L" STOP RUN IF THEN ELSE END-IF PERFORM CALL END-PERFORM END-CALL AUTHOR GO CONTINUE EVALUATE END-EVALUATE WHEN THRU ";
-
 const wchar_t COBOL_SPECIAL_VAR[] =  L" COB-CRT-STATUS JSON-STATUS VALIDATE-STATUS VAL-STATUS ";
 
-extern struct st_cobgdb cob;
-extern int color_frame;
 boolean isProcedure = FALSE;
 boolean isPicture = FALSE;
 int isProc=0;
 
+// ==========================================================================================
+// Function to convert a wide-character string to uppercase, iterating through each character 
+// and applying
+// ==========================================================================================
 wchar_t * toWUpper(wchar_t* str) {
   int j = 0;
  
@@ -46,6 +56,10 @@ wchar_t * toWUpper(wchar_t* str) {
   return str;
 }
 
+// ==========================================================================================
+// Parse a wide-character string to count leading spaces, iterating through the characters until
+// a non-space character is found and counting the number of spaces encountered
+// ==========================================================================================
 int parseSpaces(wchar_t * ch){
     int count=0;
     while(*ch==L' '){
@@ -55,6 +69,11 @@ int parseSpaces(wchar_t * ch){
     return count;
 }
 
+// ==========================================================================================
+// Parse a wide-character string to count the characters in a string literal, iterating through
+// the characters until the closing quote is found and counting the number of characters 
+// encountered
+// ==========================================================================================
 int parseStringHigh(wchar_t * ch){
     int count=0;
     if(*ch==L'\''){
@@ -83,7 +102,11 @@ int parseStringHigh(wchar_t * ch){
     return count;
 }
 
-
+// ==========================================================================================
+// Parse a wide-character string to count the characters in a comment, iterating through the
+// characters until the end of the line is found and counting the number of characters
+// encountered
+// ==========================================================================================
 int parseSymbols(wchar_t * ch){
     int count=0;
     while(!iswalpha(*ch) && *ch!=L' ' && *ch!=L'\n' && *ch!=L'\0' && *ch!=L'.'){
@@ -93,6 +116,11 @@ int parseSymbols(wchar_t * ch){
     return count;
 }
 
+// ==========================================================================================
+// Parse a wide-character string to count the characters in an alphanumeric token, iterating 
+// through the characters until a non-alphanumeric character is found and counting the number 
+// of characters
+// ==========================================================================================
 int parseAlpha(wchar_t * ch){
     int count=0;
     while(iswalpha(*ch) || *ch==L'-' || *ch==L'_' || iswdigit(*ch)){
@@ -102,6 +130,10 @@ int parseAlpha(wchar_t * ch){
     return count;
 }
 
+// ==========================================================================================
+// Parse a wide-character string to count the characters in a picture clause, iterating through
+// the characters until a non-picture character is found and counting the number of characters
+// ==========================================================================================
 int parsePicture(wchar_t * ch){
     int count=0;
     while(*ch!=L' ' && *ch!='\0'){
@@ -112,6 +144,10 @@ int parsePicture(wchar_t * ch){
     return count;
 }
 
+// ==========================================================================================
+// Parse a wide-character string and digit or alphanumeric token, iterating through the 
+// characters until a non-alphanumeric character  
+// ==========================================================================================
 int parseDigitOrAlpha(wchar_t * ch,struct st_highlt * h){
     int count=0;
     int alpha=0;
@@ -132,72 +168,12 @@ int parseDigitOrAlpha(wchar_t * ch,struct st_highlt * h){
     return count;
 }
 
-int printHighlight(struct st_highlt * hight, int bkg, int start, int total){
-    struct st_highlt * h = hight;
-    wchar_t wcBuffer[512];    
-    int qtdMove=0;
-    int tot=total;
-    int fg=-1;
-    void (*fprint_colorBK)(int,int);
-    int st = start;
-    #if defined(_WIN32)
-    static HANDLE hConsole = NULL;
-    if (!hConsole)
-        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    #else
-    char    utf8buf[2048];
-    mbstate_t mbst = {0};
-    #endif
 
-    while (st > 0 && h != NULL) {
-        if (st < h->size) break;
-        st -= h->size;
-        h = h->next;
-    }
-    bkg = (bkg > 0) ? bkg : color_black;
-    fprint_colorBK = (bkg == color_dark_gray ? print_colorBK256c : print_colorBK);
-    fprint_colorBK(bkg, bkg);
-    fg = bkg;
-    while (h != NULL && tot > 0) {
-        qtdMove = (tot < h->size - st) ? tot : h->size - st;
-        if (qtdMove > 0) {
-            if (qtdMove > 512) qtdMove = 512;
-            if (h->color != fg) {
-                fprint_colorBK(h->color, bkg);
-                fg = h->color;
-            }
-            wmemcpy(wcBuffer, &h->token[st], qtdMove);
-            wcBuffer[qtdMove] = L'\0';
-            #if defined(_WIN32)
-            DWORD written;
-            WriteConsoleW(hConsole, wcBuffer, qtdMove, &written, NULL);
-            #else
-            const wchar_t *src = wcBuffer;
-            size_t out = wcsrtombs(utf8buf, &src, sizeof(utf8buf), &mbst);
-            if (out != (size_t)-1)
-                fwrite(utf8buf, 1, out, stdout);
-            //printf("%*ls", qtdMove, wcBuffer);
-            #endif
-        }
-        tot -= qtdMove;
-        h = h->next;
-        st = 0;
-    }
-    if (tot > 0) {
-        print_colorBK(color_black, bkg);
-        if (tot > 511) tot = 511;
-        wmemset(wcBuffer, L' ', tot);
-        #if defined(_WIN32)
-        DWORD written;
-        WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), wcBuffer, tot, &written, NULL);
-        #else
-        fwrite(wcBuffer, sizeof(wchar_t), tot, stdout);
-        #endif
-    }
-    print_color_reset();
-    return TRUE;
-}
-
+// ==========================================================================================
+// Free the memory allocated for the linked list of highlighted tokens, iterating through the list
+// and freeing the memory for each token and the list nodes, ensuring that all allocated memory is  
+// properly released and that there are no memory leaks
+// ==========================================================================================
 void freeHighlight(struct st_highlt * hight){
     if (hight->token != NULL) {
             free(hight->token);
@@ -210,6 +186,12 @@ void freeHighlight(struct st_highlt * hight){
     }
 }
 
+// ==========================================================================================
+// Verify if a token is a reserved word, checking if the token matches any of the reserved 
+// words in the COBOL language and assigning the appropriate color and type to the token if 
+// it is a reserved word, ensuring that the token is properly identified and highlighted in 
+// the output
+// ==========================================================================================
 void isReserved(struct st_highlt * h){
     wchar_t test[50];
     if(h->size<50){
@@ -237,6 +219,11 @@ void isReserved(struct st_highlt * h){
     }
 }
 
+// ==========================================================================================
+// Clean a line of code by replacing tabs with spaces and removing carriage return and newline
+// characters, iterating through the characters in the input string and constructing a new
+// string with the cleaned
+// ==========================================================================================
 char *cleanLine(const char *input) {
     size_t inputSize = strlen(input);
     char *result = (char *)malloc((inputSize + 1) * sizeof(char));
@@ -265,6 +252,13 @@ char *cleanLine(const char *input) {
     return result;
 }
 
+// ==========================================================================================
+// Parse the lines of code and create a linked list of highlighted tokens for each line, iterating
+// through the lines and characters in the code, identifying the different types of tokens (such as 
+// reserved words, strings, comments, etc.) and creating a linked list of tokens with the appropriate
+// color and type for each token, ensuring that the tokens are properly identified and highlighted
+// in the output
+// ==========================================================================================
 int highlightParse(){
     Lines * lines = cob.lines;
     int pos=1;

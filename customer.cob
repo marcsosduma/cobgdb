@@ -6,8 +6,10 @@
               SOURCE-COMPUTER.      
                     GNUCOBOL.
                   OBJECT-COMPUTER.      
-                    GNUCOBOL.
-              SPECIAL-NAMES.
+                    GNUCOBOL
+                    CLASSIFICATION brazil.
+                SPECIAL-NAMES.
+	                LOCALE brazil "pt_BR.UTF-8".
            DECIMAL-POINT IS COMMA.    
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
@@ -23,36 +25,36 @@
        01 FILE1-REC.
            05 FS-KEY.
                10 FS-PHONE PIC 9(09) BLANK WHEN ZEROS.
-           05 FS-NAME     PIC X(40).
-           05 FS-ADDRESS PIC X(40).
-           05 FILLER      PIC X(20).
+           05 FS-NAME      PIC X(40).
+           05 FS-ADDRESS   PIC X(40).
+           05 FILLER       PIC X(20).
 
        WORKING-STORAGE SECTION.
 
        01 WS-MODULE.
-           05 FILLER PIC X(12) VALUE "CUSTOMERS - ".
-           05 WS-OP PIC X(20) VALUE SPACES.
+           05 FILLER       PIC X(12) VALUE "CUSTOMERS - ".
+           05 WS-OP        PIC X(20) VALUE SPACES.
 
-       77 WS-CHOICE PIC X.
-           88 E-INCLUDE   VALUE IS "1".
-           88 E-CONSULT VALUE IS "2".
-           88 E-UPDATE   VALUE IS "3".
-           88 E-DELETE   VALUE IS "4".
-           88 E-EXIT  VALUE IS "X" "x".
-       77 FS-STAT PIC 9(02).
-           88 FS-OK         VALUE ZEROS.
+       77 WS-CHOICE        PIC X.
+           88 E-INCLUDE    VALUE IS "1".
+           88 E-CONSULT    VALUE IS "2".
+           88 E-UPDATE     VALUE IS "3".
+           88 E-DELETE     VALUE IS "4".
+           88 E-EXIT       VALUE IS "X" "x".
+       77 FS-STAT          PIC 9(02).
+           88 FS-OK        VALUE ZEROS.
            88 FS-CANCEL    VALUE 99.
            88 FS-NOT-EXIST VALUE 35.
-       77 WS-ERROR PIC X.
-           88 E-YES VALUES ARE "Y" "y".
+       77 WS-ERROR         PIC X.
+           88 E-YES        VALUES ARE "Y" "y".
 
-       77 WS_NUMR PIC 999.
-       77 WS-NUMC012 PIC 999.
-       77 BACK-COLOR PIC 9 VALUE 1.
-       77 FRONT-COLOR PIC 9 VALUE 6.
+       77 WS_NUMR          PIC 999.
+       77 WS-NUMC012       PIC 999.
+       77 BACK-COLOR       PIC 9 VALUE 1.
+       77 FRONT-COLOR      PIC 9 VALUE 6.
 
-       77 WS-STATUS PIC X(30).
-       77 WS-ERRMSG PIC X(80).
+       77 WS-STATUS        PIC X(30).
+       77 WS-ERRMSG        PIC X(80).
 
        COPY screenio.
 
@@ -96,7 +98,7 @@
 
        01 SS-ERROR.
            05 FILLER FOREGROUND-COLOR 4 BACKGROUND-COLOR 1 HIGHLIGHT.
-               10 LINE WS_NUMR COLUMN 2 PIC X(80) FROM WS-ERRMSG BELL.
+               10 LINE WS_NUMR COLUMN 2 PIC X(80) FROM WS-ERRMSG.
                10 COLUMN PLUS 2 TO WS-ERROR.
 
        PROCEDURE DIVISION.

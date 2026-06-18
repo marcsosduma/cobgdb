@@ -19,6 +19,17 @@ extern ST_Line * LineDebug;
 
 void free_cfiles(void);
 
+/*
+ * Unit tests for source mapping and parser functionality.
+ *
+ * Covered features:
+ *  - COBOL-to-C source line mapping
+ *  - Variable name translation
+ *  - Variable hierarchy resolution
+ *  - Variable attribute extraction
+ *  - Multiple function support
+ *  - Compiler version detection
+ */
 int testParser()
 {
     char buffer[500]; /* PATH_MAX incudes the \0 so +1 is not required */
@@ -128,7 +139,7 @@ int testParser()
 	}
 	{
 		printf("------------------------------------------------\n");
-	    printf("Grupo Files:\n");
+	    printf("File Group:\n");
 		free_cfiles();
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/sample.c", buffer));
@@ -177,7 +188,7 @@ int testParser()
 	}
 	{
 		printf("------------------------------------------------\n");
-		printf("Variables Hierarchy:\n");
+		printf("Variable Hierarchy:\n");
 		free_cfiles();
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/petstore.c", buffer));
@@ -225,7 +236,7 @@ int testParser()
 	}
 	{
 		printf("------------------------------------------------\n");
-		printf("Attributes:\n");
+		printf("Variable Attributes::\n");
 		free_cfiles();
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/datatypes.c", buffer));
@@ -251,7 +262,7 @@ int testParser()
 	}	
 	{
 		printf("------------------------------------------------\n");
-		printf("Multiple Functions:\n");
+		printf("Multiple Function Support:\n");
 		free_cfiles();
 		char cSample[256];
 		strcpy(cSample,realpath("./resources/func.c", buffer));

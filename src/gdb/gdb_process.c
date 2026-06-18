@@ -30,10 +30,17 @@
 #include "cobgdb.h"
 #define BUFSIZE 2048
 #define BUFFER_OUTPUT_SIZE 1024
-//#define DEBUG 1
 
+// ==========================================================================================
+// Global Variables
+// ==========================================================================================
 extern struct st_cobgdb cob;
 extern char * gdbOutput;
+extern int DEBUG_GDB;
+
+// ==========================================================================================
+// Variables
+// ==========================================================================================
 int token=1;
 
 #if defined(_WIN32)
@@ -46,12 +53,18 @@ HANDLE g_hChildStd_OUT_Wr = NULL;
 HANDLE g_hInputFile = NULL;
 TCHAR command[512];
 
+// ==========================================================================================
+// Prototypes
+// ==========================================================================================
 int debug(int (*sendCommandGdb)(char *));
 void CreateChildProcess(void);
 int sendCommandGdb(char * command);
 void ErrorExit(char *);
 //TCHAR szCmdline[]=TEXT("gdb --interpreter=mi2 client.exe");
 
+// ==========================================================================================
+// Start GDB and create child process
+// ==========================================================================================
 int start_gdb(char * name, char * cwd)
 {
    char fixCommand[] = "gdb -nx --quiet --interpreter=mi2 ";
@@ -119,6 +132,10 @@ int start_gdb(char * name, char * cwd)
    return 0;
 }
 
+// ==========================================================================================
+// Create the child process to run GDB, setting up the necessary pipes for communication and
+// waiting for the process to finish before cleaning up handles
+// ==========================================================================================
 void CreateChildProcess()
 {
    PROCESS_INFORMATION piProcInfo;
@@ -157,18 +174,20 @@ void CreateChildProcess()
    }
 }
 
+// ==========================================================================================
+// Send a command to GDB through the pipe, handling the command formatting, writing to the pipe,
+// and reading the output from GDB, ensuring that the output is captured correctly and stored in   
+// a buffer for further processing
+// ==========================================================================================
 int sendCommandGdb(char * command)
 {
    DWORD dwRead, dwWritten;
    CHAR chBuf[BUFSIZE];
    BOOL bSuccess = FALSE;
-   int qtdAlloc = 0;
    int mustReturn = 1;
    int count0 = 0;
-
-   #ifdef DEBUG
-   HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-   #endif
+   static int bufferSize = 0;
+   static int qtdAlloc = 0;
 
    int tk = token;
    if (strlen(command) > 0) {
@@ -190,32 +209,40 @@ int sendCommandGdb(char * command)
 
    if (gdbOutput != NULL) {
       strcat(gdbOutput, "\n");
-      if (strcmp(gdbOutput, "\n") == 0) strcpy(gdbOutput, "");
-      qtdAlloc = strlen(gdbOutput);
+      if (strcmp(gdbOutput, "\n") == 0) gdbOutput[0]= '\0';
+      qtdAlloc = strlen(gdbOutput) + 1;
    } else {
-      qtdAlloc = 0;
+      qtdAlloc = 1;
+      bufferSize = BUFFER_OUTPUT_SIZE;
       gdbOutput = malloc(BUFFER_OUTPUT_SIZE);
-      strcpy(gdbOutput, "");
+      gdbOutput[0] = '\0';
    }
 
-   strcpy(chBuf, "");
+   chBuf[0] = '\0';
+   int gdbOutputUsed=qtdAlloc-1;
    for (;;) {
       DWORD dwAvailable = 0;
       if (!PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &dwAvailable, NULL)) 
          break;
-      bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
-      #ifdef DEBUG
-      bSuccess = WriteFile(hParentStdOut, chBuf, dwRead, &dwWritten, NULL);
-      #endif
-
-      qtdAlloc = (gdbOutput != NULL) ? strlen(gdbOutput) + 1 : 0;
+      bSuccess = ReadFile(g_hChildStd_OUT_Rd, chBuf, BUFSIZE-1, &dwRead, NULL);
       if (dwRead > 0) {
          chBuf[dwRead] = '\0';
          qtdAlloc += dwRead + 1;
-         if (qtdAlloc > BUFFER_OUTPUT_SIZE) {
-            gdbOutput = realloc(gdbOutput, qtdAlloc);
+         if (DEBUG_GDB) {
+            log_gdb_output(chBuf);
          }
-         strcat(gdbOutput, chBuf);
+         if (qtdAlloc > bufferSize) {
+            bufferSize = qtdAlloc + BUFFER_OUTPUT_SIZE;
+            gdbOutput = realloc(gdbOutput, bufferSize);
+         }
+         //strcat(gdbOutput, chBuf);
+         memcpy(
+            gdbOutput + gdbOutputUsed,
+            chBuf,
+            dwRead
+         );
+         gdbOutputUsed += dwRead;
+         gdbOutput[gdbOutputUsed] = '\0';
          count0 = 0;
       } else {
          if (count0 > 0)
@@ -231,6 +258,9 @@ int sendCommandGdb(char * command)
    return TRUE;
 }
 
+// ==========================================================================================
+// Exit with an error message, printing the message to the console and terminating the process
+// ==========================================================================================
 void ErrorExit(char *msg)
 {
    printf("%s\n", msg);
@@ -240,17 +270,28 @@ void ErrorExit(char *msg)
 
 #elif defined(__linux__)
 
+// ==========================================================================================
+// Variables
+// ==========================================================================================
 int stInPid, stOutPid;
+
+// ==========================================================================================
+// Prototypes
+// ==========================================================================================
 int debug(int (*sendCommandGdb)(char *));
 
-// Read output from the child process's pipe for STDOUT
-// and write to the parent process's pipe for STDOUT.
+// ==========================================================================================
+// Send a command to GDB through the pipe, handling the command formatting, writing to the pipe,
+// and reading the output from GDB, ensuring that the output is captured correctly and stored in
+// a buffer for further processing
+// ==========================================================================================
 int sendCommandGdb(char * command)
 {
    char chBuf[BUFSIZE];
-   int qtdAlloc = BUFSIZE;  
    int mustReturn=1;
    fd_set read_fds;
+   static int bufferSize = 0;
+   static int qtdAlloc = 0;
 
    int tk = token;
    if(strlen(command)>0){
@@ -265,24 +306,21 @@ int sendCommandGdb(char * command)
          snprintf(chBuf, BUFSIZE, "%d-%s", token++, command);
          chBuf[BUFSIZE - 1] = '\0';
       }
-      #ifdef DEBUG
-      printf("%s",chBuf);
-      #endif
       write(stOutPid, chBuf, strlen(chBuf));
       if(mustReturn) return tk;
    }
    if(gdbOutput!=NULL){
       strcat(gdbOutput,"\n");
-      if(strcmp(gdbOutput,"\n")==0) strcpy(gdbOutput,"");
-      qtdAlloc=strlen(gdbOutput);
+      if(strcmp(gdbOutput,"\n")==0) gdbOutput[0]= '\0';
+      qtdAlloc = strlen(gdbOutput) + 1;
    }else{
-      qtdAlloc=0;
-      gdbOutput=malloc(BUFFER_OUTPUT_SIZE);
-      strcpy(gdbOutput,"");
+      qtdAlloc=1;
+      bufferSize = BUFFER_OUTPUT_SIZE;
+      gdbOutput = malloc(BUFFER_OUTPUT_SIZE);
+      gdbOutput[0] = '\0';
    }
-   #ifdef DEBUG
-   //clrscr();
-   #endif
+   chBuf[0] = '\0';
+   int gdbOutputUsed=qtdAlloc-1;
    for (;;)
    {
       FD_ZERO(&read_fds);
@@ -303,18 +341,29 @@ int sendCommandGdb(char * command)
       }else{
          chBuf[dwRead]='\0';
          qtdAlloc+=dwRead+1;
-         if(qtdAlloc>BUFFER_OUTPUT_SIZE){
-           gdbOutput = realloc(gdbOutput, qtdAlloc+3);
+         if(qtdAlloc>bufferSize){
+           bufferSize = qtdAlloc + BUFFER_OUTPUT_SIZE;
+           gdbOutput = realloc(gdbOutput, bufferSize);
          }
-         strcat(gdbOutput, chBuf);
-         #ifdef DEBUG
-         printf("Recebendo: %s", gdbOutput);
-         #endif
+          memcpy(
+            gdbOutput + gdbOutputUsed,
+            chBuf,
+            dwRead
+         );
+         gdbOutputUsed += dwRead;
+         gdbOutput[gdbOutputUsed] = '\0';
+        if (DEBUG_GDB) {
+            log_gdb_output(chBuf);
+        }
       }
    }
    return TRUE;
 }
 
+// ==========================================================================================
+// Start GDB and create child process, using fork and exec to run GDB with the specified 
+// command-line arguments
+// ==========================================================================================
 int start_gdb(char * name, char * cwd){
 
     int fd1[2];

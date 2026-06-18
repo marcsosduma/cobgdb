@@ -30,10 +30,27 @@
 #endif
 #include "cobgdb.h"
 
+// =====================================================
+// Global Variables
+// =====================================================
 extern struct st_cobgdb cob;
 extern struct st_cfiles * parsed_cfiles;
 
-// Function to get the current directory
+// ==========================================================================================
+// Get the current working directory.
+//
+// Retrieves the current process working directory using the
+// appropriate platform-specific API.
+//
+// On Windows, _getcwd() is used.
+// On POSIX systems, getcwd() is used.
+//
+// Returns:
+//   Dynamically allocated string containing the current directory.
+//   NULL on failure.
+//
+// The returned buffer must be freed by the caller.
+// ==========================================================================================
 char* getCurrentDirectory() {
     char* currentDirectory = NULL;
 
@@ -60,7 +77,21 @@ char* getCurrentDirectory() {
     return currentDirectory;
 }
 
-
+// ==========================================================================================
+// Extract the filename without its extension.
+//
+// Example:
+//
+//   Input : "program.cbl"
+//   Output: "program"
+//
+// Parameters:
+//   file      - Original filename.
+//   onlyName  - Destination buffer.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void fileNameWithoutExtension(char * file, char * onlyName){
     int qtd=strlen(file);
     if(strchr(file,'.')!=NULL){
@@ -75,6 +106,21 @@ void fileNameWithoutExtension(char * file, char * onlyName){
     }
 }
 
+// ==========================================================================================
+// Extract the file extension from a filename.
+//
+// Example:
+//
+//   Input : "program.cbl"
+//   Output: ".cbl"
+//
+// Parameters:
+//   file           - Original filename.
+//   onlyExtension  - Destination buffer.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void fileExtension(char * file, char * onlyExtension){
     int offset=strlen(file);
     int qtt=1;
@@ -90,6 +136,19 @@ void fileExtension(char * file, char * onlyExtension){
     }
 }
 
+// ==========================================================================================
+// Perform a case-insensitive substring search.
+//
+// Similar to strstr(), but ignores character case.
+//
+// Parameters:
+//   haystack - String to search in.
+//   needle   - String to search for.
+//
+// Returns:
+//   Pointer to the first occurrence.
+//   NULL if not found.
+// ==========================================================================================
 char *istrstr(const char *haystack, const char *needle) {
     while (*haystack) {
         const char *h = haystack;
@@ -105,7 +164,15 @@ char *istrstr(const char *haystack, const char *needle) {
     return NULL;
 }
 
-
+// ==========================================================================================
+// Convert a string to lowercase in place.
+//
+// Parameters:
+//   str - String to convert.
+//
+// Returns:
+//   Pointer to the modified string.
+// ==========================================================================================
 char* toLower(char* str) {
   int j = 0;
  
@@ -116,6 +183,15 @@ char* toLower(char* str) {
   return str;
 }
 
+// ==========================================================================================
+// Convert a string to uppercase in place.
+//
+// Parameters:
+//   str - String to convert.
+//
+// Returns:
+//   Pointer to the modified string.
+// ==========================================================================================
 char* toUpper(char* str) {
   int j = 0;
  
@@ -126,6 +202,21 @@ char* toUpper(char* str) {
   return str;
 }
 
+// ==========================================================================================
+// Check whether a character is considered whitespace.
+//
+// Recognized characters:
+//
+//   ' '
+//   '\n'
+//   '\r'
+//   '\t'
+//   '\f'
+//
+// Returns:
+//   TRUE  if the character is whitespace.
+//   FALSE otherwise.
+// ==========================================================================================
 boolean isSpace(char c) {
     switch (c) {
         case ' ':
@@ -141,6 +232,22 @@ boolean isSpace(char c) {
     }
 }
 
+// ==========================================================================================
+// Remove all whitespace characters from a string.
+//
+// Unlike a traditional trim operation, this function removes
+// every whitespace character found in the string.
+//
+// Example:
+//
+//   "A B C" -> "ABC"
+//
+// Parameters:
+//   s - String to modify.
+//
+// Returns:
+//   Pointer to the modified string.
+// ==========================================================================================
 char * Trim(char * s){
     int ix, jx;
     char * buf;
@@ -156,6 +263,18 @@ char * Trim(char * s){
         return s;             
 }
 
+// ==========================================================================================
+// Extract a substring from a string.
+//
+// Parameters:
+//   input  - Source string.
+//   offset - Starting position.
+//   len    - Number of characters to copy.
+//   dest   - Destination buffer.
+//
+// Returns:
+//   Pointer to the destination buffer.
+// ==========================================================================================
 char* subString(const char* input, int offset, int len, char* dest)
 {
   int input_len = strlen (input);
@@ -170,6 +289,18 @@ char* subString(const char* input, int offset, int len, char* dest)
   return dest;
 }
 
+// ==========================================================================================
+// Normalize a filesystem path.
+//
+// Converts Windows path separators ('\') into POSIX-style
+// separators ('/') and removes duplicate separators.
+//
+// Parameters:
+//   path - Path string to normalize.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void normalizePath(char * path){
     char bef = ' ';
     char * temp = strdup(path);
@@ -186,6 +317,19 @@ void normalizePath(char * path){
     free(temp);
 }
 
+// ==========================================================================================
+// Extract the filename portion from a full path.
+//
+// Example:
+//
+//   "/tmp/test.cbl" -> "test.cbl"
+//
+// Parameters:
+//   path - Full file path.
+//
+// Returns:
+//   Pointer to the filename inside the original buffer.
+// ==========================================================================================
 char* getFileNameFromPath(char* path) {
         char sep = '/';
         for(size_t i = strlen(path) - 1; i; i--)  
@@ -198,6 +342,21 @@ char* getFileNameFromPath(char* path) {
         return path;
 }
 
+// ==========================================================================================
+// Extract the directory portion of a full path.
+//
+// Example:
+//
+//   Input : "/tmp/test.cbl"
+//   Output: "/tmp"
+//
+// Parameters:
+//   path - Destination buffer.
+//   org  - Full path.
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void getPathName(char * path, char * org) {
    char sep = '/';
     int final_pos=0;
@@ -212,6 +371,21 @@ void getPathName(char * path, char * org) {
    path[final_pos]='\0';
 }
 
+// ==========================================================================================
+// Determine whether a path is absolute or relative.
+//
+// Return values:
+//
+//   0 - Relative path.
+//   1 - Absolute path.
+//   2 - Relative path containing directory separators.
+//
+// Parameters:
+//   path - Path to evaluate.
+//
+// Returns:
+//   Classification value.
+// ==========================================================================================
 int isAbsolutePath(char *path) {
     if (!path || !*path)
         return 0;
@@ -234,6 +408,21 @@ int isAbsolutePath(char *path) {
     return 0;
 }
 
+// ==========================================================================================
+// Portable getline() implementation.
+//
+// Reads a complete line from a file stream and automatically
+// expands the destination buffer as needed.
+//
+// Parameters:
+//   line - Pointer to destination buffer.
+//   len  - Current buffer size.
+//   fp   - File stream.
+//
+// Returns:
+//   Number of bytes read.
+//   -1 on error or EOF.
+// ==========================================================================================
 int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp) {
     if (line == NULL || len == NULL || fp == NULL) {
         errno = EINVAL;
@@ -280,6 +469,31 @@ int64_t my_getline(char **restrict line, size_t *restrict len, FILE *restrict fp
     return -1;
 }
 
+
+void sanitize_to_utf8(char *str) {
+    unsigned char *p = (unsigned char *)str;
+    while (*p) {
+        // If the byte is greater than 127, it can cause problems in UTF-8 if not properly formatted.
+        // We replace control or invalid characters with '?'
+        if (*p > 127) {
+            *p = '?'; 
+        }
+        p++;
+    }
+}
+
+// ==========================================================================================
+// Load a COBOL source file into memory.
+//
+// Reads the source file line by line and builds a doubly linked
+// list of Lines structures.
+//
+// Parameters:
+//   program - Debugger program structure.
+//
+// Returns:
+//   TRUE on success.
+// ==========================================================================================
 int readCodFile(struct st_cobgdb *program) {
     FILE *fp = fopen(program->name_file, "r");
     if (fp == NULL) {
@@ -291,9 +505,10 @@ int readCodFile(struct st_cobgdb *program) {
     size_t len = 0;
     Lines *lines = NULL;
     Lines *line_before = NULL;
-    int qtd = 0;
+    int qtd = 0; 
 
     while (my_getline(&line, &len, fp) != -1) {
+        //sanitize_to_utf8(line);
         Lines *new_line = (Lines *)malloc(sizeof(Lines));
         new_line->line_after = NULL;
         new_line->line_before = NULL;
@@ -320,7 +535,16 @@ int readCodFile(struct st_cobgdb *program) {
     return TRUE;
 }
 
-//Make sure the file exists
+// ==========================================================================================
+// Check whether a file exists.
+//
+// Parameters:
+//   filepath - File path to test.
+//
+// Returns:
+//   TRUE if the file exists.
+//   FALSE otherwise.
+// ==========================================================================================
 int file_exists(const char *filepath) {
     struct stat fileStat; // Structure to store file information
     // Attempt to get file status
@@ -330,6 +554,20 @@ int file_exists(const char *filepath) {
     return FALSE;
 }
 
+// ==========================================================================================
+// Save all breakpoints to a breakpoint file.
+//
+// Creates a .bkp file associated with the specified source file
+// and stores all breakpoint locations.
+//
+// Parameters:
+//   head     - Breakpoint list.
+//   filename - Source filename.
+//
+// Returns:
+//   TRUE on success.
+//   FALSE on error.
+// ==========================================================================================
 int save_breakpoints(struct st_bkpoint *head, char *filename) {
     char baseName[512];    
     fileNameWithoutExtension(filename, &baseName[0]);
@@ -349,6 +587,19 @@ int save_breakpoints(struct st_bkpoint *head, char *filename) {
     return TRUE;
 }
 
+// ==========================================================================================
+// Restore all breakpoints into GDB.
+//
+// Removes existing breakpoints and recreates every breakpoint
+// contained in the provided list.
+//
+// Parameters:
+//   sendCommandGdb - Function used to communicate with GDB.
+//   bp_list        - Breakpoint list.
+//
+// Returns:
+//   TRUE on success.
+// ==========================================================================================
 int set_break_on_file(int (*sendCommandGdb)(char *), struct st_bkpoint *bp_list) {
     struct st_bkpoint *bp = bp_list;
     if(bp_list == NULL) return FALSE;
@@ -380,7 +631,19 @@ int set_break_on_file(int (*sendCommandGdb)(char *), struct st_bkpoint *bp_list)
     return TRUE;
 }
 
-
+// ==========================================================================================
+// Load breakpoints from a .bkp file.
+//
+// Reads all saved breakpoints and restores them into the debugger.
+//
+// Parameters:
+//   sendCommandGdb - Function used to communicate with GDB.
+//   head           - Existing breakpoint list.
+//   filename       - Source filename.
+//
+// Returns:
+//   Updated breakpoint list.
+// ==========================================================================================
 struct st_bkpoint *load_breakpoints(int (*sendCommandGdb)(char *), struct st_bkpoint *head, char *filename) {
     char baseName[512];    
     fileNameWithoutExtension(filename, &baseName[0]);
@@ -415,6 +678,20 @@ struct st_bkpoint *load_breakpoints(int (*sendCommandGdb)(char *), struct st_bkp
     return head;
 }
 
+// ==========================================================================================
+// Save debugger configuration values.
+//
+// Stores user preferences in the configuration file located
+// in the user's home directory.
+//
+// Saved values:
+//
+//   - Color theme
+//   - Auto-step delay
+//
+// Returns:
+//   Nothing.
+// ==========================================================================================
 void save_cfg_value(int color, int speed_delay)
 {
     char *home = NULL;
@@ -448,6 +725,16 @@ void save_cfg_value(int color, int speed_delay)
     showCobMessage(msg, 1);
 }
 
+// ==========================================================================================
+// Load debugger configuration values.
+//
+// Reads the configuration file from the user's home directory
+// and restores previously saved settings.
+//
+// Returns:
+//   Configured color theme.
+//   -1 if the configuration file does not exist.
+// ==========================================================================================
 int load_cfg_value(void)
 {
     char *home = NULL;

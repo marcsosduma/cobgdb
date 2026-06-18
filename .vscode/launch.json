@@ -15,13 +15,13 @@
                 "program": "${workspaceFolder}/cobgdb.exe",
                 //"args": ["--test"],
                 "args": ["customer.cob"],
-                //"args": ["datatypes.cob"],
+                //"args": ["samples\\datatypes.cob"],
             },
             "linux": {
                 "program": "${workspaceFolder}/cobgdb",
                 //"args": ["--test"],
                 "args": ["customer.cob"],
-                //"args": ["datatypes.cob"],
+                //"args": ["samples/datatypes.cob"],
             },
             "environment": [{ "name": "config", "value": "Debug" }],
             "cwd": "${workspaceFolder}"
