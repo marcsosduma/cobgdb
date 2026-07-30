@@ -74,10 +74,10 @@ $(info COBGDB_VERSION = $(COBGDB_VERSION))
 
 # Directory and files for distribution
 DIST_DIR ?= cobgdb-$(COBGDB_VERSION)
-DIST_FILES = $(SRCDIR)README.md \
+DIST_FILES = $(SRCDIR1)README.md \
              $(wildcard $(SRCDIR)*.png) \
              $(wildcard $(SRCDIR)doc/*.pdf) \
-             $(SRCDIR)LICENSE
+             $(SRCDIR1)LICENSE
 
 .PHONY: all all-before all-after clean clean-custom copy dist
 
