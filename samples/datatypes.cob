@@ -4,6 +4,8 @@
        DATA             DIVISION.
        WORKING-STORAGE  SECTION.
        01  numeric-data.
+           05 dispd1     usage display   pic s999   value -510.
+           05 dispd2    usage display   pic s999   value  510.
            05 disp1     usage display   pic s99v999   value -12.34.
            05 disp-u   usage display   pic  99v999   value  12.34.
            05 dispp    usage display   pic spppp9999 value -.0000123.
@@ -30,6 +32,7 @@
            05 dble     usage binary-double  signed   value -4294967295.
            05 dble-u   usage binary-double  unsigned value  8294967295.
       *   05 cmp0       usage comp-0.  TODO
+       01  duma       usage display   pic s99v999   value -12.34.
        01  floating-data.
            05 dbl        usage float-long      value -3.40282e+038.
            05 flt        usage float-short     value 3.40282e+038.
@@ -69,54 +72,57 @@
            move cmp5   to edit-num1, edit-num2, edit-num3, edit-num4
            move cmp5   to net-num1,  net-num2,  net-num3,  net-num4
 
-           display disp1
-           display disp-u
-           display dispp
-           display dispp-u
-           display disppp
-           display disppp-u
-           display bin
-           display bin-u
-           display cmp3
-           display cmp3-u
-           display cmp5
-           display cmp5-u
-           display cmp6
-           display cmpx
-           display cmpx-u
-           display cmpn
-           display cmpn-u
-           display chr
-           display chr-u
-           display shrt
-           display shrt-u
-           display long
-           display long-u
-           display dble
-           display dble-u
-           display dbl
-           display flt
-           display r2d2
-           display point
-           display ppoint
-           display idx
-           display hnd
-           display alpnum
-           display alpha
-           display edit-num1
-           display edit-num2
-           display edit-num3
-           display edit-num4
-           display nat
-           display net-num1
-           display net-num2
-           display net-num3
-           display net-num4
+           DISPLAY "duma" "=" duma
+           DISPLAY "bin" "=" bin
+           DISPLAY "bin-u" "=" bin-u
+           DISPLAY "dispp" "=" dispp
+           DISPLAY "dispp-u" "=" dispp-u
+           DISPLAY "disppp" "=" disppp
+           DISPLAY "disppp-u" "=" disppp-u
+           DISPLAY "dispd1" "=" dispd1
+           DISPLAY "dispd2" "=" dispd2
+           DISPLAY "disp1" "=" disp1
+           DISPLAY "disp-u" "=" disp-u
+           DISPLAY "cmp3" "=" cmp3
+           DISPLAY "cmp3-u" "=" cmp3-u
+           DISPLAY "cmp5" "=" cmp5
+           DISPLAY "cmp5-u" "=" cmp5-u
+           DISPLAY "cmp6" "=" cmp6
+           DISPLAY "cmpx" "=" cmpx
+           DISPLAY "cmpx-u" "=" cmpx-u
+           DISPLAY "cmpn" "=" cmpn
+           DISPLAY "cmpn-u" "=" cmpn-u
+           DISPLAY "chr" "=" chr
+           DISPLAY "chr-u" "=" chr-u
+           DISPLAY "shrt" "=" shrt
+           DISPLAY "shrt-u" "=" shrt-u
+           DISPLAY "long" "=" long
+           DISPLAY "long-u" "=" long-u
+           DISPLAY "dble" "=" dble
+           DISPLAY "dble-u" "=" dble-u
+           DISPLAY "dbl" "=" dbl
+           DISPLAY "flt" "=" flt
+           DISPLAY "r2d2" "=" r2d2
+           DISPLAY "point" "=" point
+           DISPLAY "ppoint" "=" ppoint
+           DISPLAY "idx" "=" idx
+           DISPLAY "hnd" "=" hnd
+           DISPLAY "alpnum" "=" alpnum
+           DISPLAY "alpha" "=" alpha
+           DISPLAY "edit-num1" "=" edit-num1
+           DISPLAY "edit-num2" "=" edit-num2
+           DISPLAY "edit-num3" "=" edit-num3
+           DISPLAY "edit-num4" "=" edit-num4
+           DISPLAY "nat" "=" nat
+           DISPLAY "net-num1" "=" net-num1
+           DISPLAY "net-num2" "=" net-num2
+           DISPLAY "net-num3" "=" net-num3
+           DISPLAY "net-num4" "=" net-num4
 
-           display numeric-data
-           display floating-data
-           display special-data
-           display alphanumeric-data
-           display national-data
+           DISPLAY "numeric-data" "=" numeric-data
+           DISPLAY "floating-data" "=" floating-data
+           DISPLAY "special-data" "=" special-data
+           DISPLAY "alphanumeric-data" "=" alphanumeric-data
+           DISPLAY "national-data" "=" national-data
 
            GOBACK.

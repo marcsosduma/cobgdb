@@ -1,42 +1,31 @@
-tmp
-*build*
+# Temporary
+tmp/
+dist/
+**/Installer
+**/tmp/
+
+# Bin and Objects
 *.so
 *.dll
 *.o
 *.i
+*.d
+*.exe
+*.c.h
+*.c.l.h
+*.so
+
+# Aux Files
 *.SCR
 *gdb.py
+
+# Data files
 *.DAT
 *.DAT.*
 *.bkp
+
+# Others
 cobgdb
 cobgdb.exe
-simple
-simple.c
-simple.c.h
-simple.c.l.h
-simple.exe
-customer
-customer.c
-customer.c.h
-customer.c.l.h
-customer.exe
-number
-number.c
-number.c.h
-number.c.l.h
-number.exe
-sample
-sample.exe
-sample.c
-sample.c.h
-sample.c.l.h
-subsample
-subsample.c
-subsample.c.h
-subsample.c.l.h
-datatype
-datatype.exe
-datatype.c
-datatype.c.h
-datatype.c.l.h
+wcobgdb
+wcobgdb.exe

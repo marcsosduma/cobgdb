@@ -20,11 +20,11 @@ else
 endif
 
 # path where the source resides - same as current Makefile's directory
-MAINDIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+SRCDIR1 := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 OBJ      = cobgdb.o terminal.o read_file.o gdb_process.o parser_mi2.o parser.o mi2.o testMI2.o testParser.o variables.o debugger.o highlight.o string_parser.o util.o
 
-TUIDIR := $(MAINDIR)src/tui/
-SRCDIR := $(MAINDIR)src/gdb/
+TUIDIR := $(SRCDIR1)src/tui/
+SRCDIR := $(SRCDIR1)src/gdb/
 
 $(info SRCDIR = $(SRCDIR))
 
@@ -74,10 +74,10 @@ $(info COBGDB_VERSION = $(COBGDB_VERSION))
 
 # Directory and files for distribution
 DIST_DIR ?= cobgdb-$(COBGDB_VERSION)
-DIST_FILES = $(MAINDIR)README.md \
-             $(wildcard $(MAINDIR)/images/*.png) \
-             $(wildcard $(MAINDIR)doc/*.pdf) \
-             $(MAINDIR)LICENSE
+DIST_FILES = $(SRCDIR)README.md \
+             $(wildcard $(SRCDIR)*.png) \
+             $(wildcard $(SRCDIR)doc/*.pdf) \
+             $(SRCDIR)LICENSE
 
 .PHONY: all all-before all-after clean clean-custom copy dist
 

@@ -1,0 +1,11 @@
+[Icon Theme]
+Name=WcobGDB
+Comment=WcobGDB Embedded Icons
+Directories=scalable/actions
+
+[scalable/actions]
+Size=16
+MinSize=16
+MaxSize=512
+Type=Scalable
+Context=Actions

@@ -1,0 +1,164 @@
+TARGET = wcobgdb
+CC ?= gcc
+
+PKGCONFIG = pkg-config
+
+# Detect OS and set executable name and clean command
+ifeq ($(OS),Windows_NT)
+    EXE = $(TARGET).exe
+    CLEAN_CMD = cmd /c "del /f /q *.o src\*.o src\gdb\*.o *.exe *.res src\*.d src\gdb\*.d src\resources.c 2>nul"
+    # Windows Icon Resource
+    RC_FILE = wcobgdb.rc
+    RES_FILE = wcobgdb.res
+    ifeq ($(MSYSTEM),)
+        POSIX_UTILS = 0
+    else
+        POSIX_UTILS = 1
+    endif
+else
+    EXE = $(TARGET)
+    # detect if running under unix by finding 'rm' in $PATH :
+    ifeq ($(wildcard $(addsuffix /rm,$(subst :, ,$(PATH)))),)
+        WINMODE = 1
+        POSIX_UTILS = 0
+    else
+        WINMODE = 0
+        POSIX_UTILS = 1
+    endif
+    CLEAN_CMD = rm -f *.o $(OBJ) $(EXE) $(RESOURCE_C) $(OBJ:.o=.d)
+endif
+
+# path where the source resides - same as current Makefile's directory
+SRCDIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+
+
+GUIDIR=$(SRCDIR)src/win/
+
+# Commands for Windows and Linux
+ifeq ($(POSIX_UTILS),0)
+  RM = del /F /Q
+  CP = copy /Y  
+  WCOBGDB_VERSION := $(shell for /f "tokens=3" %%a in ('findstr /C:"define WCOBGDB_VERSION" "$(subst /,\,$(GUIDIR)wcobgdb.c")') do @echo %%~a)
+  WCOBGDB_VERSION := $(subst ",,$(WCOBGDB_VERSION))
+else
+  # --- MSYS / LINUX ---
+  RM = rm -f
+  CP = cp
+  WCOBGDB_VERSION := $(shell awk '/define WCOBGDB_VERSION/ {gsub(/"/, "", $$3); print $$3}' $(GUIDIR)wcobgdb.c )
+endif
+
+# Flags
+CFLAGS = $(shell $(PKGCONFIG) --cflags gtk+-3.0) \
+         -Isrc \
+         -Isrc/ui \
+         -Isrc/gdb \
+         -g -Wall -MMD -MP -pthread
+
+LIBS = $(shell $(PKGCONFIG) --libs gtk+-3.0) -pthread
+
+
+ifneq ($(OS),Windows_NT)
+    X11_HEADER_EXISTS := $(shell [ -f /usr/include/X11/Xlib.h ] && echo yes || echo no)
+    ifeq ($(X11_HEADER_EXISTS),yes)
+        LIBS += -lX11
+        CFLAGS += -DHAVE_X11 -I/usr/include/X11
+    endif
+endif
+# Resources
+RESOURCE_XML = wcobgdb_resources.xml
+RESOURCE_C   = src/resources.c
+
+GLIB_COMPILE_RESOURCES := $(shell $(PKGCONFIG) --variable=glib_compile_resources gio-2.0)
+ifeq ($(GLIB_COMPILE_RESOURCES),)
+GLIB_COMPILE_RESOURCES = glib-compile-resources
+endif
+
+GLADE_DIR = .
+
+$(info WCOBGDB_VERSION = $(WCOBGDB_VERSION))
+
+# Sources
+SRC = \
+    src/win/main.c \
+    src/win/app.c \
+    src/win/window.c \
+    src/win/dialog.c \
+    src/win/help_dialog.c \
+    src/win/variables.c \
+    src/win/edit_value.c \
+    src/win/menu.c \
+    src/win/help.c \
+    src/win/css.c \
+    src/win/file_source.c \
+    src/win/wcobgdb.c \
+    src/gdb/read_file.c \
+    src/gdb/highlight.c \
+    src/gdb/string_parser.c \
+    src/gdb/mi2.c \
+    src/gdb/parser_mi2.c \
+    src/gdb/parser.c \
+    src/gdb/output.c \
+    src/gdb/debugger.c \
+    src/gdb/util.c \
+    src/gdb/realpath.c \
+    src/gdb/gdb_process.c \
+    src/gdb/testMI2.c \
+    src/gdb/testParser.c \
+    $(RESOURCE_C)
+
+OBJ = $(SRC:.c=.o)
+
+# =====================
+# BUILD
+# =====================
+
+all: $(EXE)
+
+ifeq ($(OS),Windows_NT)
+
+WINDRES ?= D:/msys64/ucrt64/bin/windres.exe
+
+$(RES_FILE): $(RC_FILE)
+	$(WINDRES) $< -O coff -o $@
+
+endif
+
+# Resources
+$(RESOURCE_C): $(RESOURCE_XML) $(GLADE_DIR)/glade/window.ui
+	$(GLIB_COMPILE_RESOURCES) $(RESOURCE_XML) \
+	    --target=$(RESOURCE_C) \
+	    --generate-source \
+	    --sourcedir=$(GLADE_DIR)
+
+# Obj depends on resources
+$(OBJ): $(RESOURCE_C)
+
+# Compile
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Link
+ifeq ($(OS),Windows_NT)
+
+$(EXE): $(OBJ) $(RES_FILE)
+	$(CC) -o $@ $(OBJ) $(RES_FILE) $(LIBS)
+
+else
+
+$(EXE): $(OBJ)
+	$(CC) -o $@ $(OBJ) $(LIBS)
+
+endif
+
+# =====================
+# RUN, CLEAN, REBUILD
+# =====================
+run: $(EXE)
+	./$(EXE)
+
+clean:
+	$(CLEAN_CMD)
+
+rebuild: clean all
+
+-include $(OBJ:.o=.d)

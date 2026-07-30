@@ -171,4 +171,35 @@ Linux Ubuntu:
 sudo apt install libx11-dev
 ```
 
+## 🖥️ Graphical Version (WCOBGDB)
+
+A graphical version of COBGDB, named **WCOBGDB**, is also available.
+
+![Screenshot](images/wcobgdb_run.png)
+
+### 🪟 Windows
+
+The `Windows` directory contains the installer for the Microsoft Windows version.
+
+### 🛠️ Building
+
+To build WCOBGDB from source, install:
+
+- **MSYS2**
+- **GCC**
+- **GTK-3 development libraries**
+
+The `GTK` directory contains the `gtk_windows_install.bat` script, which automatically installs the required dependencies and prepares the build environment.
+
+### 🎨 Graphical User Interface
+
+WCOBGDB uses the **GTK** toolkit for its graphical interface. The windows and dialogs were designed with **Glade**, allowing the interface to be defined in XML (`.ui`) files and loaded dynamically at runtime.
+
+### 📦 Installer
+
+The Windows installer (`WCobGDB_Setup.exe`) was created using **Inno Setup**, a free installer generator for Windows.
+
+For more information or to download Inno Setup, visit:
+
+https://jrsoftware.org/isinfo.php
 

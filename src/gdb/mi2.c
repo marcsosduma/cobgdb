@@ -789,21 +789,25 @@ char *convert_gdb_value(const char *gdb_output, ST_DebuggerVariable *var){
     int size;
     char *temp;
     char * ret;
+
     // size =
     p_size = strstr(gdb_output,"size = ");
     if(p_size == NULL)
         return NULL;
     p_size += strlen("size = ");
     size = atoi(p_size);
+
     // FIND \"
     p_quote = strstr(gdb_output,"\"");
     if(p_quote == NULL)
         return NULL;
     p_quote += 1;
+
     // BUFFER
     temp = (char *)malloc(2048+size + 1);
     if(temp == NULL)
         return NULL;
+    
     if(p_quote[0]=='"'){
         free(temp);
         return strdup("");
@@ -815,6 +819,7 @@ char *convert_gdb_value(const char *gdb_output, ST_DebuggerVariable *var){
              p_quote[0]='\0';
         }
     }
+
     // PARSER
     ret = debugParseBuilIn(temp,
         var->size,

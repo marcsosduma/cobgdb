@@ -1,30 +1,88 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "C++ Launch",
+            "name": "Debug GTK",
             "type": "cppdbg",
             "request": "launch",
-            "preLaunchTask": "C/C++: gcc.exe build active file",
-            "externalConsole": true,
-            //"program": "${workspaceFolder}/${fileBasenameNoExtension}.exe",
-            "windows": {
-                "program": "${workspaceFolder}/cobgdb.exe",
-                //"args": ["--test"],
-                "args": ["customer.cob"],
-                //"args": ["samples\\datatypes.cob"],
-            },
             "linux": {
-                "program": "${workspaceFolder}/cobgdb",
+                "program": "${workspaceFolder}/wcobgdb",
+                "MIMode": "gdb",
+                "miDebuggerPath": "/usr/bin/gdb",
+                "environment": [{"name": "DISPLAY", "value": "localhost:10.0"}],
+                //"args": ["samples/sample.cbl", "samples/subsample.cbl", "samples/subsubsample.cbl"],
+                //"args": ["samples/sample.cbl"],
+                //"args": ["samples/customer.cob"],
+                "args": ["samples/datatypes.cob"],
+                //"args": ["--exe", "sample"],
                 //"args": ["--test"],
-                "args": ["customer.cob"],
-                //"args": ["samples/datatypes.cob"],
+                //"args": ["--help"],
             },
-            "environment": [{ "name": "config", "value": "Debug" }],
-            "cwd": "${workspaceFolder}"
-        }        
+            "windows": {
+                "program": "${workspaceFolder}/wcobgdb.exe",
+                "MIMode": "gdb",
+                "miDebuggerPath": "D:\\msys64\\ucrt64\\bin\\gdb.exe",
+                "environment": [{"name": "PATH", "value": "D:\\msys64\\ucrt64\\bin;${env:PATH}"}],
+                //"args": ["samples/sample.cbl", "samples/subsample.cbl", "samples/subsubsample.cbl"],
+                ///"args": ["samples/sample.cbl"],
+                //"args": ["--connect","localhost:5555", "samples/customer.cob"],
+                //"args": ["--connect","localhost:5555", "--exe", "customer.exe"],
+                "args": ["samples/customer.cob"],
+                //"args": ["samples/datatypes.cob"],
+                //"args": ["--exe", "sample.exe"],
+                //"args": ["--test"],
+                //"args": ["--help"],
+                //"args": ["--version"],
+            },
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "externalConsole": false,
+            "preLaunchTask": "Run Make"
+        },
+        {
+          "name": "C++ Terminal Launch",
+          "type": "cppdbg",
+          "request": "launch",
+          "preLaunchTask": "TUI Make",
+          "externalConsole": true,
+          //"program": "${workspaceFolder}/${fileBasenameNoExtension}.exe",
+          "windows": {
+              "program": "${workspaceFolder}/cobgdb.exe",
+              //"args": ["--exe","sample.exe"],                
+              //"args": ["--info"],                
+              //"args": [ "sample.cbl"],
+              //"args": ["--exe","p0.exe"],                
+              //"args": ["p0.cob"],                
+              //"args": ["--connect","localhost:5555", "customer.cob"],
+              //"args": ["--connect","localhost:5555", "--exe", "customer.exe"],
+              //"args": ["--connect","localhost:5555", "--exe", "p0.exe"],
+              //"args": ["cobol_source\\customer.cob"],
+              //"args": [ "samples/sample.cbl", "samples/subsample.cbl", "samples/subsubsample.cbl" ],
+              //"args": [ "samples/number.cob" ],
+              //"args": ["samples/datatypes.cob"],
+              "args": ["samples/customer.cob"],
+              //"args": ["--test"],  
+          },
+          "linux": {
+              "program": "${workspaceFolder}/cobgdb",
+              //"args": ["--connect","localhost:5555", "samples/customer.cob"],
+              //"args": ["--connect","localhost:5555", "samples/p0.cob"],
+              //"args": ["--connect","localhost:5555", "--exe", "p0"],
+              //"args": ["--exe","sample"],                
+              //"args": ["samples/sample.cbl"],                
+              //"args": ["--exe","p0"],                
+              //"args": ["samples/p0.cob"],                
+              //"args": ["--test"],
+              //"args": [ "samples/sample.cbl", "samples/subsample.cbl", "samples/subsubsample.cbl" ],
+              //"args": [ "samples/number.cob" ],
+              "args": ["samples/customer.cob"],
+              //"args": ["samples/datatypes.cob"],
+              "MIMode": "gdb"
+          },
+          "environment": [{ "name": "config", "value": "Debug" }],
+          "cwd": "${workspaceFolder}",
+          "targetArchitecture": "x64",
+          "launchCompleteCommand": "exec-run"
+      }
     ]
 }
