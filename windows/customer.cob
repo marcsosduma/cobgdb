@@ -6,10 +6,8 @@
               SOURCE-COMPUTER.      
                     GNUCOBOL.
                   OBJECT-COMPUTER.      
-                    GNUCOBOL
-                    CLASSIFICATION brazil.
-                SPECIAL-NAMES.
-	                LOCALE brazil "pt_BR.UTF-8".
+                    GNUCOBOL.
+              SPECIAL-NAMES.
            DECIMAL-POINT IS COMMA.    
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
